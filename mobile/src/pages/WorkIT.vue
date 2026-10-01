@@ -9,6 +9,9 @@
         <div v-else-if="selectedTab === 'Entries'">
             <WorkITEntries></WorkITEntries>
         </div>
+        <div v-else-if="selectedTab === 'Tasks'">
+            <Tasks />
+        </div>
         <div v-else>
             <ProjectSchedule></ProjectSchedule>
         </div>
@@ -16,15 +19,16 @@
 </template>
 <script setup>
 import { ref } from 'vue';
+import Tasks from './Tasks.vue';
 import Tab from '../components/Tab.vue';
 import TimesheetEntry from './TimesheetEntry.vue';
 import WorkITEntries from './WorkITEntries.vue';
 import ProjectSchedule from './ProjectSchedule.vue';
 import { moduleName } from '../data/module';
 
-const tabs = ["Check-In","Schedule","Entries"]
+const tabs = ["Check-In","Schedule","Entries","Tasks"]
 const selectedTab = ref('Check-In')
 
-moduleName.value = 'WorkIT'
+moduleName.value = 'Techy Work'
 
 </script>

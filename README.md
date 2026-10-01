@@ -1,85 +1,68 @@
-## ProjectIT :
+# Techy App
 
-ProjectIT is an Open Source PWA mobile app to track the Employees out in the field. This mobile app is developed on Frappe Framework and it is integrated with the Project functionalities of ERPNext and integrated tightly with Frappe HR.
+Techy App 16 is an open-source field workforce and project tracking app for Frappe, ERPNext, and Frappe HR version 16.
 
-### Features of the ProjectIT Mobile app
+Employees can check in and out with photos and GPS, view their allocations and instructions, and record project time. Managers can allocate employees, share instructions, and view team activity. The mobile sections are **Techy Work** and **Techy Manage**.
 
-* Easy Check In & Check out of Jobs (Projects) with Photo
-* Detailed GPS Tracking - Check In and Check Out
-* Integrated with Frappe HR - Checkin and Attendance Functionality
-* Photo Updates from the site along with the text information
-* Track Job Progress for the Project Managers
-* Realtime reporting of the Employees from the Site
-* See Who's in the site - Realtime
-* Send Instructions to the Employees
-* Recording of the Project timesheet with the breakup of Regular hours and Overtime hours automatically
+## Requirements
 
-### Some of the business that could be benefited from ProjectIT Mobile app
+- Frappe, ERPNext, and HRMS: `>=16.0.0,<17.0.0`
+- Python 3.14+, Node.js 24+, Yarn 1.22+
+- A configured Frappe Bench and MariaDB 11.8 (see the official installation guide)
+- HTTPS for camera and geolocation access on mobile devices
 
-* Construction business
-* Architectural product installation business
-* HVAC - Heating, Ventilation & Air Conditioning
-* Electrical Installation
-* Maintenance & Repair Services
+See [Frappe installation](https://docs.frappe.io/framework/user/en/installation) and the [v16 migration guide](https://github.com/frappe/frappe/wiki/Migrating-to-version-16).
 
-### License
+## Installation
 
-GPL-3.0
+Use this Techy App checkout, or your own fork containing these changes, in a version-16 Bench. Do not install the original upstream repository expecting this rebrand.
 
-### Prerequisites 
+```sh
+bench get-app /absolute/path/to/this/checkout
+bench --site your-site install-app projectit
+bench build --app projectit
+bench --site your-site migrate
+```
 
-ERPNext app and Frappe HR app are mandatory for ProjectIT PWA mobile app to install.
+ERPNext and HRMS must already be installed on the site. Open `https://your-site/techy-app` and sign in with your site credentials. On iOS, use Safari's Share menu and Add to Home Screen. On Android, use the browser's install/Add to Home Screen option when available.
 
-## Installation Instructions :
+## Existing installations
 
-Download the App using the Bench CLI
+The product is named **Techy App**, but the Python/Bench app key remains `projectit`. Existing module identifiers, DocTypes, custom fields, API paths, asset paths, and stored WorkIT/ManageIT assignments are retained to preserve existing data. `/projectit` and its nested routes remain usable; `/techy-app` is the new public entry point.
 
-> bench get-app https://github.com/Arus-Info/ProjectIT.git
+Back up the site, upgrade the Bench and all three platform apps to version 16 using their official migration guides, then update this app checkout and run:
 
-Install the App on your site
+```sh
+bench setup requirements
+bench build --app projectit
+bench --site your-site migrate
+bench --site your-site clear-cache
+```
 
-> bench --site [site name] install-app projectit
+Restart the deployment's services after the upgrade. Verify login/logout, both module assignments, allocations, instructions, photo/GPS check-in and checkout, timesheets, and attendance on a staging site before production. Existing installations may need to refresh or reinstall their home-screen shortcut to pick up the new branding.
 
-To install the app on your phones, go to
+## Attendance
 
-https://your-site-url/projectit
+Techy App records IN/OUT punches and delegates Present/Half Day/Absent decisions to HRMS shift rules. See [attendance setup and staging checks](docs/attendance.md).
 
-eg: if the site is https://example.com, the ProjectIT mobile app can be installed from https://example.com/projectit
+## Tasks and checklists
 
-Go to this URL on the mobile browser (Chrome/Safari) and install the app.
+Use ERPNext Tasks and child Tasks on mobile and desktop. See [task setup and usage](docs/tasks.md).
 
-Note: Firefox does not support PWA installation unless you have a plugin.
+## Development
 
-## Android :
+```sh
+yarn install
+yarn dev
+yarn build
+```
 
-On Android, there will be a prompt to install the app on this URL.
-If there is no prompt, tap on the hamburger menu (three dots), and tap on Install app from the list of options.
-Tap on Install, and wait for a few seconds.
-You will then be able to find the ProjectIT app in your applications. 
-You can login to this app with your site credentials.
+The frontend is in `mobile/`; the backend and custom DocTypes are in `projectit/`. The build creates both branded and legacy HTML entry points under `projectit/www/`. See [mobile development](mobile/README.md).
 
-## iOS :
+## Validation status
 
-On iOS, if you're using Safari, tap on the share button.
-Scroll down the list of options, then tap Add to Home Screen.
-If you do not see "Add to Home Screen", click on "Edit Actions" and you should find the option.
-The icon will then appear on your home screen. 
-You can login to this app with your site credentials.
+Version 16 runtime constraints and relevant API/configuration changes are included. Full compatibility still requires the staging-site checks above; a frontend build alone cannot validate Frappe permissions, database migration, or HRMS behavior.
 
-## Setup Instructions to access ProjectIT :
+## License and attribution
 
-![image](https://github.com/user-attachments/assets/00288082-2c43-4c42-b16f-02df5e45697f)
-
-![image](https://github.com/user-attachments/assets/ed508e22-7f45-4fba-bf10-1e8238b42b89)
-
-![image](https://github.com/user-attachments/assets/22491a07-0419-4ae2-b8ef-030e575bc09c)
-
-![image](https://github.com/user-attachments/assets/b16ace89-5a39-4b2c-8d49-f88de0f20055)
-
-![image](https://github.com/user-attachments/assets/3ef8339f-2395-428f-970f-a7f23f2ef42f)
-
-![image](https://github.com/user-attachments/assets/1e20d51b-88be-425d-926d-1c60182753cd)
-
-![image](https://github.com/user-attachments/assets/884b93f2-decd-4b2b-b543-d6284856bf1c)
-
-![image](https://github.com/user-attachments/assets/d77d1ba3-19da-4ea8-931a-8083054e7ef9)
+GPL-3.0. Techy App is derived from [ProjectIT by Arus Info](https://github.com/Arus-Info/ProjectIT). Original copyright and author attribution are retained. See [license.txt](license.txt).

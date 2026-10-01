@@ -7,6 +7,9 @@
             <div v-if="selectedTab === 'Allocation'">
                 <Allocation></Allocation>
             </div>
+            <div v-else-if="selectedTab === 'Tasks'">
+                <Tasks manager></Tasks>
+            </div>
             <div v-else>
                 <WorkInstructions></WorkInstructions>
             </div>
@@ -15,14 +18,15 @@
 </template>
 <script setup>
 import { ref } from 'vue';
+import Tasks from './Tasks.vue';
 import Tab from '../components/Tab.vue';
 import Allocation from './Allocation.vue';
 import WorkInstructions from './WorkInstructions.vue';
 import { moduleName } from '../data/module';
 
-const tabs = ["Allocation","Instruction"]
+const tabs = ["Allocation","Instruction","Tasks"]
 const selectedTab = ref('Allocation')
 
-moduleName.value = "ManageIT";
+moduleName.value = "Techy Manage";
 
 </script>

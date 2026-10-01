@@ -1,15 +1,19 @@
 {
-  "name": "projectit",
-  "version": "1.0.0",
-  "description": "Project Cost Tracking Tool",
+  "name": "techy-app",
+  "version": "16.0.0",
+  "description": "Techy App - field workforce and project tracking",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "cd mobile && yarn install",
+    "postinstall": "cd mobile && yarn install --frozen-lockfile",
     "dev": "cd mobile && yarn dev",
     "build": "cd mobile && yarn build"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "GPL-3.0-only",
+  "engines": {
+    "node": ">=24",
+    "yarn": ">=1.22"
+  }
 }

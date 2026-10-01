@@ -1,50 +1,17 @@
-# Frappe UI Starter
+# Techy App mobile frontend
 
-This template should help get you started developing custom frontend for Frappe
-apps with Vue 3 and the Frappe UI package.
+Vue 3, Frappe UI, Tailwind CSS, and Vite frontend for Techy App 16.
 
-![Auth](https://user-images.githubusercontent.com/34810212/236846289-ac31c292-81ea-4456-be65-95773a4049be.png)
+Use Node.js 24+ and Yarn 1.22+ with a running Frappe/ERPNext/HRMS v16 site.
 
-![Home](https://user-images.githubusercontent.com/34810212/236846299-fd534e2b-1c06-4f01-a4f2-91a27547cd55.png)
-
-This boilerplate sets up Vue 3, Vue Router, TailwindCSS, and Frappe UI out of
-the box. It also has basic authentication frontend.
-
-## Docs
-
-[Frappe UI Website](https://frappeui.com)
-
-## Usage
-
-This template is meant to be cloned inside an existing Frappe App. Assuming your
-apps name is `todo`. Clone this template in the root folder of your app using `degit`.
-
-```
-cd apps/todo
-npx degit NagariaHussain/doppio_frappeui_starter frontend
-cd frontend
-yarn
+```sh
+yarn install --frozen-lockfile
 yarn dev
+yarn build
 ```
 
-In a development environment, you need to put the below key-value pair in your `site_config.json` file:
+Open the Vite dev server with your Bench site's hostname and `/techy-app` path. The development proxy discovers the Bench webserver port, defaulting to 8000 outside a Bench. Set `FRAPPE_URL` to override the backend URL. It preserves the request hostname for site resolution. Production assets use `/assets/projectit/projectit/`; the build script copies HTML to both `techy-app.html` and `projectit.html` under `projectit/www/` using portable Node filesystem APIs.
 
-```
-"ignore_csrf": 1
-```
+The visible brand is Techy App; legacy API paths, stored module names, and `/projectit` routes remain compatible. The manifest retains the original app identity and uses the new launch URL. Service-worker registration remains disabled as in the original app; offline operation and push delivery are not provided by this rebrand.
 
-This will prevent `CSRFToken` errors while using the vite dev server. In production environment, the `csrf_token` is attached to the `window` object in `index.html` for you.
-
-The Vite dev server will start on the port `8080`. This can be changed from `vite.config.js`.
-The development server is configured to proxy your frappe app (usually running on port `8000`). If you have a site named `todo.test`, open `http://todo.test:8080` in your browser. If you see a button named "Click to send 'ping' request", congratulations!
-
-If you notice the browser URL is `/frontend`, this is the base URL where your frontend app will run in production.
-To change this, open `src/router.js` and change the base URL passed to `createWebHistory`.
-
-## Resources
-
-- [Vue 3](https://v3.vuejs.org/guide/introduction.html)
-- [Vue Router](https://next.router.vuejs.org/guide/)
-- [Frappe UI](https://github.com/frappe/frappe-ui)
-- [TailwindCSS](https://tailwindcss.com/docs/utility-first)
-- [Vite](https://vitejs.dev/guide/)
+Do not disable CSRF protection on production sites. Use the site's normal session authentication and CSRF token.

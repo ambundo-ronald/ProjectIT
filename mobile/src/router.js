@@ -4,6 +4,9 @@ import { userResource } from '@/data/user'
 import { createResource } from 'frappe-ui'
 
 const routes = [
+  { path: '/workit/tasks', name: 'MyTasks', component: () => import('@/pages/Tasks.vue') },
+  { path: '/manageit/tasks', name: 'ManageTasks', component: () => import('@/pages/Tasks.vue'), props: { manager: true } },
+  { path: '/', redirect: '/home' },
   {
     path: '/home',
     name: 'Home',
@@ -37,7 +40,7 @@ const routes = [
 ]
 
 let router = createRouter({
-  history: createWebHistory('/projectit'),
+  history: createWebHistory(window.location.pathname.startsWith('/projectit') ? '/projectit' : '/techy-app'),
   routes,
 })
 

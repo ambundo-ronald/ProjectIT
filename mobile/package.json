@@ -1,13 +1,11 @@
 {
-  "name": "frappe-ui-frontend",
+  "name": "techy-app-mobile",
   "private": true,
-  "version": "0.0.0",
+  "version": "16.0.0",
   "scripts": {
     "dev": "vite",
-    "build": "vite build --base=/assets/projectit/projectit/ && yarn copy-html-entry && yarn copy-icon",
-    "preview": "vite preview",
-    "copy-html-entry": "cp ../projectit/public/projectit/index.html ../projectit/www/projectit.html",
-    "copy-icon": "cp -r ../mobile/src/images/ ../projectit/public/projectit/images/"
+    "build": "vite build && node scripts/copy-entry.mjs",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@internationalized/date": "^3.7.0",
@@ -27,5 +25,11 @@
     "postcss": "^8.4.5",
     "tailwindcss": "^3.4.14",
     "vite": "^5.4.10"
+  },
+  "description": "Techy App - field workforce and project tracking",
+  "license": "GPL-3.0-only",
+  "engines": {
+    "node": ">=24",
+    "yarn": ">=1.22"
   }
 }

@@ -3,19 +3,19 @@
     <div class=" pt-[16px] flex flex-col items-center justify-center">
       <div
         class=" w-[322px] h-11 bg-[#F2F2F2] flex items-center justify-center shadow-[0_4px_4px_rgba(0,0,0,0.25)]">
-        <p class="text-[#4A6BB6] font-[800] text-2xl">ProjectIT</p>
+        <p class="text-[#4A6BB6] font-[800] text-2xl">Techy App</p>
       </div>
       <div class="pt-[30px]">
         <div class=" text-center">
-          <img src="../images/home_page.png" />
+          <img src="/techy-app.svg" alt="Techy App" class="h-48 w-48" />
         </div>
       </div>
     </div>
     <div v-if="! mobileModules.list.loading">
       <div class=" pt-15 flex justify-evenly " v-if="mobileModules.data && employee.name">
-        <ThemeButton v-if="mobileModules.data.includes('WorkIT')" name="WorkIT" @click="router.push({ name: 'WorkIT' })">
+        <ThemeButton v-if="mobileModules.data.includes('WorkIT')" name="Techy Work" @click="router.push({ name: 'WorkIT' })">
         </ThemeButton>
-        <ThemeButton v-if="mobileModules.data.includes('ManageIT')" name="ManageIT"
+        <ThemeButton v-if="mobileModules.data.includes('ManageIT')" name="Techy Manage"
           @click="router.push({ name: 'ManageIT' })"></ThemeButton>
       </div>
       <div v-else class="pt-10 pl-6 pr-6">

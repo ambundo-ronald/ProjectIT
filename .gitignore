@@ -6,4 +6,5 @@ tags
 node_modules
 __pycache__
 projectit/www/projectit.html
+projectit/www/techy-app.html
 projectit/public/projectit

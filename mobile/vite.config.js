@@ -1,66 +1,48 @@
 import path from 'path'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import frappeui from 'frappe-ui/vite'
+import { frappeProxy } from './scripts/frappe-proxy.mjs'
 import { VitePWA } from 'vite-plugin-pwa'
 
-// https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [frappeui(), vue(),
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? '/assets/projectit/projectit/' : '/',
+  server: { port: 8080, proxy: frappeProxy(__dirname) },
+  plugins: [
+    vue(),
     VitePWA({
-      registerType: "autoUpdate",
-			strategies: "injectManifest",
-			injectRegister: null,
-			devOptions: {
-				enabled: true,
-			},
-			manifest: {
-				display: "standalone",
-				name: "ProjectIT",
-				short_name: "ProjectIT",
-				start_url: "/projectit",
-				description: "Project Costing and Tracking Tool",
-				theme_color: "#ffffff",
-				icons: [
-          {
-            "src": "images/pwa-192x192.png",
-            "sizes": "192x192",
-            "type": "image/png",
-            "purpose": "any"
-          },
-          {
-            "src": "images/pwa-512x512.png",
-            "sizes": "512x512",
-            "type": "image/png",
-            "purpose": "any"
-          },
-          {
-            "src": "images/pwa-maskable-192x192.png",
-            "sizes": "192x192",
-            "type": "image/png",
-            "purpose": "maskable"
-          },
-          {
-            "src": "images/pwa-maskable-512x512.png",
-            "sizes": "512x512",
-            "type": "image/png",
-            "purpose": "maskable"
-          }
+      registerType: 'autoUpdate',
+      strategies: 'injectManifest',
+      injectRegister: null,
+      srcDir: 'public',
+      filename: 'sw.js',
+      devOptions: { enabled: true },
+      manifest: {
+        display: 'standalone',
+        name: 'Techy App',
+        short_name: 'Techy App',
+        // Preserve the identity of existing home-screen installations.
+        id: '/projectit',
+        start_url: '/techy-app',
+        scope: '/',
+        description: 'Techy App - field workforce and project tracking',
+        theme_color: '#163B65',
+        background_color: '#ffffff',
+        icons: [
+          { src: 'techy-app.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+          { src: 'techy-app.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
         ],
-      }
-    })
+      },
+    }),
   ],
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, 'src'),
-    },
+    alias: { '@': path.resolve(__dirname, 'src') },
   },
   build: {
-    outDir: `../${path.basename(path.resolve('..'))}/public/projectit`,
+    outDir: path.resolve(__dirname, '../projectit/public/projectit'),
     emptyOutDir: true,
     target: 'es2015',
   },
   optimizeDeps: {
     include: ['frappe-ui > feather-icons', 'showdown', 'engine.io-client'],
   },
-})
+}))

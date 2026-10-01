@@ -16,6 +16,7 @@ export function sessionUser() {
 export const session = reactive({
   login: createResource({
     url: 'login',
+    method: 'POST',
     makeParams({ email, password }) {
       return {
         usr: email,
@@ -35,7 +36,8 @@ export const session = reactive({
     }
   }),
   logout: createResource({
-    url: 'logout',
+    url: 'frappe.handler.logout',
+    method: 'POST',
     onSuccess() {
       userResource.reset()
       session.user = sessionUser()

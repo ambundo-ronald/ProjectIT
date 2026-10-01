@@ -1,7 +1,7 @@
 app_name = "projectit"
-app_title = "Projectit"
+app_title = "Techy App"
 app_publisher = "frappe.dev@arus.co.in"
-app_description = "Project Cost Tracking Tool"
+app_description = "Techy App - field workforce and project tracking"
 app_email = "frappe.dev@arus.co.in"
 app_license = "gpl-3.0"
 required_apps = ["frappe","erpnext","hrms"]
@@ -23,7 +23,7 @@ fixtures = [
 # 	{
 # 		"name": "projectit",
 # 		"logo": "/assets/projectit/logo.png",
-# 		"title": "Projectit",
+# 		"title": "Techy App",
 # 		"route": "/projectit",
 # 		"has_permission": "projectit.api.permission.has_app_permission"
 # 	}
@@ -51,7 +51,7 @@ fixtures = [
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-doctype_js = {"Project" : "public/js/project.js"}
+doctype_js = {"Project": "public/js/project.js", "Task": "public/js/task.js"}
 # doctype_js = {"doctype" : "public/js/doctype.js"}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -157,9 +157,6 @@ doctype_js = {"Project" : "public/js/project.js"}
 doc_events = {
     "Project" : {
         "after_insert" : "projectit.projectit.project.after_insert_of_project"
-    },
-    "Timesheet" : {
-        "on_submit" : "projectit.projectit.timesheet.on_submit_of_timesheet"
     }
 }
 
@@ -261,4 +258,16 @@ doc_events = {
 # }
 
 
-website_route_rules = [ {'from_route': '/projectit/<path:app_path>', 'to_route': 'projectit'},]
+# Keep the original entry points for existing bookmarks and installed PWAs.
+website_route_rules = [
+    {'from_route': '/techy-app', 'to_route': 'techy-app'},
+    {'from_route': '/techy-app/<path:app_path>', 'to_route': 'techy-app'},
+    {'from_route': '/projectit/<path:app_path>', 'to_route': 'projectit'},
+]
+
+add_to_apps_screen = [{
+    'name': 'projectit',
+    'title': 'Techy App',
+    'logo': '/assets/projectit/techy-app.svg',
+    'route': '/techy-app',
+}]
