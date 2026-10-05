@@ -41,6 +41,10 @@ bench --site your-site clear-cache
 
 Restart the deployment's services after the upgrade. Verify login/logout, both module assignments, allocations, instructions, photo/GPS check-in and checkout, timesheets, and attendance on a staging site before production. Existing installations may need to refresh or reinstall their home-screen shortcut to pick up the new branding.
 
+## Employee access
+
+If the Employee access field is missing, follow the [access field repair guide](docs/employee-access.md).
+
 ## Attendance
 
 Techy App records IN/OUT punches and delegates Present/Half Day/Absent decisions to HRMS shift rules. See [attendance setup and staging checks](docs/attendance.md).

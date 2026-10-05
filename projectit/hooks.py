@@ -92,7 +92,8 @@ doctype_js = {"Project": "public/js/project.js", "Task": "public/js/task.js"}
 # ------------
 
 # before_install = "projectit.install.before_install"
-# after_install = "projectit.install.after_install"
+after_install = "projectit.setup.ensure_access_fields"
+after_migrate = "projectit.setup.ensure_access_fields"
 
 # Uninstallation
 # ------------
