@@ -141,6 +141,8 @@ def bootstrap():
     system_user()
     from projectit.chat import unread_total
     from projectit.work_orders import summary
+    from projectit import billing, parts
+    from projectit.api import my_apps
     user = frappe.session.user
     pending = frappe.db.count("Issue", {"custom_maintenance_request": 1, "custom_work_order": ["is", "not set"],
         "status": ["not in", ["Resolved", "Closed"]]}) if manager() else 0
@@ -148,7 +150,10 @@ def bootstrap():
         "image": frappe.get_cached_value("User", user, "user_image"), "manager": manager(),
         "sitename": frappe.local.site, "socketio_port": frappe.conf.socketio_port or 9000,
         "unread": unread_total(), "guest_requests": settings().allow_guest_requests,
-        "counts": {"work_orders": summary()["open"], "pending_requests": pending}}
+        "counts": {"work_orders": summary()["open"] if frappe.has_permission("Task", "read") else 0,
+            "pending_requests": pending, "pending_parts": parts.pending_count()},
+        "can_approve_parts": parts.can_approve(), "can_invoice": billing.can_invoice(),
+        "ops_access": "Ops" in my_apps()}
 
 
 @frappe.whitelist()

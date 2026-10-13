@@ -89,6 +89,7 @@ class ProcedureAnswerTests(OpsTestCase):
         doc.has_value_changed.return_value = True
         self.frappe.db.get_value.return_value = "RUN-1"
         self.frappe.db.sql.return_value = [[2]]
+        self.frappe.db.count.return_value = 0  # no open parts requests
         with self.assertRaises(ValidationError) as raised:
             wo.validate_task(doc)
         self.assertIn("2 required", str(raised.exception))

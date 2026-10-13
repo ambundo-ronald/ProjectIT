@@ -1,5 +1,5 @@
 <template>
-  <Modal :model-value="modelValue" title="Add a part" subtitle="Stock is taken out when the job is completed." size="md" @update:model-value="emit('update:modelValue', $event)">
+  <Modal :model-value="modelValue" title="Add a part" subtitle="Your list goes to a manager or stock manager for approval." size="md" @update:model-value="emit('update:modelValue', $event)">
     <div v-if="!item" class="space-y-3">
       <div class="relative">
         <FeatherIcon name="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />

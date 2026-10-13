@@ -11,7 +11,10 @@
   "installation_procedure",
   "parts_section",
   "default_parts_warehouse",
-  "parts_expense_account"
+  "parts_expense_account",
+  "billing_section",
+  "labour_hour_item",
+  "flat_fee_item"
  ],
  "fields": [
   {
@@ -62,13 +65,32 @@
    "fieldtype": "Link",
    "label": "Parts Expense Account",
    "options": "Account",
-   "description": "Account charged when parts are issued from stock. Leave blank to use the company's Stock Adjustment Account."
+   "description": "Default expense account on Material Requests raised for job parts. Leave blank to use the company's."
+  },
+  {
+   "fieldname": "billing_section",
+   "fieldtype": "Section Break",
+   "label": "Billing"
+  },
+  {
+   "fieldname": "labour_hour_item",
+   "fieldtype": "Link",
+   "label": "Labour Item (per hour)",
+   "options": "Item",
+   "description": "Service item invoiced for hourly labour. Its Standard Selling price is the default hourly rate."
+  },
+  {
+   "fieldname": "flat_fee_item",
+   "fieldtype": "Link",
+   "label": "Labour Item (flat fee)",
+   "options": "Item",
+   "description": "Service item invoiced for flat-fee jobs, such as a call-out. Its Standard Selling price is the default fee."
   }
  ],
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-13 15:00:00.000000",
+ "modified": "2026-10-14 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Techy Ops Settings",

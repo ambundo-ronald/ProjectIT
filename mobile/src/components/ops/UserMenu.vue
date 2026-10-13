@@ -26,6 +26,8 @@
             <span class="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all" :class="notify.enabled ? 'left-[18px]' : 'left-0.5'" />
           </span>
         </button>
+        <router-link v-if="me.can_approve_parts" :to="{ name: 'OpsPartsRequests' }" class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm hover:bg-gray-50" role="menuitem" @click="close"><FeatherIcon name="package" class="h-4 w-4 text-gray-500" /><span class="flex-1">Parts requests</span><span v-if="me.counts?.pending_parts" class="rounded-full bg-amber-500 px-1.5 text-[11px] font-semibold text-white">{{ me.counts.pending_parts }}</span></router-link>
+        <router-link v-if="me.can_invoice" :to="{ name: 'OpsBilling' }" class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm hover:bg-gray-50" role="menuitem" @click="close"><FeatherIcon name="file-text" class="h-4 w-4 text-gray-500" />Billing</router-link>
         <router-link :to="{ name: 'Home' }" class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm hover:bg-gray-50" role="menuitem" @click="close"><FeatherIcon name="grid" class="h-4 w-4 text-gray-500" />All apps</router-link>
         <a href="/desk" class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm hover:bg-gray-50" role="menuitem"><FeatherIcon name="external-link" class="h-4 w-4 text-gray-500" />Open ERPNext</a>
       </div>
@@ -40,6 +42,7 @@ import { FeatherIcon } from 'frappe-ui'
 import Dropdown from './Dropdown.vue'
 import UserAvatar from './UserAvatar.vue'
 import { session } from '@/data/session'
+import { me } from '@/data/ops'
 import { notify, setNotifications } from '@/data/chat'
 
 defineProps({ align: { type: String, default: 'right' }, placement: { type: String, default: 'bottom' } })

@@ -15,11 +15,11 @@
       <div v-if="mobileModules.list.loading || employeeResource.loading" class="mt-8 space-y-3">
         <div v-for="i in 2" :key="i" class="h-24 animate-pulse rounded-2xl bg-gray-200/70" />
       </div>
-      <div v-else-if="mobileModules.data?.length && employee.name" class="mt-8 grid gap-3 sm:grid-cols-2">
-        <button v-for="m in modules" :key="m.module" class="card group flex items-start gap-4 p-5 text-left transition hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-pop" @click="router.push({ name: m.route })">
+      <div v-else-if="(modules.length && employee.name) || shortcuts.length" class="mt-8 grid gap-3 sm:grid-cols-2">
+        <button v-for="m in [...(employee.name ? modules : []), ...shortcuts]" :key="m.module" class="card group flex items-start gap-4 p-5 text-left transition hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-pop" @click="router.push({ name: m.route })">
           <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl" :class="m.tone"><FeatherIcon :name="m.icon" class="h-6 w-6" /></span>
           <span class="min-w-0 flex-1">
-            <span class="flex items-center justify-between font-semibold text-gray-900">{{ m.title }}<FeatherIcon name="arrow-right" class="h-4 w-4 text-gray-300 transition group-hover:translate-x-0.5 group-hover:text-brand-600" /></span>
+            <span class="flex items-center justify-between font-semibold text-gray-900"><span>{{ m.title }}<span v-if="m.count" class="ml-2 rounded-full bg-amber-500 px-1.5 text-[11px] font-semibold text-white">{{ m.count }}</span></span><FeatherIcon name="arrow-right" class="h-4 w-4 text-gray-300 transition group-hover:translate-x-0.5 group-hover:text-brand-600" /></span>
             <span class="mt-1 block text-sm text-gray-500">{{ m.text }}</span>
           </span>
         </button>
@@ -38,6 +38,7 @@ import { useRouter } from 'vue-router'
 import { userResource } from '../data/user'
 import EmptyState from '../components/ops/EmptyState.vue'
 import UserMenu from '../components/ops/UserMenu.vue'
+import { me, loadMe } from '../data/ops'
 
 const router = useRouter()
 const employee = inject('employee_id')
@@ -47,6 +48,12 @@ const CATALOG = {
   WorkIT: { route: 'WorkIT', title: 'Techy Work', icon: 'briefcase', tone: 'bg-accent-50 text-accent-600', text: 'Check in and out, your tasks, instructions and timesheets.' },
   ManageIT: { route: 'ManageIT', title: 'Techy Manage', icon: 'users', tone: 'bg-amber-50 text-amber-700', text: 'Allocate people to projects and share instructions.' },
 }
+// Role-based shortcuts that do not need an app module (e.g. stock keepers approving parts).
+const shortcuts = computed(() => [
+  me.can_approve_parts && { module: 'parts', route: 'OpsPartsRequests', title: 'Parts requests', icon: 'package', tone: 'bg-amber-50 text-amber-700', text: 'Approve technicians’ parts lists into Material Requests.', count: me.counts?.pending_parts },
+  me.can_invoice && { module: 'billing', route: 'OpsBilling', title: 'Billing', icon: 'file-text', tone: 'bg-green-50 text-green-700', text: 'Turn completed customer jobs into draft invoices.' },
+].filter(Boolean))
+loadMe().catch(() => {})
 const modules = computed(() => (mobileModules.data || []).filter((m) => CATALOG[m]).map((m) => ({ module: m, ...CATALOG[m] })))
 
 const cookies = new URLSearchParams(document.cookie.split('; ').join('&'))
@@ -65,6 +72,7 @@ const employeeResource = createResource({
     return { user_id: userResource.data }
   },
   onSuccess(d) {
+    if (!d) return // signed-in staff without an Employee record (e.g. a stock keeper)
     employee.name = d
     mobileModules.update({ filters: { name: employee.name } })
     mobileModules.fetch()

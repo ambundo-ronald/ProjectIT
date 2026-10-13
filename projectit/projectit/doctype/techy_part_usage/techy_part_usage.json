@@ -19,7 +19,14 @@
   "amount",
   "valuation_rate",
   "status",
-  "stock_entry"
+  "stock_entry",
+  "approval_section",
+  "requested_on",
+  "approved_by",
+  "rejection_reason",
+  "column_break_mr",
+  "material_request",
+  "material_request_item"
  ],
  "fields": [
   {
@@ -116,8 +123,8 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Recorded\nIssued",
-   "default": "Recorded",
+   "options": "Draft\nRequested\nApproved\nRejected\nIssued",
+   "default": "Draft",
    "in_list_view": 1,
    "read_only": 1
   },
@@ -127,11 +134,53 @@
    "label": "Stock Entry",
    "options": "Stock Entry",
    "read_only": 1
+  },
+  {
+   "fieldname": "approval_section",
+   "fieldtype": "Section Break",
+   "label": "Approval"
+  },
+  {
+   "fieldname": "requested_on",
+   "fieldtype": "Datetime",
+   "label": "Requested On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "approved_by",
+   "fieldtype": "Link",
+   "label": "Approved / Rejected By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "rejection_reason",
+   "fieldtype": "Small Text",
+   "label": "Rejection Reason",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_mr",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "material_request",
+   "fieldtype": "Link",
+   "label": "Material Request",
+   "options": "Material Request",
+   "read_only": 1
+  },
+  {
+   "fieldname": "material_request_item",
+   "fieldtype": "Data",
+   "label": "Material Request Item",
+   "hidden": 1,
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-13 15:00:00.000000",
+ "modified": "2026-10-14 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Techy Part Usage",

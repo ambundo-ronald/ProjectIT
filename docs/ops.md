@@ -100,31 +100,52 @@ What each contract covers varies per customer, so contracts are kept as **Techy 
 - **Lists:** the contract list filters Active, Expiring in 60 days (renewals), Expired and Cancelled.
 - **Permissions:** only managers can create or change contracts. Cancel the ERPNext Subscription separately when a contract ends.
 
-## Parts used on jobs
+## Parts on jobs (approval and Material Requests)
 
-- **Recording parts:**
-  - Technicians tap **Add part** on a job and search stock items (in-stock items are listed first).
-  - They choose the warehouse the part came from, for example the main store or their van, which is just another ERPNext Warehouse.
-  - They can't record more than that warehouse holds.
-  - Set the default warehouse in *Techy Ops Settings › Default Parts Warehouse*.
-- **Billing, decided per line from the machine's cover:**
+1. **The technician lists parts.**
+   - On the job, **Add part** searches stock items (in-stock items first). The technician picks the warehouse the part should come from, such as the main store or a van, and the quantity.
+   - Lines start as *Not sent*. **Request approval** sends the whole list and notifies the approvers.
+2. **A manager or Stock Manager decides.**
+   - Approvers are users with Stock Manager, Maintenance Manager or Projects Manager. They can approve or reject each line, or **Approve all**, on the job or from **Parts requests**.
+   - Parts requests is in the sidebar and account menu, and on the home screen. People without the Ops app module, such as stock keepers, see only this page.
+   - A rejection needs a reason, which the technician sees.
+3. **Approval raises the ERPNext Material Request.** There is one Material Request (type *Material Issue*) per company, linked to the job (*Work Order (Techy Ops)* on the Material Request), with each line's warehouse and the job's project.
+4. **The stock team fulfils it in ERPNext as usual.** The Stock Entry made from the Material Request marks the lines *Issued*. Cancelling that Stock Entry sets them back to *Approved*, and cancelling the Material Request sends its lines back for approval.
 
-  | Situation | Billing | Charged? |
-  |---|---|---|
-  | Job on our own asset, or not on customer equipment | Internal | No |
-  | Machine under warranty | Warranty | No |
-  | Part on the service contract's *Parts included* list | Contract | No |
-  | Anything else | Chargeable, at the *Standard Selling* (Selling Settings) price, or the item's standard rate | Yes |
+**Rules:**
+- A job can't be completed while its list has unsent or undecided lines. Approved lines don't need to be issued first.
+- Approved and issued lines can't be removed from the job; cancel the Material Request in ERPNext instead.
+- Stock levels are shown to the technician and the approver, but they don't block a request. Out-of-stock items can be approved and bought.
 
-  Managers can change any line, for example to *No charge* as a goodwill gesture. The job shows the total to charge the customer, and managers also see the cost.
-- **When stock leaves:**
-  - Completing the job posts **one ERPNext Stock Entry (Material Issue)** for all recorded parts.
-  - It is charged to *Techy Ops Settings › Parts Expense Account*, or the company's Stock Adjustment Account if that is blank.
-  - If a warehouse no longer holds enough stock, the job can't be completed until stock is added or the part is changed.
-  - If the Stock Entry fails for another reason (for example accounts setup), the job still completes, the reason is posted in its activity, and a manager can press **Take out of stock** to retry.
-- **After issuing:** issued lines can't be removed from the job. Cancel the Stock Entry in ERPNext to reverse them.
-- **History:** each machine page lists the parts fitted to it, so you can see when the membrane was last changed.
-- **Not yet built:** invoicing chargeable parts and labour. That is the next step.
+**Billing per line** follows the machine's cover:
+
+| Situation | Billing |
+|---|---|
+| Job on our own asset, or not on customer equipment | Internal |
+| Machine under warranty | Warranty |
+| Part on the service contract's *Parts included* list | Contract |
+| Anything else | Chargeable, at the *Standard Selling* price |
+
+Managers can change the billing of any line until the job is invoiced. Each machine page lists the parts supplied to it.
+
+## Labour and invoices
+
+- **Labour on each customer job:**
+  - Labour is charged **Hourly** (hours × rate) or as a **Flat fee**.
+  - The rates come from the Standard Selling prices of the items set in *Techy Ops Settings › Labour Item (per hour)* and *Labour Item (flat fee)*, and can be changed per job.
+  - The hourly item must use a unit that allows fractions, such as **Hour**, not *Nos*.
+- **Default labour billing:**
+  - *Included* when the machine is under warranty;
+  - *Included* when its contract covers labour (scheduled visits) or call-outs (other jobs);
+  - otherwise *Chargeable*.
+- **Who edits labour:** technicians record the hours worked. Managers and accounts staff change the billing, mode and rates.
+- **Creating invoices:**
+  - Managers and Accounts Users create a **draft Sales Invoice**.
+  - For one job, use **Create invoice** on the job.
+  - For several jobs, the **Billing** page groups completed, uninvoiced jobs by customer. Tick the jobs to combine and press **Invoice N jobs together**.
+  - The invoice has a labour line per job (hours × hourly item, or 1 × flat-fee item) plus the job's approved chargeable parts, oldest job first. It does not update stock, because parts already left through the Material Request.
+  - The invoice stays a draft for accounts to review and submit.
+- **No double invoicing:** each job is invoiced once. Cancelling or deleting the invoice in ERPNext frees its jobs to be invoiced again.
 
 ## Assets and preventive maintenance
 

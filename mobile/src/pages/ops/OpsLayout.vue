@@ -4,13 +4,13 @@
     <aside class="hidden w-64 shrink-0 flex-col bg-brand-800 text-brand-100 md:flex">
       <div class="px-3 pb-3 pt-4"><AppSwitcher dark /></div>
       <div class="px-3">
-        <button class="btn w-full bg-accent-400 text-brand-900 shadow-sm hover:bg-accent-500" @click="openNew()">
+        <button v-if="me.ops_access !== false" class="btn w-full bg-accent-400 text-brand-900 shadow-sm hover:bg-accent-500" @click="openNew()">
           <FeatherIcon name="plus" class="h-4 w-4" /> New work order
         </button>
       </div>
       <nav class="mt-4 space-y-0.5 px-3" aria-label="Ops">
         <router-link
-          v-for="item in nav"
+          v-for="item in visibleNav"
           :key="item.name"
           :to="{ name: item.name }"
           class="flex h-9 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors"
@@ -44,7 +44,7 @@
               </span>
               <span class="min-w-0 flex-1">
                 <span class="block truncate text-sm font-medium text-white">{{ me.full_name }}</span>
-                <span class="block text-xs text-brand-300">{{ me.manager ? 'Manager' : 'Technician' }}</span>
+                <span class="block text-xs text-brand-300">{{ me.manager ? 'Manager' : me.ops_access === false ? (me.can_approve_parts ? 'Stock approvals' : 'Billing') : 'Technician' }}</span>
               </span>
               <FeatherIcon name="chevrons-up" class="h-4 w-4 text-brand-300" />
             </button>
@@ -72,7 +72,7 @@
         </div>
       </main>
       <!-- Mobile tab bar -->
-      <nav class="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-gray-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden" aria-label="Ops">
+      <nav v-if="me.ops_access !== false" class="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-gray-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden" aria-label="Ops">
         <router-link v-for="item in nav.filter((i) => !i.desktop)" :key="item.name" :to="{ name: item.name }" class="relative flex flex-col items-center gap-0.5 pb-1.5 pt-2 text-[11px] font-medium" :class="isActive(item) ? 'text-brand-700' : 'text-gray-500'">
           <span class="flex h-7 w-12 items-center justify-center rounded-full transition-colors" :class="isActive(item) ? 'bg-brand-50' : ''">
             <FeatherIcon :name="item.icon" class="h-5 w-5" />
@@ -109,8 +109,12 @@ const nav = [
   { name: 'OpsEquipment', label: 'Equipment', short: 'Equipment', icon: 'droplet', prefix: ['/ops/equipment', '/ops/contracts', '/ops/assets'] },
   { name: 'OpsPM', label: 'Preventive maintenance', short: 'PM', icon: 'calendar', prefix: '/ops/pm' },
   { name: 'OpsProcedures', label: 'Procedures', short: 'Procedures', icon: 'clipboard', prefix: '/ops/procedures', desktop: true },
+  { name: 'OpsPartsRequests', label: 'Parts requests', short: 'Parts', icon: 'package', prefix: '/ops/parts-requests', desktop: true, show: () => me.can_approve_parts },
+  { name: 'OpsBilling', label: 'Billing', short: 'Billing', icon: 'file-text', prefix: '/ops/billing', desktop: true, show: () => me.can_invoice },
   { name: 'OpsChat', label: 'Chat', short: 'Chat', icon: 'message-circle', prefix: '/ops/chat' },
 ]
+// Without the Ops module (e.g. a stock keeper) only the queues the user's roles allow are shown.
+const visibleNav = computed(() => nav.filter((i) => (!i.show || i.show()) && (me.ops_access !== false || i.show)))
 const isActive = (item) => [].concat(item.prefix).some((p) => route.path.startsWith(p))
 const title = computed(() => route.meta.title || nav.find(isActive)?.label || 'Techy Ops')
 const joined = computed(() => channels.value.filter((c) => c.is_member))
@@ -119,6 +123,7 @@ function badge(item) {
   if (item.name === 'OpsChat') return cap(unread.value)
   if (item.name === 'OpsWorkOrders') return cap(me.counts?.work_orders)
   if (item.name === 'OpsRequests') return cap(me.counts?.pending_requests)
+  if (item.name === 'OpsPartsRequests') return cap(me.counts?.pending_parts)
   return 0
 }
 

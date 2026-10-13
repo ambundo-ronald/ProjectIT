@@ -1,27 +1,42 @@
-"""Parts used on jobs: recorded by technicians, issued from stock when the job is completed.
+"""Parts on jobs: technicians list them, a manager or Stock Manager approves, ERPNext issues them.
 
-Each line is a Techy Part Usage with the warehouse it came from (main store, a technician's van) and
-how it is billed. The billing default follows the machine's cover: work on our own assets is Internal,
-a machine under warranty gets parts free (Warranty), parts on the service contract's included list are
-free (Contract), anything else is Chargeable at the selling price. Managers can override a line.
-Completing the job posts one ERPNext Stock Entry (Material Issue) for its recorded lines; completion is
-blocked when a warehouse does not hold enough stock.
+Lines start as Draft while the technician builds the list, become Requested when sent for approval,
+and Approved (or Rejected, with a reason) by a manager or Stock Manager. Approving raises one ERPNext
+Material Request (Material Issue) per company for the approved lines, linked to the job; the stock team
+fulfils it as usual and the Stock Entry marks the lines Issued. Each line's billing follows the machine's
+cover: Internal for our own work, Warranty, Contract when the part is on the contract's included list,
+otherwise Chargeable at the selling price. Managers can override a line.
 """
 from html import escape
 
 import frappe
 from frappe import _
-from frappe.utils import flt, getdate, nowdate
+from frappe.utils import flt, getdate, now_datetime, nowdate
 
 from projectit import ops
 
 BILLING = ("Chargeable", "Contract", "Warranty", "Internal", "No charge")
+APPROVER_ROLES = {"Stock Manager", "Maintenance Manager", "Projects Manager", "System Manager"}
+OPEN = ("Draft", "Requested")
 FIELDS = ["name", "work_order", "equipment", "item_code", "item_name", "qty", "uom", "warehouse", "billing",
-    "billing_set_by_manager", "rate", "amount", "valuation_rate", "status", "stock_entry", "owner", "creation"]
+    "billing_set_by_manager", "rate", "amount", "valuation_rate", "status", "stock_entry", "material_request",
+    "requested_on", "approved_by", "rejection_reason", "owner", "creation"]
 
 
 def _setting(field):
     return frappe.get_cached_doc("Techy Ops Settings").get(field)
+
+
+def can_approve(user=None):
+    user = user or frappe.session.user
+    return user != "Guest" and bool(set(frappe.get_roles(user)) & APPROVER_ROLES)
+
+
+def approvers():
+    users = frappe.get_all("Has Role", filters={"role": ["in", list(APPROVER_ROLES - {"System Manager"})],
+        "parenttype": "User"}, pluck="parent")
+    return frappe.get_all("User", filters={"name": ["in", users or [""]], "enabled": 1, "user_type": "System User"},
+        pluck="name")
 
 
 def available(item_code, warehouse):
@@ -57,22 +72,33 @@ def _amount(row):
     return flt(row.qty) * flt(row.rate) if row.billing == "Chargeable" else 0
 
 
+def billable(task_name):
+    """Approved or issued lines: what was actually supplied for the job."""
+    return frappe.get_all("Techy Part Usage", filters={"work_order": task_name, "status": ["in", ["Approved", "Issued"]]},
+        fields=FIELDS, order_by="creation asc")
+
+
 def summary(task_name, can_edit=False):
     rows = frappe.get_all("Techy Part Usage", filters={"work_order": task_name}, fields=FIELDS, order_by="creation asc")
-    return {"rows": rows, "chargeable_total": sum(flt(r.amount) for r in rows),
-        "cost_total": sum(flt(r.qty) * flt(r.valuation_rate) for r in rows), "can_edit": bool(can_edit),
+    for row in rows:
+        row.in_stock = available(row.item_code, row.warehouse)
+    supplied = [r for r in rows if r.status in ("Approved", "Issued")]
+    return {"rows": rows, "chargeable_total": sum(flt(r.amount) for r in supplied),
+        "cost_total": sum(flt(r.qty) * flt(r.valuation_rate) for r in supplied), "can_edit": bool(can_edit),
+        "can_approve": can_approve(), "drafts": sum(1 for r in rows if r.status == "Draft"),
+        "pending": sum(1 for r in rows if r.status == "Requested"),
         "default_warehouse": _setting("default_parts_warehouse"), "manager": ops.manager(),
         "currency": frappe.db.get_default("currency")}
 
 
 def history(equipment):
-    """Every part fitted to a machine, newest first."""
-    return frappe.get_all("Techy Part Usage", filters={"equipment": equipment}, fields=["name", "work_order",
-        "item_code", "item_name", "qty", "uom", "billing", "status", "creation"], order_by="creation desc",
-        limit_page_length=100)
+    """Every part supplied for a machine, newest first."""
+    return frappe.get_all("Techy Part Usage", filters={"equipment": equipment, "status": ["in", ["Approved", "Issued"]]},
+        fields=["name", "work_order", "item_code", "item_name", "qty", "uom", "billing", "status", "creation"],
+        order_by="creation desc", limit_page_length=100)
 
 
-# Picking parts -----------------------------------------------------------------------------------------------
+# Building the list -------------------------------------------------------------------------------------------
 
 @frappe.whitelist()
 def search_parts(txt=None, warehouse=None):
@@ -121,8 +147,16 @@ def _result(doc):
     return procedures._result(doc)
 
 
+def _line(doc, name):
+    row = frappe.get_doc("Techy Part Usage", name)
+    if row.work_order != doc.name:
+        frappe.throw(_("This part is not on the job."))
+    return row
+
+
 @frappe.whitelist(methods=["POST"])
 def add_part(work_order, item_code, qty, warehouse):
+    """Add a line to the job's parts list (a draft until it is sent for approval)."""
     doc = _job(work_order)
     item = frappe.db.get_value("Item", item_code, ["name", "item_name", "stock_uom", "is_stock_item", "disabled"],
         as_dict=True)
@@ -133,19 +167,13 @@ def add_part(work_order, item_code, qty, warehouse):
         frappe.throw(_("Enter a quantity above zero."))
     if not frappe.db.get_value("Warehouse", {"name": warehouse, "is_group": 0, "disabled": 0}):
         frappe.throw(_("Choose a warehouse."))
-    recorded = sum(flt(r.qty) for r in frappe.get_all("Techy Part Usage", filters={"work_order": doc.name,
-        "item_code": item_code, "warehouse": warehouse, "status": "Recorded"}, fields=["qty"]))
-    have = available(item_code, warehouse)
-    if recorded + qty > have:
-        frappe.throw(_("Only {0} {1} of {2} in {3}.").format(frappe.format(have), item.stock_uom, item.item_name,
-            warehouse))
     row = frappe.get_doc({"doctype": "Techy Part Usage", "work_order": doc.name, "equipment": doc.get("custom_equipment"),
         "item_code": item_code, "qty": qty, "uom": item.stock_uom, "warehouse": warehouse,
         "billing": default_billing(doc, item_code), "rate": selling_rate(item_code),
         "valuation_rate": flt(frappe.db.get_value("Bin", {"item_code": item_code, "warehouse": warehouse}, "valuation_rate")),
-        "status": "Recorded"})
+        "status": "Draft"})
     row.amount = _amount(row)
-    # Anyone who may work the job may record its parts; stock moves only when the job is completed.
+    # Anyone who may work the job may list its parts; nothing moves until an approver signs off.
     row.insert(ignore_permissions=True)
     return _result(doc)
 
@@ -153,26 +181,131 @@ def add_part(work_order, item_code, qty, warehouse):
 @frappe.whitelist(methods=["POST"])
 def remove_part(work_order, name):
     doc = _job(work_order)
-    row = frappe.get_doc("Techy Part Usage", name)
-    if row.work_order != doc.name:
-        frappe.throw(_("This part is not on the job."))
-    if row.status != "Recorded":
-        frappe.throw(_("This part has already left stock. Cancel its Stock Entry in ERPNext to undo it."))
+    row = _line(doc, name)
+    if row.status not in ("Draft", "Requested", "Rejected"):
+        frappe.throw(_("This part was approved. Cancel its Material Request in ERPNext to undo it."))
     frappe.delete_doc("Techy Part Usage", row.name, ignore_permissions=True)
     return _result(doc)
 
 
 @frappe.whitelist(methods=["POST"])
+def request_approval(work_order):
+    """Send the job's draft lines to the approvers."""
+    doc = _job(work_order)
+    drafts = frappe.get_all("Techy Part Usage", filters={"work_order": doc.name, "status": "Draft"},
+        fields=["name", "item_name", "qty"])
+    if not drafts:
+        frappe.throw(_("Add parts to the list first."))
+    for row in drafts:
+        frappe.db.set_value("Techy Part Usage", row.name, {"status": "Requested", "requested_on": now_datetime()})
+    lines = ", ".join(f"{frappe.format(r.qty)} × {r.item_name}" for r in drafts)
+    doc.add_comment("Info", escape(_("{0} requested parts: {1}").format(frappe.utils.get_fullname(), lines)))
+    ops.notify(approvers(), _("Parts to approve for {0}: {1}").format(doc.subject, lines)[:250], "Task", doc.name,
+        "Assignment")
+    ops.push(approvers(), "techy_work_order", {"name": doc.name})
+    return _result(doc)
+
+
+# Approval ----------------------------------------------------------------------------------------------------
+
+def _approver_job(work_order):
+    ops.system_user()
+    if not can_approve():
+        frappe.throw(_("Only managers and Stock Managers can approve parts."), frappe.PermissionError)
+    # Approvers act on any job's parts list; the Task is read directly because Stock Managers usually
+    # have no Task access.
+    doc = frappe.get_doc("Task", work_order)
+    if not doc.custom_work_order:
+        frappe.throw(_("{0} is not a work order.").format(work_order))
+    return doc
+
+
+@frappe.whitelist(methods=["POST"])
+def approve_parts(work_order, lines=None):
+    """Approve requested lines (all when none are given) and raise the Material Request."""
+    doc = _approver_job(work_order)
+    lines = frappe.parse_json(lines) if isinstance(lines, str) else lines
+    filters = {"work_order": doc.name, "status": "Requested"}
+    if lines:
+        filters["name"] = ["in", list(lines)]
+    rows = frappe.get_all("Techy Part Usage", filters=filters, fields=["name", "item_code", "qty", "uom", "warehouse",
+        "owner"], order_by="creation asc")
+    if not rows:
+        frappe.throw(_("There are no parts waiting for approval."))
+    by_company = {}
+    for row in rows:
+        by_company.setdefault(frappe.db.get_value("Warehouse", row.warehouse, "company"), []).append(row)
+    account = _setting("parts_expense_account")
+    made = []
+    for company, group in by_company.items():
+        schedule = max(getdate(nowdate()), getdate(doc.exp_end_date)) if doc.exp_end_date else getdate(nowdate())
+        mr = frappe.get_doc({"doctype": "Material Request", "material_request_type": "Material Issue", "company": company,
+            "schedule_date": schedule, "custom_work_order": doc.name,
+            "items": [{"item_code": r.item_code, "qty": r.qty, "uom": r.uom, "warehouse": r.warehouse,
+                "schedule_date": schedule, "project": doc.project, **({"expense_account": account} if account else {})}
+                for r in group]})
+        # Approval is the authority here; approvers may lack Material Request roles (e.g. Maintenance Managers).
+        mr.flags.ignore_permissions = True
+        mr.insert()
+        mr.submit()
+        for r, item in zip(group, mr.items):
+            frappe.db.set_value("Techy Part Usage", r.name, {"status": "Approved", "material_request": mr.name,
+                "material_request_item": item.name, "approved_by": frappe.session.user})
+        made.append(mr.name)
+    doc.add_comment("Info", escape(_("{0} approved {1} part line(s): {2}.").format(frappe.utils.get_fullname(), len(rows),
+        ", ".join(made))))
+    owners = {r.owner for r in rows}
+    ops.notify(owners, _("Parts approved for {0} ({1})").format(doc.subject, ", ".join(made)), "Task", doc.name)
+    ops.push(owners | set(_people(doc)), "techy_work_order", {"name": doc.name})
+    return {"material_requests": made, "job": _view(doc)}
+
+
+@frappe.whitelist(methods=["POST"])
+def reject_parts(work_order, lines, reason):
+    doc = _approver_job(work_order)
+    reason = ops.text(reason, "a reason", 500)
+    lines = frappe.parse_json(lines) if isinstance(lines, str) else lines
+    rows = frappe.get_all("Techy Part Usage", filters={"work_order": doc.name, "status": "Requested",
+        "name": ["in", list(lines or []) or [""]]}, fields=["name", "item_name", "owner"])
+    if not rows:
+        frappe.throw(_("There are no parts waiting for approval."))
+    for row in rows:
+        frappe.db.set_value("Techy Part Usage", row.name, {"status": "Rejected", "rejection_reason": reason,
+            "approved_by": frappe.session.user})
+    doc.add_comment("Info", escape(_("{0} rejected {1}: {2}").format(frappe.utils.get_fullname(),
+        ", ".join(r.item_name for r in rows), reason)))
+    ops.notify({r.owner for r in rows}, _("Parts rejected for {0}: {1}").format(doc.subject, reason)[:250], "Task",
+        doc.name)
+    ops.push({r.owner for r in rows} | set(_people(doc)), "techy_work_order", {"name": doc.name})
+    return {"job": _view(doc)}
+
+
+def _people(doc):
+    from projectit import work_orders
+    return work_orders._assignees([doc.name])[doc.name] + [doc.owner]
+
+
+def _view(doc):
+    """The job page data when the approver can open the job (Stock Managers may not)."""
+    from projectit import work_orders
+    try:
+        return work_orders.get_work_order(doc.name)
+    except frappe.PermissionError:
+        frappe.clear_messages()
+        return None
+
+
+@frappe.whitelist(methods=["POST"])
 def set_billing(work_order, name, billing):
-    """Managers decide the billing for a line, before or after the job is completed."""
+    """Managers decide the billing for a line, until the job is invoiced."""
     from projectit import work_orders
     ops.require_manager()
     doc = work_orders._work_order(work_order)
     if billing not in BILLING:
         frappe.throw(_("Invalid billing."))
-    row = frappe.get_doc("Techy Part Usage", name)
-    if row.work_order != doc.name:
-        frappe.throw(_("This part is not on the job."))
+    if doc.get("custom_sales_invoice"):
+        frappe.throw(_("This job is already invoiced ({0}).").format(doc.custom_sales_invoice))
+    row = _line(doc, name)
     row.billing = billing
     row.billing_set_by_manager = 1
     row.amount = _amount(row)
@@ -180,60 +313,67 @@ def set_billing(work_order, name, billing):
     return _result(doc)
 
 
-# Completion --------------------------------------------------------------------------------------------------
-
-def check_stock(task_name):
-    """Before completing: every recorded line must be in stock (validate_task)."""
-    need = {}
-    for row in frappe.get_all("Techy Part Usage", filters={"work_order": task_name, "status": "Recorded"},
-            fields=["item_code", "item_name", "warehouse", "qty", "uom"]):
-        key = (row.item_code, row.warehouse)
-        need.setdefault(key, [0, row])[0] += flt(row.qty)
-    short = [_("{0} {1} of {2} in {3} (have {4})").format(frappe.format(qty), row.uom, row.item_name, row.warehouse,
-        frappe.format(available(*key))) for key, (qty, row) in need.items() if available(*key) < qty]
-    if short:
-        frappe.throw(_("Not enough stock to complete this job: {0}. Restock or change the warehouse first.").format(
-            "; ".join(short)))
-
-
-def issue(task):
-    """On completion: one Material Issue for the job's recorded parts. Failures leave the lines for a retry."""
-    rows = frappe.get_all("Techy Part Usage", filters={"work_order": task.name, "status": "Recorded"},
-        fields=["name", "item_code", "qty", "warehouse"])
-    if not rows:
-        return None
-    company = frappe.db.get_value("Warehouse", rows[0].warehouse, "company")
-    account = _setting("parts_expense_account")
-    frappe.db.savepoint("techy_parts")
-    try:
-        entry = frappe.get_doc({"doctype": "Stock Entry", "stock_entry_type": "Material Issue", "company": company,
-            "project": task.project, "remarks": _("Parts used on job {0}: {1}").format(task.name, task.subject),
-            "items": [{"item_code": r.item_code, "qty": r.qty, "s_warehouse": r.warehouse, "project": task.project,
-                **({"expense_account": account} if account else {})} for r in rows]})
-        # The technician completed the permitted job; the stock movement is its system-owned record.
-        entry.flags.ignore_permissions = True
-        entry.insert()
-        entry.submit()
-    except Exception as e:
-        frappe.db.rollback(save_point="techy_parts")
-        frappe.log_error(title=f"Techy Ops: parts for {task.name} were not issued")
-        task.add_comment("Info", escape(_("Parts could not be taken out of stock: {0}. A manager can retry from the job.")
-            .format(frappe.utils.strip_html(str(e))[:200])))
-        return None
-    for r in rows:
-        frappe.db.set_value("Techy Part Usage", r.name, {"status": "Issued", "stock_entry": entry.name})
-    task.add_comment("Info", escape(_("Parts taken out of stock with {0}.").format(entry.name)))
-    return entry.name
+@frappe.whitelist()
+def approval_queue():
+    """Requested lines across all jobs, grouped by job, for approvers."""
+    ops.system_user()
+    if not can_approve():
+        frappe.throw(_("Only managers and Stock Managers can approve parts."), frappe.PermissionError)
+    rows = frappe.get_all("Techy Part Usage", filters={"status": "Requested"}, fields=FIELDS, order_by="requested_on asc",
+        limit_page_length=500)
+    jobs = {}
+    for row in rows:
+        row.in_stock = available(row.item_code, row.warehouse)
+        jobs.setdefault(row.work_order, []).append(row)
+    info = {t.name: t for t in frappe.get_all("Task", filters={"name": ["in", list(jobs) or [""]]},
+        fields=["name", "subject", "custom_customer", "custom_equipment", "exp_end_date", "status"])}
+    from projectit.equipment import labels
+    machines = labels(t.custom_equipment for t in info.values())
+    result = []
+    for name, lines in jobs.items():
+        task = info.get(name) or frappe._dict(name=name)
+        result.append({"work_order": name, "subject": task.subject, "status": task.status, "due": task.exp_end_date,
+            "equipment": machines.get(task.custom_equipment), "requested_by": frappe.utils.get_fullname(lines[0].owner),
+            "requested_on": lines[0].requested_on, "lines": lines,
+            "chargeable_total": sum(flt(l.amount) for l in lines)})
+    return {"jobs": result, "currency": frappe.db.get_default("currency")}
 
 
-@frappe.whitelist(methods=["POST"])
-def retry_issue(work_order):
-    from projectit import work_orders
-    ops.require_manager()
-    doc = work_orders._work_order(work_order)
-    if doc.status != "Completed":
-        frappe.throw(_("Parts leave stock when the job is completed."))
-    check_stock(doc.name)
-    if not issue(doc):
-        frappe.throw(_("The parts could not be issued. See the job's activity for the reason."))
-    return work_orders.get_work_order(doc.name)
+def pending_count():
+    return frappe.db.count("Techy Part Usage", {"status": "Requested"}) if can_approve() else 0
+
+
+# Job completion and ERPNext stock --------------------------------------------------------------------------
+
+def check_open(task_name):
+    """Before completing: the parts list must have been decided (validate_task)."""
+    drafts = frappe.db.count("Techy Part Usage", {"work_order": task_name, "status": "Draft"})
+    if drafts:
+        frappe.throw(_("{0} part(s) on this job were never sent for approval. Request approval or remove them first.")
+            .format(drafts))
+    waiting = frappe.db.count("Techy Part Usage", {"work_order": task_name, "status": "Requested"})
+    if waiting:
+        frappe.throw(_("{0} part(s) on this job are waiting for approval.").format(waiting))
+
+
+def on_stock_entry_submit(doc, method=None):
+    """A Stock Entry made from the Material Request marks the job's lines Issued."""
+    for item in doc.items:
+        if item.get("material_request_item"):
+            frappe.db.set_value("Techy Part Usage", {"material_request_item": item.material_request_item,
+                "status": "Approved"}, {"status": "Issued", "stock_entry": doc.name})
+
+
+def on_stock_entry_cancel(doc, method=None):
+    for item in doc.items:
+        if item.get("material_request_item"):
+            frappe.db.set_value("Techy Part Usage", {"material_request_item": item.material_request_item,
+                "stock_entry": doc.name}, {"status": "Approved", "stock_entry": None})
+
+
+def on_material_request_cancel(doc, method=None):
+    """A cancelled Material Request sends its lines back for a new decision."""
+    if not doc.get("custom_work_order"):
+        return
+    frappe.db.set_value("Techy Part Usage", {"material_request": doc.name, "status": "Approved"},
+        {"status": "Requested", "material_request": None, "material_request_item": None, "approved_by": None})

@@ -168,6 +168,17 @@ doc_events = {
         "on_submit": "projectit.equipment.on_delivery_note_submit",
         "on_cancel": "projectit.equipment.on_delivery_note_cancel",
     },
+    "Stock Entry": {
+        "on_submit": "projectit.parts.on_stock_entry_submit",
+        "on_cancel": "projectit.parts.on_stock_entry_cancel",
+    },
+    "Material Request": {
+        "on_cancel": "projectit.parts.on_material_request_cancel",
+    },
+    "Sales Invoice": {
+        "on_cancel": "projectit.billing.release_jobs",
+        "on_trash": "projectit.billing.release_jobs",
+    },
     "Techy Service Contract": {
         "validate": "projectit.contracts.validate",
         "on_update": "projectit.contracts.on_update",

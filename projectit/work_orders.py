@@ -9,7 +9,7 @@ import frappe
 from frappe import _
 from frappe.utils import cint, getdate, nowdate
 
-from projectit import equipment as installed, ops, parts, procedures
+from projectit import billing, equipment as installed, ops, parts, procedures
 
 FIELDS = ["name", "subject", "status", "priority", "exp_end_date", "custom_work_category", "custom_asset",
     "custom_location", "custom_equipment", "custom_customer", "project", "is_group", "progress", "owner", "creation",
@@ -105,6 +105,7 @@ def get_work_order(name):
         "asset": asset, "request": request, "procedure": procedures.run_data(doc.name),
         "equipment": installed.summary(doc.custom_equipment),
         "parts": parts.summary(doc.name, can_write and doc.status not in ("Completed", "Cancelled")),
+        "billing": billing.summary(doc, can_write),
         "pm_log": doc.custom_asset_maintenance_log, "workflow": _workflow(), "can_write": can_write,
         "manager": ops.manager()}
 
@@ -298,7 +299,7 @@ def validate_task(doc, method=None):
         missing = procedures.missing_required(doc.name)
         if missing:
             frappe.throw(_("Finish the procedure first: {0} required step(s) still need an answer.").format(missing))
-        parts.check_stock(doc.name)
+        parts.check_open(doc.name)
     if not doc.get("custom_asset_maintenance_log"):
         return
     if frappe.db.get_value("Asset Maintenance Log", doc.custom_asset_maintenance_log, "has_certificate") \
@@ -318,7 +319,6 @@ def on_task_update(doc, method=None):
         complete_log(doc)
     if doc.get("custom_equipment") and doc.custom_work_category == "Installation":
         installed.complete_installation(doc)
-    parts.issue(doc)
     if doc.custom_work_request:
         request = frappe.get_doc("Issue", doc.custom_work_request)
         if request.status not in ("Resolved", "Closed"):
