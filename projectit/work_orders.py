@@ -117,7 +117,7 @@ def _steps(value):
 
 def create(subject, description=None, priority="Medium", category="Corrective", asset=None, location=None,
         assignees=None, due_date=None, steps=None, project=None, request=None, pm_log=None, procedure=None,
-        ignore_permissions=False, equipment=None):
+        ignore_permissions=False, equipment=None, service_contract=None):
     """Create a work order; callers have already authorised the action."""
     from frappe.desk.form.assign_to import add
     subject = ops.text(subject, "a title", 140)
@@ -148,6 +148,7 @@ def create(subject, description=None, priority="Medium", category="Corrective", 
             "exp_end_date": due_date or None, "project": project or None, "custom_work_order": int(not parent),
             "custom_work_category": category, "custom_asset": asset or None, "custom_location": location or None,
             "custom_equipment": equipment or None, "custom_customer": customer,
+            "custom_service_contract": service_contract if not parent else None,
             "custom_work_request": request if not parent else None,
             "custom_asset_maintenance_log": pm_log if not parent else None})
         doc.insert(ignore_permissions=ignore_permissions)

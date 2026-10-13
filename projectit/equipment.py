@@ -12,11 +12,11 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, cint, getdate, nowdate
 
-from projectit import ops
+from projectit import contracts, ops
 
 FIELDS = ["name", "equipment_name", "item_code", "serial_no", "tag", "status", "customer", "customer_name",
     "site_address", "site", "project", "delivery_note", "delivered_on", "installed_on", "installation_note",
-    "warranty_until", "contract_until", "notes", "modified"]
+    "warranty_until", "contract_until", "service_contract", "notes", "modified"]
 STATUSES = ("Awaiting installation", "Active", "Out of service", "Decommissioned", "Cancelled")
 RETIRED = ("Decommissioned", "Cancelled")
 EDITABLE = ("equipment_name", "item_code", "serial_no", "tag", "status", "customer", "site_address", "project",
@@ -86,6 +86,7 @@ def summary(name):
     return {"name": row.name, "equipment_name": row.equipment_name, "tag": row.tag, "serial_no": row.serial_no,
         "status": row.status, "customer": row.customer, "customer_name": row.customer_name, "site": row.site,
         "address": _address(row.site_address), "contact": _contact(row.customer), "coverage": coverage(row),
+        "contract": contracts.terms(row.service_contract),
         "warranty_until": row.warranty_until, "contract_until": row.contract_until, "installed_on": row.installed_on}
 
 
@@ -141,7 +142,10 @@ def get_equipment(name):
         fields=["name", "subject", "status", "opening_date", "custom_work_order"], order_by="creation desc",
         limit_page_length=20)
     project_name = frappe.db.get_value("Project", row.project, "project_name") if row.project else None
+    next_visit = frappe.db.get_value("Techy Contract Equipment", {"parent": row.service_contract,
+        "parenttype": "Techy Service Contract", "equipment": row.name}, "next_visit") if row.service_contract else None
     return {"equipment": row, "coverage": coverage(row), "address": _address(row.site_address),
+        "contract": contracts.terms(row.service_contract), "next_visit": next_visit,
         "contact": _contact(row.customer), "project_name": project_name, "work_orders": jobs, "requests": requests,
         "can_create": bool(frappe.has_permission("Task", "create")), "manager": ops.manager()}
 

@@ -5,6 +5,10 @@
     <p v-if="equipment.address?.address_title || equipment.site" class="text-gray-700">{{ equipment.address?.address_title || equipment.site }}</p>
     <p v-for="l in equipment.address?.lines || []" :key="l" class="text-gray-500">{{ l }}</p>
     <p v-if="equipment.contact.name" class="mt-2 text-xs text-gray-500">Contact: {{ equipment.contact.name }}</p>
+    <div v-if="equipment.contract" class="mt-3 border-t border-gray-100 pt-3">
+      <router-link :to="{ name: 'OpsContract', params: { name: equipment.contract.name } }" class="text-xs font-semibold uppercase tracking-wide text-gray-500 hover:text-brand-700">Contract {{ equipment.contract.name }}</router-link>
+      <ContractTerms :terms="equipment.contract" compact class="mt-1.5" />
+    </div>
     <div class="mt-3 flex flex-wrap gap-2">
       <a v-if="phone" :href="`tel:${phone}`" class="btn btn-secondary btn-sm"><FeatherIcon name="phone" class="h-4 w-4" />Call</a>
       <a v-if="mapLink(equipment.address)" :href="mapLink(equipment.address)" target="_blank" rel="noopener" class="btn btn-secondary btn-sm"><FeatherIcon name="navigation" class="h-4 w-4" />Directions</a>
@@ -16,6 +20,7 @@
 import { computed } from 'vue'
 import { FeatherIcon } from 'frappe-ui'
 import { mapLink } from '@/data/equipment'
+import ContractTerms from './ContractTerms.vue'
 
 const props = defineProps({ equipment: { type: Object, required: true } })
 const phone = computed(() => props.equipment.contact?.phone || props.equipment.address?.phone || '')

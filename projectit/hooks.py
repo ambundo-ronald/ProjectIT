@@ -168,10 +168,15 @@ doc_events = {
         "on_submit": "projectit.equipment.on_delivery_note_submit",
         "on_cancel": "projectit.equipment.on_delivery_note_cancel",
     },
+    "Techy Service Contract": {
+        "validate": "projectit.contracts.validate",
+        "on_update": "projectit.contracts.on_update",
+        "after_delete": "projectit.contracts.after_delete",
+    },
 }
 
 scheduler_events = {
-    "daily": ["projectit.maintenance.generate_pm_work_orders"],
+    "daily": ["projectit.maintenance.generate_pm_work_orders", "projectit.contracts.generate_visits"],
 }
 
 # Scheduled Tasks

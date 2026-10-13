@@ -26,6 +26,7 @@
   "column_break_dates",
   "warranty_until",
   "contract_until",
+  "service_contract",
   "notes_section",
   "notes"
  ],
@@ -155,7 +156,15 @@
   {
    "fieldname": "contract_until",
    "fieldtype": "Date",
-   "label": "Service Contract Until"
+   "label": "Service Contract Until",
+   "description": "Set from the active Techy Service Contract. For machines without one, enter it by hand."
+  },
+  {
+   "fieldname": "service_contract",
+   "fieldtype": "Link",
+   "label": "Service Contract",
+   "options": "Techy Service Contract",
+   "read_only": 1
   },
   {
    "fieldname": "notes_section",
@@ -170,7 +179,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-13 09:00:00.000000",
+ "modified": "2026-10-13 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Techy Equipment",

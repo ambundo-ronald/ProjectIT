@@ -53,6 +53,22 @@
           </div>
         </div>
 
+        <!-- Contract -->
+        <div class="card p-5">
+          <div class="flex items-start justify-between gap-3">
+            <h2 class="section-label">Service contract</h2>
+            <router-link v-if="data.contract" :to="{ name: 'OpsContract', params: { name: data.contract.name } }" class="text-xs font-medium text-brand-600 hover:underline">Open contract</router-link>
+          </div>
+          <template v-if="data.contract">
+            <ContractTerms :terms="data.contract" class="mt-2" />
+            <p v-if="data.next_visit && data.contract.state === 'Active'" class="mt-2 inline-flex items-center gap-1.5 text-sm text-gray-700"><FeatherIcon name="calendar" class="h-4 w-4 text-gray-400" />Next service visit {{ formatDate(data.next_visit) }}</p>
+          </template>
+          <div v-else class="mt-2 flex flex-wrap items-center justify-between gap-3">
+            <p class="text-sm text-gray-500">{{ eq.contract_until ? `Contract recorded until ${formatDate(eq.contract_until)}, without a Techy contract.` : 'No service contract. Work on this machine is chargeable once the warranty ends.' }}</p>
+            <router-link v-if="data.manager && !retired" :to="{ name: 'OpsContract', params: { name: 'new' }, query: { customer: eq.customer, customer_name: eq.customer_name, equipment: eq.name } }" class="btn btn-secondary btn-sm"><FeatherIcon name="file-plus" class="h-4 w-4" />Add to a contract</router-link>
+          </div>
+        </div>
+
         <!-- Jobs -->
         <div class="card overflow-hidden">
           <div class="card-header"><h2 class="card-title">Job history</h2><span class="text-xs text-gray-500">{{ data.work_orders.length }}</span></div>
@@ -122,6 +138,7 @@ import StatusPill from '@/components/ops/StatusPill.vue'
 import CoverageBadge from '@/components/ops/CoverageBadge.vue'
 import LinkChip from '@/components/ops/LinkChip.vue'
 import EquipmentForm from '@/components/ops/EquipmentForm.vue'
+import ContractTerms from '@/components/ops/ContractTerms.vue'
 import { api, me, formatDate, fromNow } from '@/data/ops'
 import { EQUIPMENT_STATUS, mapLink } from '@/data/equipment'
 

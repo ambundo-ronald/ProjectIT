@@ -77,6 +77,29 @@ Machines you sell and install for customers, such as RO systems, belong to the c
 - **QR stickers:** each machine has a printable QR sticker. When public requests are on, the customer scans it, sees only the machine model and site, and reports a problem. The request is linked to the machine and the customer.
 - **Permissions:** all staff can look up customer equipment. Only managers can register or edit it.
 
+## Service contracts
+
+What each contract covers varies per customer, so contracts are kept as **Techy Service Contract** records (**Equipment › Contracts**). Billing stays on the customer's ERPNext **Subscription**.
+
+- **What a contract holds:**
+  - the customer;
+  - the linked Subscription (optional), whose dates can be copied with **Use the subscription's dates**;
+  - start and end dates;
+  - visit frequency (monthly to yearly) and the procedure for visits;
+  - **Labour included** on scheduled visits, and **Breakdown call-outs included**;
+  - **Parts included at no charge** (any stock items);
+  - the customer's machines, each with its next visit date. If left blank, the first visit is one period after the start date.
+- **Coverage:** saving a contract sets each machine's *contract end date* and links the contract. Removing a machine or cancelling the contract takes the cover away again. A machine still under warranty shows *Under warranty* first, with the contract alongside.
+- **Visits:**
+  - Every day, and on demand with **Create due visits**, Techy Ops creates a *Preventive* service-visit job for each machine whose next visit falls within the PM lead time.
+  - The job has the contract's procedure attached, and its due date is the visit date.
+  - The machine's next visit then moves on by the frequency, so running it twice never creates duplicate visits. Visits stop at the contract end date.
+  - Managers are notified and assign the visits.
+- **What technicians see:** a job on a contract machine shows the contract terms under the customer site: labour, call-outs and included parts.
+- **Payment warnings:** if the linked Subscription is *Grace Period*, *Unpaid* or *Cancelled*, the job and the contract list show a payment warning. The status comes from ERPNext. For example, a subscription whose first period has ended without a paid invoice shows as *Unpaid*.
+- **Lists:** the contract list filters Active, Expiring in 60 days (renewals), Expired and Cancelled.
+- **Permissions:** only managers can create or change contracts. Cancel the ERPNext Subscription separately when a contract ends.
+
 ## Assets and preventive maintenance
 
 - **Assets** lists ERPNext Assets with their open work count. An asset page shows the PM schedule, work order history, requests and the QR label.

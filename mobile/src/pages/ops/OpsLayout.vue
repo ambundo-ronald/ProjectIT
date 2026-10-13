@@ -106,7 +106,7 @@ const newEquipment = ref(null)
 const nav = [
   { name: 'OpsWorkOrders', label: 'Work orders', short: 'Work', icon: 'tool', prefix: '/ops/work-orders' },
   { name: 'OpsRequests', label: 'Requests', short: 'Requests', icon: 'inbox', prefix: '/ops/requests' },
-  { name: 'OpsEquipment', label: 'Equipment', short: 'Equipment', icon: 'droplet', prefix: ['/ops/equipment', '/ops/assets'] },
+  { name: 'OpsEquipment', label: 'Equipment', short: 'Equipment', icon: 'droplet', prefix: ['/ops/equipment', '/ops/contracts', '/ops/assets'] },
   { name: 'OpsPM', label: 'Preventive maintenance', short: 'PM', icon: 'calendar', prefix: '/ops/pm' },
   { name: 'OpsProcedures', label: 'Procedures', short: 'Procedures', icon: 'clipboard', prefix: '/ops/procedures', desktop: true },
   { name: 'OpsChat', label: 'Chat', short: 'Chat', icon: 'message-circle', prefix: '/ops/chat' },

@@ -52,6 +52,11 @@ class OpsTestCase(unittest.TestCase):
         utils = ModuleType("frappe.utils")
         utils.cint = lambda value: int(value or 0)
         utils.flt = lambda value: float(value or 0)
+        def add_months(value, months):
+            d = date.fromisoformat(str(value)[:10])
+            m = d.month - 1 + months
+            return date(d.year + m // 12, m % 12 + 1, min(d.day, 28))
+        utils.add_months = add_months
         utils.strip_html = lambda text: text
         utils.getdate = lambda value=None: date.fromisoformat(str(value)[:10]) if value else date(2026, 10, 11)
         utils.nowdate = lambda: "2026-10-11"
