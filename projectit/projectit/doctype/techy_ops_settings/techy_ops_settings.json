@@ -1,0 +1,74 @@
+{
+ "actions": [],
+ "creation": "2026-10-11 09:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "requests_section",
+  "allow_guest_requests",
+  "pm_section",
+  "pm_lead_days",
+  "installation_procedure"
+ ],
+ "fields": [
+  {
+   "fieldname": "requests_section",
+   "fieldtype": "Section Break",
+   "label": "Work Requests"
+  },
+  {
+   "default": "0",
+   "description": "Lets anyone with an asset's QR link submit a work request without signing in. Submissions are rate limited.",
+   "fieldname": "allow_guest_requests",
+   "fieldtype": "Check",
+   "label": "Allow Public Requests from Asset QR Codes"
+  },
+  {
+   "fieldname": "pm_section",
+   "fieldtype": "Section Break",
+   "label": "Preventive Maintenance"
+  },
+  {
+   "default": "3",
+   "fieldname": "pm_lead_days",
+   "fieldtype": "Int",
+   "label": "Create PM Work Orders (Days Before Due)",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "installation_procedure",
+   "fieldtype": "Link",
+   "label": "Installation Procedure",
+   "options": "Techy Procedure",
+   "description": "Attached to the installation job created for each delivered machine."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-10-13 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Projectit",
+ "name": "Techy Ops Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Maintenance Manager",
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -32,7 +32,8 @@ def ensure_access_fields():
     fixture = Path(__file__).parent / "fixtures" / "custom_field.json"
     definitions = json.loads(fixture.read_text(encoding="utf-8"))
     custom_fields = {}
-    allowed = {"fieldname", "fieldtype", "label", "insert_after", "options", "description", "module"}
+    allowed = {"fieldname", "fieldtype", "label", "insert_after", "options", "description", "module", "default",
+        "depends_on", "collapsible", "read_only", "no_copy", "in_standard_filter", "search_index"}
     for definition in definitions:
         custom_fields.setdefault(definition["dt"], []).append({
             key: definition[key] for key in allowed if key in definition
@@ -45,3 +46,13 @@ def ensure_access_fields():
     frappe.clear_cache(doctype="Employee")
     frappe.clear_cache(doctype="Employee Checkin")
     return "Techy App access fields and module choices are ready. Reload the Employee form."
+
+
+def ensure_ops_defaults():
+    """Store Techy Ops Settings defaults once; never overwrite values a site has saved."""
+    if not frappe.db.exists("DocType", "Techy Ops Settings"):
+        return
+    if frappe.db.get_single_value("Techy Ops Settings", "pm_lead_days") is None:
+        frappe.db.set_single_value("Techy Ops Settings", "pm_lead_days", 3)
+    if not frappe.db.exists("Mobile Module Item", "Ops"):
+        frappe.get_doc({"doctype": "Mobile Module Item", "module": "Ops"}).insert(ignore_permissions=True)

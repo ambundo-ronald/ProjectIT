@@ -51,7 +51,8 @@ fixtures = [
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-doctype_js = {"Project": "public/js/project.js", "Task": "public/js/task.js"}
+doctype_js = {"Project": "public/js/project.js", "Task": "public/js/task.js",
+    "Employee Checkin": "public/js/employee_checkin.js"}
 # doctype_js = {"doctype" : "public/js/doctype.js"}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -92,8 +93,8 @@ doctype_js = {"Project": "public/js/project.js", "Task": "public/js/task.js"}
 # ------------
 
 # before_install = "projectit.install.before_install"
-after_install = "projectit.setup.ensure_access_fields"
-after_migrate = "projectit.setup.ensure_access_fields"
+after_install = ["projectit.setup.ensure_access_fields", "projectit.setup.ensure_ops_defaults"]
+after_migrate = ["projectit.setup.ensure_access_fields", "projectit.setup.ensure_ops_defaults"]
 
 # Uninstallation
 # ------------
@@ -127,13 +128,13 @@ after_migrate = "projectit.setup.ensure_access_fields"
 # -----------
 # Permissions evaluated in scripted ways
 
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
-# has_permission = {
-# 	"Event": "frappe.desk.doctype.event.event.has_permission",
-# }
+permission_query_conditions = {
+    "Techy Channel": "projectit.chat.permission_query_conditions",
+}
+
+has_permission = {
+    "Techy Channel": "projectit.chat.has_permission",
+}
 
 # DocType Class
 # ---------------
@@ -158,7 +159,19 @@ after_migrate = "projectit.setup.ensure_access_fields"
 doc_events = {
     "Project" : {
         "after_insert" : "projectit.projectit.project.after_insert_of_project"
-    }
+    },
+    "Task": {
+        "validate": "projectit.work_orders.validate_task",
+        "on_update": "projectit.work_orders.on_task_update",
+    },
+    "Delivery Note": {
+        "on_submit": "projectit.equipment.on_delivery_note_submit",
+        "on_cancel": "projectit.equipment.on_delivery_note_cancel",
+    },
+}
+
+scheduler_events = {
+    "daily": ["projectit.maintenance.generate_pm_work_orders"],
 }
 
 # Scheduled Tasks

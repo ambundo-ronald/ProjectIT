@@ -1,0 +1,153 @@
+{
+ "actions": [],
+ "creation": "2026-10-12 09:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "field_type",
+  "label",
+  "help",
+  "required",
+  "options",
+  "min_value",
+  "max_value",
+  "unit",
+  "create_follow_up",
+  "answer_section",
+  "value",
+  "failed",
+  "answered_by",
+  "answered_on",
+  "follow_up_work_order"
+ ],
+ "fields": [
+  {
+   "fieldname": "field_type",
+   "fieldtype": "Select",
+   "label": "Type",
+   "options": "Heading\nCheckbox\nPass/Fail\nYes/No/N/A\nNumber\nText\nMultiple Choice\nPhoto\nSignature",
+   "default": "Checkbox",
+   "in_list_view": 1,
+   "columns": 2,
+   "read_only": 1
+  },
+  {
+   "fieldname": "label",
+   "fieldtype": "Data",
+   "label": "Step",
+   "length": 140,
+   "in_list_view": 1,
+   "columns": 4,
+   "read_only": 1
+  },
+  {
+   "fieldname": "help",
+   "fieldtype": "Small Text",
+   "label": "Instructions",
+   "read_only": 1
+  },
+  {
+   "fieldname": "required",
+   "fieldtype": "Check",
+   "label": "Required",
+   "default": "0",
+   "in_list_view": 1,
+   "columns": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "options",
+   "fieldtype": "Small Text",
+   "label": "Choices",
+   "description": "Multiple Choice: one choice per line.",
+   "depends_on": "eval:doc.field_type=='Multiple Choice'",
+   "read_only": 1
+  },
+  {
+   "fieldname": "min_value",
+   "fieldtype": "Data",
+   "label": "Minimum",
+   "length": 30,
+   "depends_on": "eval:doc.field_type=='Number'",
+   "read_only": 1
+  },
+  {
+   "fieldname": "max_value",
+   "fieldtype": "Data",
+   "label": "Maximum",
+   "length": 30,
+   "depends_on": "eval:doc.field_type=='Number'",
+   "read_only": 1
+  },
+  {
+   "fieldname": "unit",
+   "fieldtype": "Data",
+   "label": "Unit",
+   "length": 20,
+   "depends_on": "eval:doc.field_type=='Number'",
+   "read_only": 1
+  },
+  {
+   "fieldname": "create_follow_up",
+   "fieldtype": "Check",
+   "label": "Create a follow-up work order when this fails",
+   "default": "0",
+   "depends_on": "eval:['Pass/Fail','Number'].includes(doc.field_type)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "answer_section",
+   "fieldtype": "Section Break",
+   "label": "Answer"
+  },
+  {
+   "fieldname": "value",
+   "fieldtype": "Small Text",
+   "label": "Answer",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "failed",
+   "fieldtype": "Check",
+   "label": "Failed",
+   "default": "0",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "answered_by",
+   "fieldtype": "Link",
+   "label": "Answered By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "answered_on",
+   "fieldtype": "Datetime",
+   "label": "Answered On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "follow_up_work_order",
+   "fieldtype": "Link",
+   "label": "Follow-up Work Order",
+   "options": "Task",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-12 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Projectit",
+ "name": "Techy Procedure Response",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1,
+ "editable_grid": 1
+}

@@ -1,26 +1,19 @@
 <template>
-  <div class="sm:w-96">
-    <div v-show="!showCamera">
-      <Header></Header>
-      <Toasts />
-      <router-view />
-    </div>
-    <div v-if="showCamera">
-      <Camera :mode="cameraMode"  @close-event="showCamera = false" @capture-event="imageFile = $event"></Camera>
-    </div>
-  </div>
+  <Toasts />
+  <router-view />
+  <ChatDock />
+  <Camera v-if="showCamera" :mode="cameraMode" @close-event="showCamera = false" @capture-event="imageFile = $event" />
 </template>
 <script setup>
-import { watch, inject } from "vue"
-import Header from './components/Header.vue';
+import { watch, inject } from 'vue'
 import { Toasts } from 'frappe-ui'
-import Camera from "./components/Camera.vue";
+import Camera from './components/Camera.vue'
+import ChatDock from './components/ChatDock.vue'
+import { showCamera, cameraMode, imageFile } from './data/camera_context'
 
-import { showCamera, cameraMode, imageFile } from "./data/camera_context";
+const employeeId = inject('employee_id')
 
-const employeeId = inject("employee_id");
-
-watch(employeeId,() => {
-  localStorage.setItem('employee_id',JSON.stringify(employeeId))
+watch(employeeId, () => {
+  localStorage.setItem('employee_id', JSON.stringify(employeeId))
 })
 </script>

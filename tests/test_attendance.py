@@ -106,6 +106,17 @@ class AttendanceTests(unittest.TestCase):
             with self.assertRaises(ValidationError): self.module.check_out("TS-1",lat,lon,"photo")
         self.doc.submit.assert_not_called()
 
+    def test_punch_stores_coordinates_and_map_geojson(self):
+        import json
+        patch.stopall()
+        self.frappe.as_json = lambda obj, indent=None: json.dumps(obj)
+        self.module._punch("EMP-1", "TS-1", "IN", datetime(2026,10,11,12,51,46), -1.283412, 36.821946)
+        doc = self.frappe.get_doc.call_args.args[0]
+        self.assertEqual((doc["latitude"], doc["longitude"], doc["time"], doc["log_type"]), (-1.283412, 36.821946, datetime(2026,10,11,12,51,46), "IN"))
+        point = json.loads(doc["geolocation"])["features"][0]["geometry"]
+        self.assertEqual(point, {"type": "Point", "coordinates": [36.821946, -1.283412]})  # GeoJSON is [long, lat]
+        self.frappe.get_doc.return_value.insert.assert_called_once_with()
+
     def test_submit_error_propagates_before_punch(self):
         self.doc.submit.side_effect = ValidationError("Cannot submit")
         with self.assertRaises(ValidationError): self.checkout()

@@ -1,5 +1,5 @@
 """Mobile/Desk access to native ERPNext Tasks, child Tasks and assignments."""
-from html import escape
+from html import escape, unescape
 import base64
 import binascii
 import io
@@ -50,6 +50,16 @@ def _task(name, write=False):
     return doc
 
 
+def _project_names(rows):
+    """Attach project_name to Task rows for display (labels for projects the rows already reference)."""
+    projects = list({r.get("project") for r in rows if r.get("project")})
+    names = dict(frappe.get_all("Project", filters={"name": ["in", projects]}, fields=["name", "project_name"],
+        as_list=True) or []) if projects else {}
+    for row in rows:
+        row["project_name"] = names.get(row.get("project"), row.get("project"))
+    return rows
+
+
 def _workflow():
     return frappe.db.get_value("Workflow", {"document_type": "Task", "is_active": 1}, "name")
 
@@ -72,7 +82,7 @@ def list_tasks(project=None, start=0, mine=1):
     start = max(0, cint(start))
     rows = frappe.get_list("Task", filters=filters, fields=FIELDS,
         order_by="modified desc", limit_start=start, limit_page_length=51)
-    return {"tasks": rows[:50], "has_more": len(rows) > 50, "manager": _manager()}
+    return {"tasks": _project_names(rows[:50]), "has_more": len(rows) > 50, "manager": _manager()}
 
 
 @frappe.whitelist()
@@ -88,10 +98,12 @@ def get_task(name):
         "comment_type": "Comment"}, fields=["name", "content", "comment_by", "creation"],
         order_by="creation desc", limit_page_length=30)
     for comment in comments:
-        comment.content = strip_html(comment.content or "")
+        comment.content = unescape(strip_html(comment.content or ""))
     files = frappe.get_list("File", filters={"attached_to_doctype": "Task", "attached_to_name": doc.name},
         fields=["name", "file_name", "file_url"], limit_page_length=50)
-    return {"task": {field: doc.get(field) for field in FIELDS}, "description": strip_html(doc.description or ""),
+    task = {field: doc.get(field) for field in FIELDS}
+    task["project_name"] = frappe.db.get_value("Project", doc.project, "project_name")
+    return {"task": task, "description": strip_html(doc.description or ""),
         "children": children, "comments": comments, "files": files, "workflow": _workflow(),
         "can_write": frappe.has_permission("Task", "write", doc=doc), "manager": _manager()}
 
@@ -133,7 +145,7 @@ def attach_photo(name, content):
                 raise ValueError
             extension = "jpg" if photo.format == "JPEG" else "png"
             photo.verify()
-    except (ValueError, binascii.Error, OSError):
+    except (ValueError, SyntaxError, binascii.Error, OSError):  # Pillow raises SyntaxError for corrupt images.
         frappe.throw(_("Choose a valid JPEG or PNG photo."))
     frappe.get_doc({"doctype": "File", "file_name": f"task-{frappe.generate_hash(length=12)}.{extension}",
         "content": data, "is_private": 1, "attached_to_doctype": "Task", "attached_to_name": doc.name}).insert()

@@ -92,11 +92,19 @@ def _summary(doc):
     }
 
 
+def _geolocation(latitude, longitude):
+    """GeoJSON for the checkin's map field, in the same shape HRMS writes (coordinates are [long, lat])."""
+    return frappe.as_json({"type": "FeatureCollection", "features": [{"type": "Feature", "properties": {},
+        "geometry": {"type": "Point", "coordinates": [longitude, latitude]}}]}, indent=None)
+
+
 def _punch(employee, timesheet, log_type, timestamp, latitude, longitude):
     log = frappe.get_doc({
         "doctype": "Employee Checkin", "employee": employee,
         "custom_timesheet": timesheet, "log_type": log_type, "time": timestamp,
         "latitude": latitude, "longitude": longitude, "skip_auto_attendance": 0,
+        # HRMS fills this only when HR Settings geolocation tracking is on; set it so Desk always shows the pin.
+        "geolocation": _geolocation(latitude, longitude),
     })
     # Use normal permissions and HRMS validation (shift lookup and geofencing included).
     log.insert()

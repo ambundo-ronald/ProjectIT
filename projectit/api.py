@@ -198,3 +198,12 @@ def get_employee_with_workit(project_name):
         return employee
     else :
         return []
+
+@frappe.whitelist()
+def my_apps():
+    """Techy App modules enabled for the signed-in user's own Employee (never another user's)."""
+    employee = frappe.db.get_value("Employee", {"user_id": frappe.session.user, "status": "Active"}, "name")
+    if not employee:
+        return []
+    return frappe.get_all("Mobile Module", filters={"parent": employee, "parenttype": "Employee",
+        "parentfield": "custom_mobile_module"}, pluck="module_name", order_by="idx asc")
