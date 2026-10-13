@@ -89,6 +89,8 @@
           </div>
         </div>
 
+        <PartsCard v-if="data.parts && (data.parts.rows.length || data.parts.can_edit)" :parts="data.parts" :work-order="wo.name" :closed="closed" @updated="set" @error="warn" />
+
         <!-- Quick checklist (child Tasks) -->
         <div v-if="data.steps.length" class="card overflow-hidden">
           <div class="card-header">
@@ -224,6 +226,7 @@ import PeoplePicker from '@/components/ops/PeoplePicker.vue'
 import ProcedureRun from '@/components/ops/ProcedureRun.vue'
 import CoverageBadge from '@/components/ops/CoverageBadge.vue'
 import CustomerSiteCard from '@/components/ops/CustomerSiteCard.vue'
+import PartsCard from '@/components/ops/PartsCard.vue'
 import ProcedureSelect from '@/components/ops/ProcedureSelect.vue'
 import { ui } from '@/data/apps'
 import { api, onRealtime, formatDate, fromNow, isOverdue, readFile, safeFile } from '@/data/ops'

@@ -17,7 +17,7 @@
     <!-- Floating chat bubble -->
     <button
       v-show="!dock.open"
-      class="fixed right-4 z-[60] flex h-14 w-14 items-center justify-center rounded-full bg-brand-600 text-white shadow-pop transition hover:scale-105 hover:bg-brand-700 active:scale-95 md:bottom-6 md:right-6"
+      class="fixed right-4 z-[45] flex h-14 w-14 items-center justify-center rounded-full bg-brand-600 text-white shadow-pop transition hover:scale-105 hover:bg-brand-700 active:scale-95 md:bottom-6 md:right-6"
       :style="{ bottom: isPhone ? `calc(${5.25 + ui.dockLift / 16}rem + env(safe-area-inset-bottom))` : undefined }"
       :aria-label="unread ? `Chat, ${unread} unread` : 'Chat'"
       @click="openDock(null)"

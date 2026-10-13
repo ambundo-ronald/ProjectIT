@@ -100,6 +100,32 @@ What each contract covers varies per customer, so contracts are kept as **Techy 
 - **Lists:** the contract list filters Active, Expiring in 60 days (renewals), Expired and Cancelled.
 - **Permissions:** only managers can create or change contracts. Cancel the ERPNext Subscription separately when a contract ends.
 
+## Parts used on jobs
+
+- **Recording parts:**
+  - Technicians tap **Add part** on a job and search stock items (in-stock items are listed first).
+  - They choose the warehouse the part came from, for example the main store or their van, which is just another ERPNext Warehouse.
+  - They can't record more than that warehouse holds.
+  - Set the default warehouse in *Techy Ops Settings › Default Parts Warehouse*.
+- **Billing, decided per line from the machine's cover:**
+
+  | Situation | Billing | Charged? |
+  |---|---|---|
+  | Job on our own asset, or not on customer equipment | Internal | No |
+  | Machine under warranty | Warranty | No |
+  | Part on the service contract's *Parts included* list | Contract | No |
+  | Anything else | Chargeable, at the *Standard Selling* (Selling Settings) price, or the item's standard rate | Yes |
+
+  Managers can change any line, for example to *No charge* as a goodwill gesture. The job shows the total to charge the customer, and managers also see the cost.
+- **When stock leaves:**
+  - Completing the job posts **one ERPNext Stock Entry (Material Issue)** for all recorded parts.
+  - It is charged to *Techy Ops Settings › Parts Expense Account*, or the company's Stock Adjustment Account if that is blank.
+  - If a warehouse no longer holds enough stock, the job can't be completed until stock is added or the part is changed.
+  - If the Stock Entry fails for another reason (for example accounts setup), the job still completes, the reason is posted in its activity, and a manager can press **Take out of stock** to retry.
+- **After issuing:** issued lines can't be removed from the job. Cancel the Stock Entry in ERPNext to reverse them.
+- **History:** each machine page lists the parts fitted to it, so you can see when the membrane was last changed.
+- **Not yet built:** invoicing chargeable parts and labour. That is the next step.
+
 ## Assets and preventive maintenance
 
 - **Assets** lists ERPNext Assets with their open work count. An asset page shows the PM schedule, work order history, requests and the QR label.

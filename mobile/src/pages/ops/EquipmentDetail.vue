@@ -84,6 +84,19 @@
           <p v-else class="px-5 py-4 text-sm text-gray-500">No jobs yet.</p>
         </div>
 
+        <div v-if="data.parts?.length" class="card overflow-hidden">
+          <div class="card-header"><h2 class="card-title">Parts fitted</h2><span class="text-xs text-gray-500">{{ data.parts.length }}</span></div>
+          <ul class="divide-y divide-gray-100">
+            <li v-for="p in data.parts" :key="p.name">
+              <router-link :to="{ name: 'OpsWorkOrder', params: { name: p.work_order } }" class="flex items-center gap-3 px-5 py-2.5 hover:bg-gray-50">
+                <FeatherIcon name="package" class="h-4 w-4 shrink-0 text-gray-400" />
+                <span class="min-w-0 flex-1 truncate text-sm"><span class="font-medium">{{ Number(p.qty).toLocaleString() }} × {{ p.item_name }}</span></span>
+                <span class="text-xs text-gray-500">{{ p.billing }} · {{ formatDate(p.creation) }}</span>
+              </router-link>
+            </li>
+          </ul>
+        </div>
+
         <div v-if="data.requests.length" class="card overflow-hidden">
           <div class="card-header"><h2 class="card-title">Requests</h2></div>
           <ul class="divide-y divide-gray-100">
