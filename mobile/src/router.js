@@ -43,6 +43,7 @@ const routes = [
       { path: 'equipment', name: 'OpsEquipment', component: () => import('@/pages/ops/Equipment.vue') },
       { path: 'equipment/:name', name: 'OpsEquipmentDetail', component: () => import('@/pages/ops/EquipmentDetail.vue'), meta: { back: true, title: 'Equipment' } },
       { path: 'parts-requests', name: 'OpsPartsRequests', component: () => import('@/pages/ops/PartsRequests.vue') },
+      { path: 'reports', name: 'OpsReports', component: () => import('@/pages/ops/Reports.vue') },
       { path: 'billing', name: 'OpsBilling', component: () => import('@/pages/ops/Billing.vue') },
       { path: 'contracts', name: 'OpsContracts', component: () => import('@/pages/ops/Contracts.vue') },
       { path: 'contracts/:name', name: 'OpsContract', component: () => import('@/pages/ops/ContractDetail.vue'), meta: { back: true, title: 'Service contract' } },

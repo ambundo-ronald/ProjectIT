@@ -147,6 +147,27 @@ Managers can change the billing of any line until the job is invoiced. Each mach
   - The invoice stays a draft for accounts to review and submit.
 - **No double invoicing:** each job is invoiced once. Cancelling or deleting the invoice in ERPNext frees its jobs to be invoiced again.
 
+## Reports
+
+Managers open **Reports** from the sidebar, or from the account menu on a phone. Choose a period: 7 days, 30 days, 90 days or 12 months. The headline figures are compared with the period before.
+
+- **Work:**
+  - jobs completed and opened;
+  - jobs open now and overdue;
+  - average time to fix repairs (Corrective jobs, from opened to completed);
+  - average time to start (from opened to first set to Working);
+  - a chart of jobs opened and completed per day, week or month.
+- **Preventive maintenance:** Preventive jobs due in the period are counted as on time (completed by the due date), late, missed (still open after the due date) or upcoming. *PM done on time* is on time ÷ (on time + late + missed). Late and missed jobs are listed.
+- **Requests:** received, turned into jobs, declined and waiting. Jobs are also broken down by type, with each type's average time to finish.
+- **Technicians:** jobs completed, average time to finish, labour hours logged (shared equally when a job has several assignees) and open jobs, with how many are overdue.
+- **Machines with the most repairs:** customer equipment and our own assets with the most repair jobs opened in the period. Repeat breakdowns are worth a closer look.
+- **Service contract profit:**
+  - **Money in** is the contract's subscription invoices plus invoices for extra work on its machines. Only submitted invoices count.
+  - **Money out** is the parts issued at stock valuation cost plus labour hours × *Techy Ops Settings › Labour Cost per Hour*. Set that to what an hour of technician time costs you; until it is set, labour is not costed.
+  - Contracts losing money are listed first.
+
+Jobs record when they were first started and when they were completed (*Started At*, *Completed At* on the Task). Jobs completed before this update use their last-modified time instead.
+
 ## Assets and preventive maintenance
 
 - **Assets** lists ERPNext Assets with their open work count. An asset page shows the PM schedule, work order history, requests and the QR label.

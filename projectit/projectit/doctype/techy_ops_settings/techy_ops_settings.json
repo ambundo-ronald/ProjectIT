@@ -14,7 +14,8 @@
   "parts_expense_account",
   "billing_section",
   "labour_hour_item",
-  "flat_fee_item"
+  "flat_fee_item",
+  "labour_cost_rate"
  ],
  "fields": [
   {
@@ -85,12 +86,18 @@
    "label": "Labour Item (flat fee)",
    "options": "Item",
    "description": "Service item invoiced for flat-fee jobs, such as a call-out. Its Standard Selling price is the default fee."
+  },
+  {
+   "fieldname": "labour_cost_rate",
+   "fieldtype": "Currency",
+   "label": "Labour Cost per Hour",
+   "description": "What an hour of technician time costs you (wages and overheads). Reports use it to work out the profit on each service contract."
   }
  ],
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-14 09:00:00.000000",
+ "modified": "2026-10-14 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Techy Ops Settings",

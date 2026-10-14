@@ -111,6 +111,7 @@ const nav = [
   { name: 'OpsProcedures', label: 'Procedures', short: 'Procedures', icon: 'clipboard', prefix: '/ops/procedures', desktop: true },
   { name: 'OpsPartsRequests', label: 'Parts requests', short: 'Parts', icon: 'package', prefix: '/ops/parts-requests', desktop: true, show: () => me.can_approve_parts },
   { name: 'OpsBilling', label: 'Billing', short: 'Billing', icon: 'file-text', prefix: '/ops/billing', desktop: true, show: () => me.can_invoice },
+  { name: 'OpsReports', label: 'Reports', short: 'Reports', icon: 'bar-chart-2', prefix: '/ops/reports', desktop: true, show: () => me.manager },
   { name: 'OpsChat', label: 'Chat', short: 'Chat', icon: 'message-circle', prefix: '/ops/chat' },
 ]
 // Without the Ops module (e.g. a stock keeper) only the queues the user's roles allow are shown.

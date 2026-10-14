@@ -177,11 +177,13 @@ def get_modules_for_router(user_id):
     modules.append('home')
     modules = [m.lower() for m in modules ]
     # Approvers and accounts staff reach their Ops queues without the Ops module (e.g. stock keepers).
-    from projectit import billing, parts
+    from projectit import billing, ops, parts
     if parts.can_approve():
         modules.append('ops/parts-requests')
     if billing.can_invoice():
         modules.append('ops/billing')
+    if ops.manager():
+        modules.append('ops/reports')
     return modules
 
 @frappe.whitelist()

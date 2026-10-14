@@ -7,7 +7,7 @@ from html import escape
 
 import frappe
 from frappe import _
-from frappe.utils import cint, getdate, nowdate
+from frappe.utils import cint, getdate, now_datetime, nowdate
 
 from projectit import billing, equipment as installed, ops, parts, procedures
 
@@ -290,9 +290,19 @@ def _announce(doc, verb):
 
 # Document events ---------------------------------------------------------------------------------------------
 
+def _stamp_times(doc):
+    """Record when a job was first started and when it was completed, for the reports."""
+    if not doc.get("custom_work_order") or not doc.has_value_changed("status"):
+        return
+    if doc.status in ("Working", "Pending Review", "Completed") and not doc.get("custom_started_at"):
+        doc.custom_started_at = now_datetime()
+    doc.custom_completed_at = now_datetime() if doc.status == "Completed" else None
+
+
 def validate_task(doc, method=None):
     """Block completing a work order with unanswered required procedure steps, or a PM work order whose
     maintenance task requires a certificate but has no file."""
+    _stamp_times(doc)
     if doc.status != "Completed" or not doc.has_value_changed("status"):
         return
     if doc.get("custom_work_order") and not doc.is_new():
