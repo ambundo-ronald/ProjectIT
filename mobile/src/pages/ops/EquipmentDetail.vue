@@ -69,6 +69,8 @@
           </div>
         </div>
 
+        <MetersCard :meters="data.meters" :equipment="eq.name" :manager="data.manager" :can-record="!retired" @reload="reload" />
+
         <!-- Jobs -->
         <div class="card overflow-hidden">
           <div class="card-header"><h2 class="card-title">Job history</h2><span class="text-xs text-gray-500">{{ data.work_orders.length }}</span></div>
@@ -152,6 +154,7 @@ import CoverageBadge from '@/components/ops/CoverageBadge.vue'
 import LinkChip from '@/components/ops/LinkChip.vue'
 import EquipmentForm from '@/components/ops/EquipmentForm.vue'
 import ContractTerms from '@/components/ops/ContractTerms.vue'
+import MetersCard from '@/components/ops/MetersCard.vue'
 import { api, me, formatDate, fromNow } from '@/data/ops'
 import { EQUIPMENT_STATUS, mapLink } from '@/data/equipment'
 
@@ -211,9 +214,12 @@ async function copy() {
   }
 }
 
+const reload = async () => {
+  data.value = await api('projectit.equipment.get_equipment', { name: route.params.name })
+}
 onMounted(async () => {
   try {
-    data.value = await api('projectit.equipment.get_equipment', { name: route.params.name })
+    await reload()
     qr.value = await QRCode.toDataURL(link.value, { width: 480, margin: 1, color: { dark: '#0F2A4A' } })
   } catch (e) {
     error.value = e.message

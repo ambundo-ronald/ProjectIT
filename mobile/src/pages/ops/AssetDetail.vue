@@ -30,6 +30,8 @@
           </div>
         </div>
 
+        <MetersCard :meters="data.meters" :asset="asset.name" :manager="data.manager" @reload="reload" />
+
         <div class="card overflow-hidden">
           <div class="card-header"><h2 class="card-title">Preventive maintenance</h2><router-link :to="{ name: 'OpsPM' }" class="text-xs font-medium text-brand-600 hover:underline">Schedule</router-link></div>
           <ul v-if="data.plans.length" class="divide-y divide-gray-100">
@@ -87,6 +89,7 @@ import { useRoute } from 'vue-router'
 import { FeatherIcon } from 'frappe-ui'
 import QRCode from 'qrcode'
 import StatusPill from '@/components/ops/StatusPill.vue'
+import MetersCard from '@/components/ops/MetersCard.vue'
 import { api, me, dueIn, formatDate, fromNow, safeFile } from '@/data/ops'
 
 const route = useRoute()
@@ -137,9 +140,12 @@ async function copy() {
   }
 }
 
+const reload = async () => {
+  data.value = await api('projectit.maintenance.get_asset', { name: route.params.name })
+}
 onMounted(async () => {
   try {
-    data.value = await api('projectit.maintenance.get_asset', { name: route.params.name })
+    await reload()
     qr.value = await QRCode.toDataURL(link.value, { width: 480, margin: 1, color: { dark: '#0F2A4A' } })
   } catch (e) {
     error.value = e.message

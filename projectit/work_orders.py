@@ -9,7 +9,7 @@ import frappe
 from frappe import _
 from frappe.utils import cint, getdate, now_datetime, nowdate
 
-from projectit import billing, equipment as installed, ops, parts, procedures
+from projectit import billing, equipment as installed, meters, ops, parts, procedures
 
 FIELDS = ["name", "subject", "status", "priority", "exp_end_date", "custom_work_category", "custom_asset",
     "custom_location", "custom_equipment", "custom_customer", "project", "is_group", "progress", "owner", "creation",
@@ -106,6 +106,7 @@ def get_work_order(name):
         "equipment": installed.summary(doc.custom_equipment),
         "parts": parts.summary(doc.name, can_write and doc.status not in ("Completed", "Cancelled")),
         "billing": billing.summary(doc, can_write),
+        "meters": meters.for_machine(doc.custom_equipment, None if doc.custom_equipment else doc.custom_asset),
         "pm_log": doc.custom_asset_maintenance_log, "workflow": _workflow(), "can_write": can_write,
         "manager": ops.manager()}
 

@@ -147,6 +147,25 @@ Managers can change the billing of any line until the job is invoiced. Each mach
   - The invoice stays a draft for accounts to review and submit.
 - **No double invoicing:** each job is invoiced once. Cancelling or deleting the invoice in ERPNext frees its jobs to be invoiced again.
 
+## Meter readings
+
+Customer equipment and our own Assets can have **meters**. Managers add them on the machine page with **Add meter**. Presets cover common RO meters: running hours, product water, permeate TDS, feed pressure and filter pressure drop.
+
+- **Type:**
+  - A **Counter** only goes up, like running hours or m³ produced. A reading lower than the last one is refused. If a meter was replaced or reset, a manager records the lower reading and confirms it.
+  - A **Gauge** goes up and down, like TDS or pressure.
+- **Triggers** raise jobs automatically, with an optional procedure, priority and job title:
+  - **Every N** (counters only) raises a Preventive service job when the counter reaches *Next due at*, then moves the next due reading on by N. The machine page estimates the date from recent use.
+  - **Goes above / Goes below** raises a Corrective job, High priority by default, when a reading crosses the limit.
+  - Each trigger has one job open at a time. Further readings past the limit are added to the open job as comments. The next job is raised only after that one is completed or cancelled.
+  - Managers are notified of every job raised.
+- **Recording:**
+  - Technicians record readings on the machine page, or on the job page while they work on that machine. A reading taken on a job is noted on the job.
+  - The card shows the last reading, a trend line and any meter past its limit.
+- **History:** select a meter's name to see the chart, with limit lines, and every reading with who took it, the job it was taken on and any job it raised. Managers can delete a mistaken reading; the meter then falls back to the previous one.
+
+The records are *Techy Meter* (with its *Techy Meter Trigger* rows) and *Techy Meter Reading*, all visible in ERPNext Desk.
+
 ## Reports
 
 Managers open **Reports** from the sidebar, or from the account menu on a phone. Choose a period: 7 days, 30 days, 90 days or 12 months. The headline figures are compared with the period before.

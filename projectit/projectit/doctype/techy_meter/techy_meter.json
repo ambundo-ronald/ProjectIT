@@ -1,0 +1,158 @@
+{
+ "actions": [],
+ "creation": "2026-10-14 15:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "meter_name",
+  "equipment",
+  "asset",
+  "unit",
+  "meter_type",
+  "column_break_reading",
+  "active",
+  "last_reading",
+  "last_reading_on",
+  "last_reading_by",
+  "triggers_section",
+  "triggers",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "meter_name",
+   "fieldtype": "Data",
+   "label": "Meter",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "For example Running hours, Product water or Permeate TDS."
+  },
+  {
+   "fieldname": "equipment",
+   "fieldtype": "Link",
+   "label": "Customer Equipment",
+   "options": "Techy Equipment",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "asset",
+   "fieldtype": "Link",
+   "label": "Asset",
+   "options": "Asset",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "unit",
+   "fieldtype": "Data",
+   "label": "Unit",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "For example h, m³, ppm or bar."
+  },
+  {
+   "fieldname": "meter_type",
+   "fieldtype": "Select",
+   "label": "Type",
+   "options": "Counter\nGauge",
+   "default": "Counter",
+   "reqd": 1,
+   "description": "Counter: only goes up (running hours, water produced). Gauge: goes up and down (TDS, pressure)."
+  },
+  {
+   "fieldname": "column_break_reading",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "label": "Active",
+   "default": "1"
+  },
+  {
+   "fieldname": "last_reading",
+   "fieldtype": "Float",
+   "label": "Last Reading",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "last_reading_on",
+   "fieldtype": "Datetime",
+   "label": "Last Reading On",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "last_reading_by",
+   "fieldtype": "Link",
+   "label": "Last Reading By",
+   "options": "User",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "triggers_section",
+   "fieldtype": "Section Break",
+   "label": "Triggers"
+  },
+  {
+   "fieldname": "triggers",
+   "fieldtype": "Table",
+   "label": "Triggers",
+   "options": "Techy Meter Trigger"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-14 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Projectit",
+ "name": "Techy Meter",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "role": "Maintenance Manager"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "role": "Projects Manager"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "role": "Maintenance User"
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "MTR-.#####",
+ "naming_rule": "Expression (old style)",
+ "title_field": "meter_name",
+ "show_title_field_in_link": 1,
+ "track_changes": 1
+}

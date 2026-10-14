@@ -12,7 +12,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, cint, getdate, nowdate
 
-from projectit import contracts, ops, parts
+from projectit import contracts, meters, ops, parts
 
 FIELDS = ["name", "equipment_name", "item_code", "serial_no", "tag", "status", "customer", "customer_name",
     "site_address", "site", "project", "delivery_note", "delivered_on", "installed_on", "installation_note",
@@ -146,6 +146,7 @@ def get_equipment(name):
         "parenttype": "Techy Service Contract", "equipment": row.name}, "next_visit") if row.service_contract else None
     return {"equipment": row, "coverage": coverage(row), "address": _address(row.site_address),
         "contract": contracts.terms(row.service_contract), "next_visit": next_visit, "parts": parts.history(row.name),
+        "meters": meters.for_machine(equipment=row.name, include_inactive=ops.manager()),
         "contact": _contact(row.customer), "project_name": project_name, "work_orders": jobs, "requests": requests,
         "can_create": bool(frappe.has_permission("Task", "create")), "manager": ops.manager()}
 

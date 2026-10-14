@@ -10,7 +10,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, cint, nowdate
 
-from projectit import ops, work_orders
+from projectit import meters, ops, work_orders
 
 ASSET_FIELDS = ["name", "asset_name", "item_code", "asset_category", "location", "status", "image", "custodian"]
 
@@ -53,6 +53,7 @@ def get_asset(name):
         limit_page_length=20)
     return {"asset": {field: doc.get(field) for field in ASSET_FIELDS}, "plans": _plans({"asset_name": doc.name}),
         "work_orders": history, "requests": requests, "files": ops.files("Asset", doc.name),
+        "meters": meters.for_machine(asset=doc.name, include_inactive=ops.manager()),
         "can_create": bool(frappe.has_permission("Task", "create")), "manager": ops.manager()}
 
 
