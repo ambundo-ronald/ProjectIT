@@ -81,10 +81,7 @@
             <img v-if="/\.(jpe?g|png|gif|webp)$/i.test(file.file_url)" :src="file.file_url" :alt="file.file_name" class="h-full w-full object-cover" loading="lazy" />
             <span v-else class="flex h-full items-center justify-center p-1 text-center text-[11px]">{{ file.file_name }}</span>
           </a>
-          <label v-if="detail.can_write" class="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-gray-300 text-gray-500 hover:border-brand-400 hover:bg-brand-50 hover:text-brand-700">
-            <FeatherIcon name="camera" class="h-5 w-5" /><span class="text-xs font-medium">Add photo</span>
-            <input type="file" accept="image/jpeg,image/png" capture="environment" class="sr-only" :disabled="busy" @change="upload" />
-          </label>
+          <PhotoButtons v-if="detail.can_write" variant="tiles" multiple :disabled="busy" @photos="upload" @error="(e) => (error = e)" />
         </div>
       </div>
 
@@ -165,7 +162,8 @@ import Composer from '@/components/ops/Composer.vue'
 import Modal from '@/components/ops/Modal.vue'
 import Pager from '@/components/ops/Pager.vue'
 import { usePageLength } from '@/data/paging'
-import { api, STATUS_LABEL, formatDate, fromNow, dueIn, readFile, safeFile } from '@/data/ops'
+import { api, STATUS_LABEL, formatDate, fromNow, dueIn, safeFile } from '@/data/ops'
+import PhotoButtons from '@/components/ops/PhotoButtons.vue'
 
 const route = useRoute()
 const props = defineProps({ manager: Boolean })
@@ -266,11 +264,11 @@ const create = () =>
     setDetail(await api('projectit.tasks.get_task', { name: data.name }))
   })
 const deskLink = (name) => `/desk/task/${encodeURIComponent(name)}`
-async function upload(event) {
-  const file = event.target.files?.[0]
-  event.target.value = ''
-  if (!file) return
-  await run(async () => setDetail(await api('projectit.tasks.attach_photo', { name: detail.value.task.name, content: await readFile(file) })))
+async function upload(photos) {
+  await run(async () => {
+    for (const p of photos) setDetail(await api('projectit.tasks.attach_photo', { name: detail.value.task.name, content: p.content }))
+  })
+  photos.forEach((p) => URL.revokeObjectURL(p.preview))
 }
 onMounted(() => (route.query.task ? open(String(route.query.task)) : reload()))
 </script>

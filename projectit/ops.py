@@ -143,7 +143,7 @@ def push(users, event, message):
             frappe.publish_realtime(event, message, user=user, after_commit=True)
 
 
-def save_photo(doctype, name, content, prefix):
+def save_photo(doctype, name, content, prefix, ignore_permissions=False):
     from PIL import Image
     if not isinstance(content, str) or len(content) > 14000000:
         frappe.throw(_("Choose a photo smaller than 10 MB."))
@@ -157,7 +157,8 @@ def save_photo(doctype, name, content, prefix):
     except (ValueError, SyntaxError, binascii.Error, OSError):  # Pillow raises SyntaxError for corrupt images.
         frappe.throw(_("Choose a valid JPEG or PNG photo."))
     return frappe.get_doc({"doctype": "File", "file_name": f"{prefix}-{frappe.generate_hash(length=12)}.{extension}",
-        "content": data, "is_private": 1, "attached_to_doctype": doctype, "attached_to_name": name}).insert()
+        "content": data, "is_private": 1, "attached_to_doctype": doctype, "attached_to_name": name}).insert(
+        ignore_permissions=ignore_permissions)
 
 
 def files(doctype, name):

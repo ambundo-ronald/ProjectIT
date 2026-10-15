@@ -31,12 +31,12 @@
           <div v-if="newDay(i)" class="sticky top-0 z-10 my-3 flex justify-center">
             <span class="rounded-full border border-gray-200 bg-white px-3 py-0.5 text-[11px] font-semibold text-gray-600 shadow-sm">{{ dayLabel(m.creation) }}</span>
           </div>
-          <Message :m="m" :compact="compact(i)" @reply="openThread(m)" @remove="remove(m)" />
+          <Message :m="m" :compact="compact(i)" @reply="openThread(m)" @remove="remove(m)" @job="toJob(m)" />
         </template>
       </div>
 
       <div class="shrink-0 px-3 pb-3 pt-1 md:px-6 md:pb-5">
-        <Composer v-if="channel?.is_member" ref="composer" :people="channel.members" :placeholder="`Message ${channel.is_direct ? channel.title : '#' + channel.title}`" :submit="(t) => send(t)" />
+        <Composer v-if="channel?.is_member" ref="composer" :people="channel.members" :placeholder="`Message ${channel.is_direct ? channel.title : '#' + channel.title}`" photos :submit="(t, p) => send(t, null, p)" />
         <div v-else-if="channel" class="flex flex-col items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4 text-center text-sm sm:flex-row sm:justify-between sm:text-left">
           <span>You're previewing <span class="font-semibold">#{{ channel.title }}</span>. Join to post and get notified.</span>
           <button class="btn btn-primary btn-sm" :disabled="busy" @click="join">Join channel</button>
@@ -51,12 +51,12 @@
         <button class="btn btn-ghost btn-icon" aria-label="Close thread" @click="thread = null"><FeatherIcon name="x" class="h-5 w-5" /></button>
       </header>
       <div ref="threadScroller" class="min-h-0 flex-1 overflow-y-auto px-2 py-4 md:px-3">
-        <Message :m="thread" thread-root />
+        <Message :m="thread" thread-root @job="toJob(thread)" />
         <div class="mx-2 my-3 flex items-center gap-3 text-xs font-medium text-gray-500"><span>{{ replies.length }} repl{{ replies.length === 1 ? 'y' : 'ies' }}</span><span class="h-px flex-1 bg-gray-200" /></div>
-        <Message v-for="r in replies" :key="r.name" :m="r" thread-root @remove="remove(r)" />
+        <Message v-for="r in replies" :key="r.name" :m="r" thread-root @remove="remove(r)" @job="toJob(r)" />
       </div>
       <div class="shrink-0 px-3 pb-3 pt-1">
-        <Composer v-if="channel?.is_member" :people="channel.members" placeholder="Reply…" :submit="(t) => send(t, thread.name)" />
+        <Composer v-if="channel?.is_member" :people="channel.members" placeholder="Reply…" photos :submit="(t, p) => send(t, thread.name, p)" />
       </div>
     </aside>
 
@@ -80,7 +80,7 @@
   </div>
 </template>
 <script setup>
-import { ref, computed, nextTick, onMounted, onBeforeUnmount, h } from 'vue'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount, h, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { FeatherIcon } from 'frappe-ui'
 import UserAvatar from '@/components/ops/UserAvatar.vue'
@@ -142,7 +142,13 @@ const Message = (props, { emit }) => {
       : h(UserAvatar, { name: m.full_name, image: m.image, size: 'lg', class: 'mt-0.5' }),
     h('div', { class: 'min-w-0 flex-1' }, [
       props.compact ? null : h('p', { class: 'flex items-baseline gap-2' }, [h('span', { class: 'text-[14px] font-semibold text-gray-900' }, m.full_name), h('span', { class: 'text-[11px] text-gray-400' }, formatTime(m.creation))]),
-      h(RichText, { text: m.content, names: names.value, class: 'text-[14px] leading-relaxed text-gray-800' }),
+      m.content ? h(RichText, { text: m.content, names: names.value, class: 'text-[14px] leading-relaxed text-gray-800' }) : null,
+      m.photos?.length
+        ? h('div', { class: 'mt-1.5 flex flex-wrap gap-1.5' }, m.photos.map((p, n) =>
+            h('a', { href: p.url, target: '_blank', rel: 'noopener', class: ['block overflow-hidden rounded-lg border border-gray-200 bg-gray-100', m.photos.length === 1 ? 'w-fit max-w-[min(20rem,100%)]' : 'h-28 w-28'] }, [
+              h('img', { src: p.url, alt: `Photo ${n + 1} from ${m.full_name}`, loading: 'lazy', class: m.photos.length === 1 ? 'max-h-72 min-h-[6rem] min-w-[8rem] object-cover' : 'h-full w-full object-cover' }),
+            ])))
+        : null,
       !props.threadRoot && m.reply_count
         ? h('button', { class: '-ml-1.5 mt-1 inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs font-semibold text-brand-700 hover:bg-brand-50', onClick: () => emit('reply') }, [
             h(FeatherIcon, { name: 'corner-down-right', class: 'h-3.5 w-3.5' }),
@@ -153,12 +159,13 @@ const Message = (props, { emit }) => {
     ]),
     h('div', { class: 'absolute -top-3 right-3 hidden gap-0.5 rounded-lg border border-gray-200 bg-white p-0.5 shadow-pop group-focus-within:flex group-hover:flex' }, [
       props.threadRoot ? null : h('button', { class: 'rounded-md p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800', 'aria-label': 'Reply in thread', title: 'Reply in thread', onClick: () => emit('reply') }, [h(FeatherIcon, { name: 'message-circle', class: 'h-4 w-4' })]),
+      me.ops_access !== false ? h('button', { class: 'rounded-md p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800', 'aria-label': 'Create a work order from this message', title: 'Create work order', onClick: () => emit('job') }, [h(FeatherIcon, { name: 'tool', class: 'h-4 w-4' })]) : null,
       own || me.manager ? h('button', { class: 'rounded-md p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-600', 'aria-label': 'Delete message', title: 'Delete', onClick: () => emit('remove') }, [h(FeatherIcon, { name: 'trash-2', class: 'h-4 w-4' })]) : null,
     ]),
   ])
 }
 Message.props = ['m', 'compact', 'threadRoot']
-Message.emits = ['reply', 'remove']
+Message.emits = ['reply', 'remove', 'job']
 
 function scrollToEnd(el = scroller.value) {
   nextTick(() => el && (el.scrollTop = el.scrollHeight))
@@ -216,10 +223,10 @@ function upsert(list, message) {
   if (!list.value.some((m) => m.name === message.name)) list.value = [...list.value, message]
 }
 
-async function send(content, threadName = null) {
+async function send(content, threadName = null, photos = []) {
   error.value = ''
   try {
-    const message = await api('projectit.chat.post_message', { channel: name, content, thread: threadName })
+    const message = await api('projectit.chat.post_message', { channel: name, content, thread: threadName, photos })
     if (threadName) {
       upsert(replies, message)
       bumpReplies(threadName, message.creation)
@@ -251,6 +258,10 @@ async function openThread(m) {
     error.value = e.message
   }
 }
+
+// Message to job: the new work order form opens filled in from the message (OpsLayout owns the form).
+const openNewWorkOrder = inject('openNewWorkOrder', null)
+const toJob = (m) => openNewWorkOrder?.({ message: { name: m.name, content: m.content, full_name: m.full_name, photos: m.photos?.length || 0, names: names.value } })
 
 async function remove(m) {
   if (!window.confirm('Delete this message?')) return

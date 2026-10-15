@@ -41,6 +41,10 @@ Techy Ops is a maintenance and team-collaboration workspace (similar to Maintain
 - ERPNext rules still apply. A group work order cannot be completed until its checklist steps are done. If a Task Workflow is active, status buttons are replaced by a link to Desk.
 - Updates support `@mentions`. Type `@` and pick a person; that person receives a notification.
 - When a work order has a project and a chat channel is linked to that project, its creation and completion are posted to the channel.
+- **Adding photos.** Wherever photos are added (work orders, procedure photo steps, requests, project tasks and chat) there are two buttons:
+  - **Camera** opens the phone's camera app. On a computer it opens a webcam window with a shutter button.
+  - **Upload** (or **Photos** where several can be added at once) opens the gallery or file picker.
+  - Photos are shrunk to at most 1600 px and saved as JPEG before upload, so they send quickly on mobile data.
 
 ## Procedures
 
@@ -282,6 +286,14 @@ Jobs record when they were first started and when they were completed (*Started 
   - To insert a record, tap it or press Enter. For a typed keyword, press Tab or use the arrow keys first, so that Enter still sends a sentence like "the task is done".
   - Links are stored as `[[project:PROJ-0001]]`. In messages they appear as chips showing the record's title, and tapping a chip opens the record in Techy Ops, Techy Work or Techy Manage (or in Desk if you don't have that app). Older `#TASK-…` references appear the same way.
   - A chip shows the title only to readers allowed to open the record on its own screen. Anyone else sees the ID as plain text. Notifications show links as "Project PROJ-0001".
+- **Photos.** The camera and photo buttons in the message box add up to 6 photos to a message, with or without text. Tap a photo to open it full size.
+  - Chat photos are private files attached to the channel. In a private channel or direct message, only its members can open them.
+  - Deleting a message deletes its photos (copies on work orders stay).
+- **Message to job.** Hover over a message (or tap it on a phone) and press the tool button to create a work order from it.
+  - The form opens with the message as the title and description.
+  - The message's photos are copied to the new job, and the job's activity says which message it came from.
+  - A link to the job is posted in the message's thread.
+  - It works for any message you can read, including one in a channel you have not joined, but not for a private channel you are not in.
 - Members of a direct message are notified of every message. In channels, only @mentioned members are notified.
 - Authors can delete their own messages; managers can delete any message. Deleting a thread root also deletes its replies.
 - Private channels are hidden in Desk from non-members through permission hooks. System Managers can administer all channels in Desk.

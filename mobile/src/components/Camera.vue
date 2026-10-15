@@ -51,13 +51,14 @@ const canvas = ref(null)
 const preview = ref('')
 const failed = ref('')
 const ready = ref(false)
-const facing = ref(props.mode === 'Upload' ? 'environment' : 'user')
+// Selfies for attendance; the back camera for everything else.
+const facing = ref(['Check-In', 'Check-Out'].includes(props.mode) ? 'user' : 'environment')
 let stream = null
 let file = null
 
-const title = computed(() => ({ 'Check-In': 'Check-in photo', 'Check-Out': 'Check-out photo', Upload: 'Photo update' })[props.mode] || 'Take a photo')
-const hint = computed(() => (props.mode === 'Upload' ? 'Show the progress on site' : 'Take a clear photo of yourself on site'))
-const confirmLabel = computed(() => ({ 'Check-In': 'Check in', 'Check-Out': 'Check out', Upload: 'Upload' })[props.mode] || 'Use photo')
+const title = computed(() => ({ 'Check-In': 'Check-in photo', 'Check-Out': 'Check-out photo', Upload: 'Photo update', Photo: 'Take a photo' })[props.mode] || 'Take a photo')
+const hint = computed(() => ({ Upload: 'Show the progress on site', Photo: 'Point the camera at what you want to show' })[props.mode] || 'Take a clear photo of yourself on site')
+const confirmLabel = computed(() => ({ 'Check-In': 'Check in', 'Check-Out': 'Check out', Upload: 'Upload', Photo: 'Use photo' })[props.mode] || 'Use photo')
 
 async function start() {
   stop()

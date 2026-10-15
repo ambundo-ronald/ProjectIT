@@ -2,7 +2,7 @@
   <Modal
     :model-value="modelValue"
     :title="request ? 'Approve request' : 'New work order'"
-    :subtitle="request ? 'This creates a work order with the request\'s title, details, asset and photos.' : 'Describe the job, then say who, when and where.'"
+    :subtitle="request ? 'This creates a work order with the request\'s title, details, asset and photos.' : message ? 'From a chat message. Check the title, then say who, when and where.' : 'Describe the job, then say who, when and where.'"
     size="xl"
     @update:model-value="emit('update:modelValue', $event)"
   >
@@ -14,6 +14,10 @@
           <p class="mt-0.5 text-sm text-gray-500">Requested by {{ request.raised_by_name || request.raised_by }}</p>
         </div>
         <template v-else>
+          <p v-if="message" class="flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-800">
+            <FeatherIcon name="message-circle" class="h-4 w-4 shrink-0" />
+            <span>From {{ message.full_name }}'s message<template v-if="message.photos"> · {{ message.photos === 1 ? 'its photo is' : `its ${message.photos} photos are` }} added to the job</template>. A link is posted in the chat thread.</span>
+          </p>
           <div>
             <label class="label" for="wo-subject">Title <span class="text-red-500">*</span></label>
             <input id="wo-subject" v-model="form.subject" required maxlength="140" class="input h-11 text-[15px] font-medium" placeholder="e.g. Replace conveyor belt on line 2" />
@@ -130,13 +134,15 @@ import PeoplePicker from './PeoplePicker.vue'
 import AssetPicker from './AssetPicker.vue'
 import EquipmentPicker from './EquipmentPicker.vue'
 import ProcedureSelect from './ProcedureSelect.vue'
-import { api, me } from '@/data/ops'
+import { api, me, tokens } from '@/data/ops'
+import { KIND } from '@/data/links'
 
 const props = defineProps({
   modelValue: Boolean,
   asset: Object, // { name, asset_name, location } to prefill
   equipment: Object, // customer equipment row to prefill
   request: Object, // Issue row to approve
+  message: Object, // chat message to turn into a job: { name, content, full_name, photos (count), names }
 })
 const emit = defineEmits(['update:modelValue', 'saved'])
 const categories = ['Corrective', 'Preventive', 'Inspection', 'Installation', 'Safety', 'Other']
@@ -167,6 +173,18 @@ watch(
     if (props.asset) Object.assign(form, { asset: props.asset.name, location: props.asset.location || '' })
     equipmentLabel.value = props.equipment ? `${props.equipment.customer_name} · ${props.equipment.equipment_name}` : ''
     if (props.equipment) Object.assign(form, { equipment: props.equipment.name, project: '' })
+    if (props.message) {
+      // Mentions become names and links readable text; the first line is the title.
+      const text = tokens(props.message.content, props.message.names || {})
+        .map((p) => (p.link ? `${KIND[p.link.kind].one} ${p.text}` : p.text))
+        .join('')
+        .trim()
+      const first = (text.split('\n').find((l) => l.trim()) || '').trim()
+      Object.assign(form, {
+        subject: first.length > 120 ? `${first.slice(0, 117).trimEnd()}…` : first || `Photos from ${props.message.full_name}`,
+        description: text ? `${text}\n\n(From ${props.message.full_name} in chat)` : `From ${props.message.full_name} in chat`,
+      })
+    }
     try {
       Object.assign(options, await api('projectit.work_orders.options'))
     } catch (e) {
@@ -197,7 +215,7 @@ async function save() {
     const common = { priority: form.priority, category: form.category, due_date: form.due_date || null, assignees, project: form.project || null, procedure: form.procedure || null, steps: steps.value.map((s) => s.trim()).filter(Boolean) }
     const result = props.request
       ? await api('projectit.work_requests.approve_request', { name: props.request.name, ...common })
-      : await api('projectit.work_orders.create_work_order', { ...common, subject: form.subject, description: form.description, asset: form.equipment ? null : form.asset || null, equipment: form.equipment || null, location: form.asset || form.equipment ? null : form.location || null })
+      : await api('projectit.work_orders.create_work_order', { ...common, subject: form.subject, description: form.description, asset: form.equipment ? null : form.asset || null, equipment: form.equipment || null, location: form.asset || form.equipment ? null : form.location || null, chat_message: props.message?.name || null })
     emit('saved', result)
     emit('update:modelValue', false)
   } catch (e) {

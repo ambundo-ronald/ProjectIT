@@ -63,11 +63,11 @@
         </div>
         <div>
           <span class="label">Photo <span class="font-normal text-gray-400">(optional)</span></span>
-          <label class="flex cursor-pointer items-center gap-3 rounded-lg border-2 border-dashed border-gray-300 p-3 text-sm text-gray-600 hover:border-brand-400 hover:bg-brand-50">
-            <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-500"><FeatherIcon name="camera" class="h-5 w-5" /></span>
-            <span class="min-w-0 flex-1 truncate">{{ form.photo ? form.photo.name : 'Take or choose a photo' }}</span>
-            <input type="file" accept="image/jpeg,image/png" capture="environment" class="sr-only" @change="form.photo = $event.target.files?.[0] || null" />
-          </label>
+          <div v-if="form.photo" class="flex items-center gap-3">
+            <img :src="form.photo.preview" alt="Photo to send" class="h-16 w-16 rounded-lg border border-gray-200 object-cover" />
+            <button type="button" class="btn btn-ghost btn-sm text-gray-500" @click="form.photo = null">Remove</button>
+          </div>
+          <PhotoButtons v-else @photos="(list) => (form.photo = list[0])" @error="(e) => (formError = e)" />
         </div>
         <p v-if="formError" role="alert" class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ formError }}</p>
       </form>
@@ -139,7 +139,8 @@ import CoverageBadge from '@/components/ops/CoverageBadge.vue'
 import WorkOrderForm from '@/components/ops/WorkOrderForm.vue'
 import Pager from '@/components/ops/Pager.vue'
 import { usePageLength } from '@/data/paging'
-import { api, me, loadMe, formatDate, fromNow, readFile, safeFile } from '@/data/ops'
+import { api, me, loadMe, formatDate, fromNow, safeFile } from '@/data/ops'
+import PhotoButtons from '@/components/ops/PhotoButtons.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -194,7 +195,7 @@ async function submit() {
   busy.value = true
   formError.value = ''
   try {
-    const photo = form.photo ? await readFile(form.photo) : null
+    const photo = form.photo?.content || null
     await api('projectit.work_requests.submit_request', { subject: form.subject, description: form.description, asset: form.equipment ? null : form.asset || null, equipment: form.equipment || null, photo })
     creating.value = false
     loadMe(true).catch(() => {})

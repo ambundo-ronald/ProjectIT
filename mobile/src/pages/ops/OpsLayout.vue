@@ -83,7 +83,7 @@
         </router-link>
       </nav>
     </div>
-    <WorkOrderForm v-model="showNew" :asset="newAsset" :equipment="newEquipment" @saved="(r) => router.push({ name: 'OpsWorkOrder', params: { name: r.name } })" />
+    <WorkOrderForm v-model="showNew" :asset="newAsset" :equipment="newEquipment" :message="newMessage" @saved="(r) => router.push({ name: 'OpsWorkOrder', params: { name: r.name } })" />
   </div>
 </template>
 <script setup>
@@ -104,6 +104,7 @@ const error = ref('')
 const showNew = ref(false)
 const newAsset = ref(null)
 const newEquipment = ref(null)
+const newMessage = ref(null)
 
 const nav = [
   { name: 'OpsWorkOrders', label: 'Work orders', short: 'Work', icon: 'tool', prefix: '/ops/work-orders' },
@@ -135,10 +136,12 @@ function back() {
   else router.push({ name: nav.find(isActive)?.name || 'OpsWorkOrders' })
 }
 
-// openNew(asset) for one of our assets, or openNew({ equipment }) for customer equipment.
+// openNew(asset) for one of our assets, openNew({ equipment }) for customer equipment, or openNew({ message })
+// for a chat message.
 function openNew(target = null) {
-  newAsset.value = target?.equipment ? null : target
+  newAsset.value = target?.equipment || target?.message ? null : target
   newEquipment.value = target?.equipment || null
+  newMessage.value = target?.message || null
   showNew.value = true
 }
 provide('openNewWorkOrder', openNew)

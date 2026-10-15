@@ -84,7 +84,12 @@
                 <UserAvatar v-if="m.user !== me.user" :name="m.full_name" :image="m.image" size="sm" :class="sameAuthor(i) ? 'invisible' : ''" />
                 <div class="max-w-[78%]">
                   <p v-if="m.user !== me.user && !sameAuthor(i)" class="mb-0.5 ml-1 text-[11px] font-medium text-gray-500">{{ m.full_name }}</p>
-                  <div class="rounded-2xl px-3 py-2 text-[14px] leading-snug" :class="m.user === me.user ? 'rounded-br-md bg-brand-600 text-white' : 'rounded-bl-md bg-gray-100 text-gray-900'">
+                  <div v-if="m.photos?.length" class="mb-1 flex flex-wrap gap-1" :class="m.user === me.user ? 'justify-end' : ''">
+                    <a v-for="p in m.photos" :key="p.name" :href="p.url" target="_blank" rel="noopener" class="block overflow-hidden rounded-xl border border-gray-200" :class="m.photos.length === 1 ? 'max-w-[14rem] bg-gray-100' : 'h-24 w-24'">
+                      <img :src="p.url" alt="Photo" loading="lazy" :class="m.photos.length === 1 ? 'max-h-60 min-h-[5rem] min-w-[7rem] object-cover' : 'h-full w-full object-cover'" />
+                    </a>
+                  </div>
+                  <div v-if="m.content" class="rounded-2xl px-3 py-2 text-[14px] leading-snug" :class="m.user === me.user ? 'rounded-br-md bg-brand-600 text-white' : 'rounded-bl-md bg-gray-100 text-gray-900'">
                     <RichText :text="m.content" :names="names" :inverse="m.user === me.user" />
                   </div>
                   <p class="mt-0.5 px-1 text-[10px] text-gray-400" :class="m.user === me.user ? 'text-right' : ''">{{ formatTime(m.creation) }}<template v-if="m.reply_count"> · {{ m.reply_count }} repl{{ m.reply_count === 1 ? 'y' : 'ies' }}</template></p>
@@ -94,7 +99,7 @@
           </div>
           <p v-if="error" role="alert" class="mx-3 mb-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>
           <div class="shrink-0 border-t border-gray-100 p-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
-            <Composer v-if="info?.is_member" :people="info.members" :placeholder="`Message ${channelTitle}`" :submit="send" />
+            <Composer v-if="info?.is_member" :people="info.members" :placeholder="`Message ${channelTitle}`" photos :submit="send" />
             <button v-else-if="info" class="btn btn-primary w-full" @click="join">Join #{{ info.title }}</button>
           </div>
         </template>
@@ -185,10 +190,10 @@ async function openChannel(name) {
   }
 }
 
-async function send(content) {
+async function send(content, photos = []) {
   error.value = ''
   try {
-    const message = await api('projectit.chat.post_message', { channel: dock.channel, content })
+    const message = await api('projectit.chat.post_message', { channel: dock.channel, content, photos })
     if (!messages.value.some((m) => m.name === message.name)) messages.value = [...messages.value, message]
     scrollToEnd()
   } catch (e) {

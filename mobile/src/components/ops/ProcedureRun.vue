@@ -83,10 +83,7 @@
                 </a>
                 <span v-else-if="step.value" class="inline-flex h-10 items-center gap-1.5 rounded-lg bg-green-50 px-3 text-sm font-medium text-green-800"><FeatherIcon name="check" class="h-4 w-4" />{{ step.field_type === 'Signature' ? 'Signed' : 'Photo added' }}</span>
                 <template v-if="!locked">
-                  <label v-if="step.field_type === 'Photo'" class="btn btn-secondary cursor-pointer">
-                    <FeatherIcon :name="saving[step.name] ? 'loader' : 'camera'" class="h-4 w-4" :class="saving[step.name] ? 'animate-spin' : ''" />{{ step.value ? 'Retake' : 'Take photo' }}
-                    <input type="file" accept="image/jpeg,image/png" capture="environment" class="sr-only" @change="photo(step, $event)" />
-                  </label>
+                  <PhotoButtons v-if="step.field_type === 'Photo'" :camera-label="step.value ? 'Retake' : 'Take photo'" :busy="!!saving[step.name]" @photos="(list) => photo(step, list)" @error="(e) => emit('error', e)" />
                   <button v-else type="button" class="btn btn-secondary" @click="signing = step"><FeatherIcon name="edit-3" class="h-4 w-4" />{{ step.value ? 'Sign again' : 'Sign' }}</button>
                   <button v-if="step.value" type="button" class="btn btn-ghost btn-sm text-gray-500" @click="emitAnswer(step, '')">Clear</button>
                 </template>
@@ -111,7 +108,8 @@ import { ref, computed } from 'vue'
 import { FeatherIcon } from 'frappe-ui'
 import LinkChip from './LinkChip.vue'
 import SignaturePad from './SignaturePad.vue'
-import { fromNow, readFile } from '@/data/ops'
+import { fromNow } from '@/data/ops'
+import PhotoButtons from './PhotoButtons.vue'
 import { rangeText } from '@/data/procedures'
 
 const props = defineProps({
@@ -151,14 +149,8 @@ function badge(step) {
 }
 
 const emitAnswer = (step, value) => emit('answer', step, { value })
-async function photo(step, event) {
-  const file = event.target.files?.[0]
-  event.target.value = ''
-  if (!file) return
-  try {
-    emit('answer', step, { value: '1', photo: await readFile(file) })
-  } catch (e) {
-    emit('error', e.message)
-  }
+function photo(step, list) {
+  emit('answer', step, { value: '1', photo: list[0].content })
+  URL.revokeObjectURL(list[0].preview)
 }
 </script>

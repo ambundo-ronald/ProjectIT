@@ -48,11 +48,14 @@ export function openDock(channel = null) {
 
 /** Plain-text preview with @mentions shown as names and links as 'Project PROJ-0001'. */
 export function preview(message, names = {}) {
-  return tokens(message.content, names)
+  const text = tokens(message.content, names)
     .map((p) => (p.link ? `${KIND[p.link.kind].one} ${p.text}` : p.text))
     .join('')
     .replace(/\s+/g, ' ')
-    .slice(0, 140)
+    .trim()
+  const count = message.photos?.length || 0
+  const photos = count ? (count === 1 ? '📷 Photo' : `📷 ${count} photos`) : ''
+  return (text ? (photos ? `${photos} · ${text}` : text) : photos).slice(0, 140)
 }
 
 function announce(channelRow, message) {

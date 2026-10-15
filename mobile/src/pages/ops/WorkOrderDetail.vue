@@ -124,11 +124,7 @@
               <img v-if="/\.(jpe?g|png|gif|webp)$/i.test(file.file_url)" :src="file.file_url" :alt="file.file_name" class="h-full w-full object-cover transition group-hover:scale-105" loading="lazy" />
               <span v-else class="flex h-full flex-col items-center justify-center gap-1 p-2 text-center text-[11px] text-gray-600"><FeatherIcon name="file" class="h-5 w-5" />{{ file.file_name }}</span>
             </a>
-            <label v-if="data.can_write" class="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-gray-300 text-gray-500 transition hover:border-brand-400 hover:bg-brand-50 hover:text-brand-700">
-              <FeatherIcon :name="uploading ? 'loader' : 'camera'" class="h-5 w-5" :class="uploading ? 'animate-spin' : ''" />
-              <span class="text-xs font-medium">{{ uploading ? 'Uploading…' : 'Add photo' }}</span>
-              <input type="file" accept="image/jpeg,image/png" capture="environment" class="sr-only" :disabled="busy" @change="upload" />
-            </label>
+            <PhotoButtons v-if="data.can_write" variant="tiles" multiple :busy="uploading" :disabled="busy" @photos="upload" @error="warn" />
           </div>
         </div>
 
@@ -235,9 +231,10 @@ import LabourCard from '@/components/ops/LabourCard.vue'
 import MetersCard from '@/components/ops/MetersCard.vue'
 import ServiceReportCard from '@/components/ops/ServiceReportCard.vue'
 import TimerCard from '@/components/ops/TimerCard.vue'
+import PhotoButtons from '@/components/ops/PhotoButtons.vue'
 import ProcedureSelect from '@/components/ops/ProcedureSelect.vue'
 import { ui } from '@/data/apps'
-import { api, loadMe, onRealtime, formatDate, fromNow, isOverdue, readFile, safeFile } from '@/data/ops'
+import { api, loadMe, onRealtime, formatDate, fromNow, isOverdue, safeFile } from '@/data/ops'
 
 const route = useRoute()
 const data = ref(null)
@@ -348,12 +345,12 @@ function answer(step, payload) {
 }
 const comment = (content) => run(async () => set(await api('projectit.work_orders.add_comment', { name: wo.value.name, content })))
 
-async function upload(event) {
-  const file = event.target.files?.[0]
-  event.target.value = ''
-  if (!file) return
+async function upload(photos) {
   uploading.value = true
-  await run(async () => set(await api('projectit.work_orders.attach_photo', { name: wo.value.name, content: await readFile(file) }))).catch(() => {})
+  await run(async () => {
+    for (const p of photos) set(await api('projectit.work_orders.attach_photo', { name: wo.value.name, content: p.content }))
+  }).catch(() => {})
+  photos.forEach((p) => URL.revokeObjectURL(p.preview))
   uploading.value = false
 }
 

@@ -2,6 +2,11 @@
 
 Top-level messages are Comments on the channel; thread replies link to their root Comment
 through Comment.subject (unused by plain comments). New messages are pushed to each member's socket.io room.
+
+Photos are private Files attached to the channel, so only people who can read the channel can open them.
+The message keeps a [[photo:<File name>]] token per photo; readers get the text and the photo URLs separately.
+A message can be turned into a work order (work_orders.create_work_order with chat_message), which copies its
+photos to the job and posts a link back in the message's thread.
 """
 import hashlib
 import re
@@ -14,8 +19,24 @@ from frappe.utils import cint, get_datetime, now_datetime
 from projectit import links, ops
 
 SLUG = re.compile(r"[^a-z0-9_-]+")
+PHOTO = re.compile(r"\s*\[\[photo:([0-9A-Za-z]{6,40})\]\]")
+MAX_PHOTOS = 6
 MESSAGE_FIELDS = ["name", "content", "comment_type", "comment_email", "comment_by", "creation", "modified",
-    "subject"]
+    "subject", "reference_name"]
+
+
+def _split(content):
+    """(text, photo File names) of a stored message."""
+    return PHOTO.sub("", content or "").strip(), PHOTO.findall(content or "")
+
+
+def _photo_urls(channel, names):
+    """{File name: URL} for photos that really belong to this channel."""
+    names = list(dict.fromkeys(names or []))
+    if not names:
+        return {}
+    return dict(frappe.get_all("File", filters={"name": ["in", names], "attached_to_doctype": "Techy Channel",
+        "attached_to_name": channel}, fields=["name", "file_url"], as_list=True))
 
 
 def _members(channel):
@@ -171,6 +192,7 @@ def _messages(channel, thread=None, before=None, limit=50):
     rows = frappe.get_all("Comment", filters=filters, fields=MESSAGE_FIELDS, order_by="creation desc",
         limit_page_length=min(max(cint(limit), 1), 100) + 1)
     has_more, rows = len(rows) > limit, list(reversed(rows[:limit]))
+    urls = _photo_urls(channel, [n for row in rows for n in _split(row.content)[1]])
     replies = {}
     if rows and not thread:
         for root, total, last in frappe.db.sql("""SELECT subject, COUNT(*), MAX(creation) FROM `tabComment`
@@ -178,11 +200,15 @@ def _messages(channel, thread=None, before=None, limit=50):
                   AND subject IN %(roots)s GROUP BY subject""",
                 {"channel": channel, "roots": tuple(r.name for r in rows)}):
             replies[root] = {"count": total, "last": last}
-    return [_message(row, replies.get(row.name)) for row in rows], has_more
+    return [_message(row, replies.get(row.name), urls) for row in rows], has_more
 
 
-def _message(row, replies=None):
-    return {"name": row.name, "content": ops.plain(row.content), "system": row.comment_type == "Info",
+def _message(row, replies=None, urls=None):
+    text, names = _split(row.content)
+    if urls is None:
+        urls = _photo_urls(row.reference_name, names)
+    return {"name": row.name, "content": ops.plain(text), "system": row.comment_type == "Info",
+        "photos": [{"name": n, "url": urls[n]} for n in names if n in urls],
         "user": row.comment_email, "full_name": row.comment_by or frappe.utils.get_fullname(row.comment_email),
         "image": frappe.get_cached_value("User", row.comment_email, "user_image") if row.comment_email else None,
         "creation": row.creation, "edited": row.modified != row.creation, "thread": row.subject or None,
@@ -203,50 +229,67 @@ def get_messages(channel, thread=None, before=None, limit=50):
     return {"messages": messages, "has_more": has_more, "root": root}
 
 
+def _photos(value):
+    photos = frappe.parse_json(value) if isinstance(value, str) else (value or [])
+    if not isinstance(photos, list) or len(photos) > MAX_PHOTOS:
+        frappe.throw(_("Send at most {0} photos in one message.").format(MAX_PHOTOS))
+    return photos
+
+
 @frappe.whitelist(methods=["POST"])
-def post_message(channel, content, thread=None):
+def post_message(channel, content=None, thread=None, photos=None):
     doc = _channel(channel)
     if doc.archived:
         frappe.throw(_("This channel is archived."))
-    content = ops.text(content, "a message", 4000)
+    photos = _photos(photos)
+    content = PHOTO.sub("", ops.text(content, "a message", 4000, required=not photos)).strip()
+    if not content and not photos:
+        frappe.throw(_("Write a message or add a photo."))
     if thread and not frappe.db.exists("Comment", {"name": thread, "reference_doctype": "Techy Channel",
             "reference_name": doc.name, "subject": ["is", "not set"]}):
         frappe.throw(_("Thread not found."))
-    comment = _comment(doc, "Comment", content, thread)
+    # Membership was checked above; the files follow the channel's own permission.
+    files = [ops.save_photo("Techy Channel", doc.name, photo, "chat", ignore_permissions=True) for photo in photos]
+    comment = _comment(doc, "Comment", content, thread, photos=[f.name for f in files])
     members = [row.user for row in doc.members]
     _mark_read(doc.name)
     message = _message(frappe._dict(name=comment.name, content=comment.content, comment_type="Comment",
         comment_email=comment.comment_email, comment_by=comment.comment_by, creation=comment.creation,
-        modified=comment.creation, subject=thread))
+        modified=comment.creation, subject=thread), urls={f.name: f.file_url for f in files})
     ops.push(members, "techy_chat", {"channel": doc.name, "message": message})
     mentioned = ops.mentions(content, set(members))
     if doc.is_direct:
         mentioned = [u for u in members if u != frappe.session.user]
+    said = links.readable(content) or (_("sent a photo") if len(files) == 1 else _("sent {0} photos").format(len(files)))
     ops.notify(mentioned, _("{0} in {1}: {2}").format(frappe.utils.get_fullname(),
-        _("a direct message") if doc.is_direct else f"#{doc.channel_name}", links.readable(content)[:120]),
+        _("a direct message") if doc.is_direct else f"#{doc.channel_name}", said[:120]),
         "Techy Channel", doc.name, "Mention")
     return message
 
 
-def _comment(doc, comment_type, content, thread=None, by=None):
+def _comment(doc, comment_type, content, thread=None, by=None, photos=None):
     # Membership was checked by the caller; Comment's own permission follows the channel.
+    stored = "\n".join([escape(content)] + [f"[[photo:{name}]]" for name in photos or []]).strip()
     return frappe.get_doc({"doctype": "Comment", "comment_type": comment_type, "reference_doctype": doc.doctype,
-        "reference_name": doc.name, "content": escape(content), "comment_email": frappe.session.user,
+        "reference_name": doc.name, "content": stored, "comment_email": frappe.session.user,
         "comment_by": by or frappe.utils.get_fullname(), "subject": thread or None}).insert(ignore_permissions=True)
 
 
-def post_system_message(channel, content):
+def post_system_message(channel, content, thread=None):
     doc = frappe.get_doc("Techy Channel", channel)
-    comment = _comment(doc, "Info", content, by=_("Techy Ops"))
+    comment = _comment(doc, "Info", content, thread, by=_("Techy Ops"))
     ops.push([row.user for row in doc.members], "techy_chat", {"channel": doc.name, "message": _message(
         frappe._dict(name=comment.name, content=comment.content, comment_type="Info", comment_email=None,
-        comment_by=comment.comment_by, creation=comment.creation, modified=comment.creation, subject=None))})
+        comment_by=comment.comment_by, creation=comment.creation, modified=comment.creation, subject=thread),
+        urls={})})
 
 
 @frappe.whitelist(methods=["POST"])
 def edit_message(name, content):
     comment = _own_message(name)
-    comment.content = escape(ops.text(content, "a message", 4000))
+    names = _split(comment.content)[1]
+    text = PHOTO.sub("", ops.text(content, "a message", 4000, required=not names)).strip()
+    comment.content = "\n".join([escape(text)] + [f"[[photo:{n}]]" for n in names]).strip()  # photos stay
     comment.save(ignore_permissions=True)
     return {"name": comment.name}
 
@@ -254,11 +297,38 @@ def edit_message(name, content):
 @frappe.whitelist(methods=["POST"])
 def delete_message(name):
     comment = _own_message(name, allow_manager=True)
+    removed = [comment]
     for reply in frappe.get_all("Comment", filters={"subject": comment.name,
-            "reference_doctype": "Techy Channel"}, pluck="name"):
-        frappe.delete_doc("Comment", reply, ignore_permissions=True)
+            "reference_doctype": "Techy Channel"}, fields=["name", "content"]):
+        removed.append(reply)
+        frappe.delete_doc("Comment", reply.name, ignore_permissions=True)
     frappe.delete_doc("Comment", comment.name, ignore_permissions=True)
+    # Copies made for work orders are separate File records and stay with the job.
+    for photo in _photo_urls(comment.reference_name, [n for c in removed for n in _split(c.content)[1]]):
+        frappe.delete_doc("File", photo, ignore_permissions=True)
     return {"name": name}
+
+
+def message_source(name):
+    """A chat message someone wants to turn into a work order, after checking they can read its channel."""
+    row = frappe.db.get_value("Comment", name, MESSAGE_FIELDS + ["reference_doctype"], as_dict=True)
+    if not row or row.reference_doctype != "Techy Channel" or row.comment_type != "Comment":
+        frappe.throw(_("Message not found."))
+    _channel(row.reference_name, member=False)
+    return row
+
+
+def link_work_order(message, work_order):
+    """Copy the message's photos to the new work order and say so in the message's thread."""
+    for url in _photo_urls(message.reference_name, _split(message.content)[1]).values():
+        frappe.get_doc({"doctype": "File", "file_url": url, "is_private": 1, "attached_to_doctype": "Task",
+            "attached_to_name": work_order.name}).insert(ignore_permissions=True)
+    channel = frappe.get_doc("Techy Channel", message.reference_name)
+    where = _("a direct message") if channel.is_direct else f"#{channel.channel_name}"
+    work_order.add_comment("Info", escape(_("Created from a message by {0} in {1}").format(
+        message.comment_by or message.comment_email, where)))
+    post_system_message(channel.name, _("{0} created work order [[work-order:{1}]] from this message").format(
+        frappe.utils.get_fullname(), work_order.name), thread=message.subject or message.name)
 
 
 def _own_message(name, allow_manager=False):

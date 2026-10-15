@@ -178,7 +178,9 @@ def create(subject, description=None, priority="Medium", category="Corrective", 
 
 @frappe.whitelist(methods=["POST"])
 def create_work_order(subject, description=None, priority="Medium", category="Corrective", asset=None,
-        location=None, assignees=None, due_date=None, steps=None, project=None, procedure=None, equipment=None):
+        location=None, assignees=None, due_date=None, steps=None, project=None, procedure=None, equipment=None,
+        chat_message=None):
+    """chat_message: the chat message this job comes from; its photos are copied and its thread gets a link."""
     ops.system_user()
     if not frappe.has_permission("Task", "create"):
         frappe.throw(_("You are not permitted to create work orders."), frappe.PermissionError)
@@ -187,8 +189,13 @@ def create_work_order(subject, description=None, priority="Medium", category="Co
         frappe.throw(_("Only managers can assign work orders to other people."), frappe.PermissionError)
     if project:
         frappe.get_doc("Project", project).check_permission("read")
-    return {"name": create(subject, description, priority, category, asset, location, people, due_date,
-        steps, project, procedure=procedure, equipment=equipment).name}
+    from projectit import chat
+    message = chat.message_source(chat_message) if chat_message else None
+    doc = create(subject, description, priority, category, asset, location, people, due_date, steps, project,
+        procedure=procedure, equipment=equipment)
+    if message:
+        chat.link_work_order(message, doc)
+    return {"name": doc.name}
 
 
 @frappe.whitelist(methods=["POST"])

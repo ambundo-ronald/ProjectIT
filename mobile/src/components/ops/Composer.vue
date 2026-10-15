@@ -40,7 +40,15 @@
       </p>
     </div>
 
-    <div class="flex items-end gap-2 rounded-xl border border-gray-300 bg-white p-1.5 pl-3 shadow-sm transition focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20">
+    <div class="rounded-xl border border-gray-300 bg-white shadow-sm transition focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20">
+    <!-- photos waiting to be sent -->
+    <ul v-if="pending.length" class="flex gap-2 overflow-x-auto px-3 pt-3" aria-label="Photos to send">
+      <li v-for="(p, i) in pending" :key="p.preview" class="relative shrink-0">
+        <img :src="p.preview" :alt="`Photo ${i + 1}`" class="h-16 w-16 rounded-lg border border-gray-200 object-cover" />
+        <button type="button" class="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-gray-800 text-white shadow" :aria-label="`Remove photo ${i + 1}`" @click="unpick(i)"><FeatherIcon name="x" class="h-3 w-3" /></button>
+      </li>
+    </ul>
+    <div class="flex items-end gap-2 p-1.5 pl-3">
       <textarea
         ref="input"
         v-model="text"
@@ -56,13 +64,16 @@
         @blur="trigger = null"
       />
       <slot name="actions" />
+      <PhotoButtons v-if="photos" variant="icons" multiple :max="MAX_PHOTOS - pending.length" :disabled="disabled || pending.length >= MAX_PHOTOS" @photos="addPhotos" @error="(e) => (photoError = e)" />
       <button type="button" :disabled="disabled" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-800" aria-label="Link a task, work order, project, asset or request" title="Link a record ( / or $ )" @mousedown.prevent="startLink">
         <FeatherIcon name="link-2" class="h-4 w-4" />
       </button>
-      <button :disabled="disabled || busy || !text.trim()" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white transition hover:bg-brand-700 disabled:bg-gray-200 disabled:text-gray-400" aria-label="Send">
-        <FeatherIcon name="send" class="h-4 w-4" />
+      <button :disabled="disabled || busy || (!text.trim() && !pending.length)" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white transition hover:bg-brand-700 disabled:bg-gray-200 disabled:text-gray-400" aria-label="Send">
+        <FeatherIcon :name="busy ? 'loader' : 'send'" class="h-4 w-4" :class="busy ? 'animate-spin' : ''" />
       </button>
     </div>
+    </div>
+    <p v-if="photoError" role="alert" class="mt-1.5 text-xs text-red-600">{{ photoError }}</p>
     <p class="mt-1.5 hidden text-[11px] text-gray-400 sm:block">
       <kbd class="font-sans font-semibold">Enter</kbd> to send · <kbd class="font-sans font-semibold">Shift + Enter</kbd> new line · <kbd class="font-sans font-semibold">@</kbd> mention · <kbd class="font-sans font-semibold">/</kbd> task · <kbd class="font-sans font-semibold">$</kbd> project
     </p>
@@ -72,14 +83,19 @@
 import { ref, computed, nextTick, watch } from 'vue'
 import { FeatherIcon } from 'frappe-ui'
 import UserAvatar from './UserAvatar.vue'
+import PhotoButtons from './PhotoButtons.vue'
 import { LINK_KINDS, KIND, KEYWORDS, linkToken, searchLinks } from '@/data/links'
 
 const props = defineProps({
   people: { type: Array, default: () => [] }, // [{ user, full_name, image }]
   placeholder: { type: String, default: 'Write a message' },
   disabled: Boolean,
-  submit: Function, // async (text) => void
+  submit: Function, // async (text, photos) => void; photos are base64 JPEGs when `photos` is on
+  photos: Boolean, // offer Camera and Photos buttons
 })
+const MAX_PHOTOS = 6
+const pending = ref([]) // [{ content, preview }]
+const photoError = ref('')
 const text = ref('')
 const busy = ref(false)
 const input = ref(null)
@@ -233,13 +249,27 @@ function onKey(event) {
   }
 }
 
+function addPhotos(list) {
+  photoError.value = ''
+  pending.value = [...pending.value, ...list].slice(0, MAX_PHOTOS)
+  nextTick(() => input.value?.focus())
+}
+function unpick(i) {
+  URL.revokeObjectURL(pending.value[i].preview)
+  pending.value = pending.value.filter((_, j) => j !== i)
+}
+
 async function send() {
   const value = text.value.trim()
-  if (!value || busy.value) return
+  if ((!value && !pending.value.length) || busy.value) return
   busy.value = true
+  photoError.value = ''
   try {
-    await props.submit(value)
+    if (props.photos) await props.submit(value, pending.value.map((p) => p.content))
+    else await props.submit(value)
     text.value = ''
+    pending.value.forEach((p) => URL.revokeObjectURL(p.preview))
+    pending.value = []
     trigger.value = null
     nextTick(() => {
       if (input.value) input.value.style.height = 'auto'
