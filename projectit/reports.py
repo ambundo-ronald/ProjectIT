@@ -11,11 +11,11 @@ their recorded labour hours, shared between the assignees.
 
 Jobs completed before start and finish times were recorded fall back to their last-modified time.
 """
-from collections import defaultdict
+from collections import Counter, defaultdict
 
 import frappe
 from frappe import _
-from frappe.utils import add_days, add_months, cint, flt, get_datetime, getdate, nowdate
+from frappe.utils import add_days, add_months, cint, flt, get_datetime, getdate, now_datetime, nowdate
 
 from projectit import billing, contracts, ops, timer
 
@@ -23,7 +23,8 @@ PERIODS = (7, 30, 90, 365)
 JOB_FIELDS = ["name", "subject", "status", "creation", "modified", "exp_end_date", "custom_work_category",
     "custom_equipment", "custom_asset", "custom_customer", "custom_service_contract", "custom_started_at",
     "custom_completed_at", "custom_labour_hours", "custom_labour_billing", "custom_labour_mode", "custom_labour_rate",
-    "custom_flat_fee", "custom_sales_invoice"]
+    "custom_flat_fee", "custom_sales_invoice", "custom_problem_code", "custom_cause_code", "custom_machine_down",
+    "custom_down_from", "custom_down_to"]
 OPEN = ("Completed", "Cancelled")
 
 
@@ -81,6 +82,9 @@ def _jobs(start):
     names |= set(frappe.get_all("Task", filters={**base, "creation": [">=", start]}, pluck="name", limit_page_length=0))
     names |= set(frappe.get_all("Task", filters={**base, "modified": [">=", start]}, pluck="name", limit_page_length=0))
     names |= set(frappe.get_all("Task", filters={**base, "exp_end_date": [">=", start]}, pluck="name", limit_page_length=0))
+    # Machines that were down during the period, however old the job.
+    names |= set(frappe.get_all("Task", filters={**base, "custom_machine_down": 1}, or_filters=[
+        ["custom_down_to", ">=", start], ["custom_down_to", "is", "not set"]], pluck="name", limit_page_length=0))
     if not names:
         return []
     return frappe.get_all("Task", filters={"name": ["in", list(names)]}, fields=JOB_FIELDS, limit_page_length=0)
@@ -191,6 +195,61 @@ def repeat_failures(jobs, start, end):
     return result
 
 
+def failure_counts(jobs, start, end):
+    """The problem and cause codes on jobs completed in the period, most common first."""
+    done = [j for j in jobs if j.status == "Completed" and _in(completed_at(j), start, end)]
+    used = {j.get(f) for j in done for f in ("custom_problem_code", "custom_cause_code") if j.get(f)}
+    titles = dict(frappe.get_all("Techy Failure Code", filters={"name": ["in", list(used)]}, fields=["name", "title"],
+        as_list=True)) if used else {}
+    result = {}
+    for key, field in (("problems", "custom_problem_code"), ("causes", "custom_cause_code")):
+        counts = Counter(j.get(field) for j in done if j.get(field))
+        result[key] = [{"code": code, "title": titles.get(code, code), "jobs": n} for code, n in counts.most_common(8)]
+    repairs = [j for j in done if j.custom_work_category == "Corrective"]
+    result.update(repairs=len(repairs), coded=sum(1 for j in repairs if j.get("custom_problem_code")))
+    return result
+
+
+def downtime(jobs, start, end):
+    """Hours each machine was down within the period, its stoppages, time to repair and availability."""
+    period_start = get_datetime(getdate(start))
+    period_end = min(get_datetime(f"{getdate(end)} 23:59:59"), now_datetime())
+    period_hours = max((period_end - period_start).total_seconds() / 3600, 1)
+    rows = defaultdict(lambda: {"hours": 0.0, "stops": 0, "repairs": [], "down_now": False})
+    for job in jobs:
+        if not job.get("custom_machine_down") or not job.get("custom_down_from"):
+            continue
+        key = ("equipment", job.custom_equipment) if job.custom_equipment else ("asset", job.custom_asset) if job.custom_asset else None
+        down_from = get_datetime(job.custom_down_from)
+        back = get_datetime(job.custom_down_to) if job.get("custom_down_to") else now_datetime()
+        overlap = (min(back, period_end) - max(down_from, period_start)).total_seconds() / 3600
+        if not key or overlap <= 0:
+            continue
+        row = rows[key]
+        row["hours"] += overlap
+        row["stops"] += 1
+        if job.get("custom_down_to"):
+            row["repairs"].append((back - down_from).total_seconds() / 3600)
+        else:
+            row["down_now"] = True
+    top = sorted(rows.items(), key=lambda kv: -kv[1]["hours"])
+    from projectit.equipment import labels
+    machines = labels(k[1] for k, _v in top if k[0] == "equipment")
+    assets = ops.asset_names(k[1] for k, _v in top if k[0] == "asset")
+    result = []
+    for (kind, name), row in top[:10]:
+        label = machines.get(name) or {}
+        result.append({"kind": kind, "name": name, "hours": round(row["hours"], 1), "stops": row["stops"],
+            "mttr": average(row["repairs"]), "down_now": row["down_now"],
+            "availability": round(max(0.0, 100 * (1 - row["hours"] / period_hours)), 1),
+            "label": label.get("equipment_name") if kind == "equipment" else assets.get(name) or name,
+            "where": _where(label) if kind == "equipment" else _("Our equipment")})
+    repairs = [h for row in rows.values() for h in row["repairs"]]
+    return {"machines": result, "hours": round(sum(r["hours"] for r in rows.values()), 1),
+        "stops": sum(r["stops"] for r in rows.values()), "mttr": average(repairs),
+        "down_now": sum(1 for r in rows.values() if r["down_now"])}
+
+
 def _where(label):
     customer, site = label.get("customer_name"), label.get("site")
     if site and customer and customer in site:
@@ -275,4 +334,6 @@ def dashboard(days=30):
         "machines": repeat_failures(jobs, start, end),
         "requests": request_summary(start, end),
         "contracts": contract_profit(start, end, jobs, logged),
+        "failures": failure_counts(jobs, start, end),
+        "downtime": downtime(jobs, start, end),
     }

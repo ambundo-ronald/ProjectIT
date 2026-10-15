@@ -18,7 +18,9 @@
   "labour_cost_rate",
   "reports_section",
   "service_report_auto_email",
-  "service_report_footer"
+  "service_report_footer",
+  "failure_section",
+  "require_failure_codes"
  ],
  "fields": [
   {
@@ -113,12 +115,24 @@
    "fieldtype": "Small Text",
    "label": "Service Report Footer",
    "description": "Printed at the bottom of every report, for example warranty terms or a thank-you note."
+  },
+  {
+   "fieldname": "failure_section",
+   "fieldtype": "Section Break",
+   "label": "Failure Codes"
+  },
+  {
+   "fieldname": "require_failure_codes",
+   "fieldtype": "Check",
+   "default": "0",
+   "label": "Require Problem and Cause Codes to Complete a Repair",
+   "description": "Corrective jobs on a machine (customer equipment or our assets) cannot be completed until the technician chooses a problem and a cause code. Keeps the failure reports complete."
   }
  ],
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-15 12:00:00.000000",
+ "modified": "2026-10-15 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Techy Ops Settings",

@@ -189,6 +189,23 @@ The **Time on job** card on each work order has a **Start timer** button.
 - **Reports** use the logged time per person for technician hours and for the labour cost of contracts. Jobs without timer entries fall back to the typed hours, shared between the assignees.
 - **In ERPNext:** every entry is a *Techy Time Log* (job, technician, start, stop, hours, timer or added by hand). Managers can read and export them.
 
+## Failure codes and downtime
+
+The **Failure & downtime** card on repairs and on jobs for a machine records what went wrong and how long the machine was out of service.
+
+- **Codes.** Pick a **Problem** (what was wrong), a **Cause** (why) and a **Remedy** (what fixed it).
+  - Managers keep the lists under **Reports › Failure codes**. **Add common water-treatment codes** fills an empty list with codes such as Leak, Membrane fouling or scaling, and Replaced part.
+  - Managers can add codes or disable old ones. Jobs that already use a disabled code keep it.
+  - The codes are *Techy Failure Code* records in ERPNext.
+- **Required codes (optional).** Turn on *Techy Ops Settings › Require Problem and Cause Codes to Complete a Repair*. Corrective jobs on customer equipment or our assets then cannot be completed until both are chosen; the job points to the card.
+- **Downtime.** Tick **Machine is down** when creating a job for a machine, or **Machine was down** on the card.
+  - Downtime counts from that moment. Change **Down from** if the machine stopped earlier.
+  - Completing the job puts the machine back in service. Fill in **Back in service** (or press **Back in service now**) if it ran again before the job was closed.
+- **Reports** show:
+  - **Downtime:** total hours down, stoppages and average time to repair, plus each machine's hours down, its availability for the period, and a *Down now* flag;
+  - **Failures:** the most common problems and causes, and how many repairs were coded.
+  - A stoppage that started before the period counts only its hours inside it.
+
 ## Meter readings
 
 Customer equipment and our own Assets can have **meters**. Managers add them on the machine page with **Add meter**. Presets cover common RO meters: running hours, product water, permeate TDS, feed pressure and filter pressure drop.

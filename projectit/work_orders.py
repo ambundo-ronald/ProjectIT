@@ -9,7 +9,7 @@ import frappe
 from frappe import _
 from frappe.utils import cint, getdate, now_datetime, nowdate
 
-from projectit import billing, equipment as installed, meters, ops, parts, procedures, service_report, timer
+from projectit import billing, equipment as installed, failures, meters, ops, parts, procedures, service_report, timer
 
 FIELDS = ["name", "subject", "status", "priority", "exp_end_date", "custom_work_category", "custom_asset",
     "custom_location", "custom_equipment", "custom_customer", "project", "is_group", "progress", "owner", "creation",
@@ -114,6 +114,7 @@ def detail(doc):
         "billing": billing.summary(doc, can_write),
         "meters": meters.for_machine(doc.custom_equipment, None if doc.custom_equipment else doc.custom_asset),
         "report": service_report.summary(doc, can_write), "timer": timer.summary(doc, can_write),
+        "failure": failures.summary(doc, can_write),
         "pm_log": doc.custom_asset_maintenance_log, "workflow": _workflow(), "can_write": can_write,
         "manager": ops.manager()}
 
@@ -127,8 +128,8 @@ def _steps(value):
 
 def create(subject, description=None, priority="Medium", category="Corrective", asset=None, location=None,
         assignees=None, due_date=None, steps=None, project=None, request=None, pm_log=None, procedure=None,
-        ignore_permissions=False, equipment=None, service_contract=None):
-    """Create a work order; callers have already authorised the action."""
+        ignore_permissions=False, equipment=None, service_contract=None, machine_down=False):
+    """Create a work order; callers have already authorised the action. `machine_down` starts its downtime now."""
     from frappe.desk.form.assign_to import add
     subject = ops.text(subject, "a title", 140)
     description = ops.text(description, "a description", 4000, required=False)
@@ -160,7 +161,9 @@ def create(subject, description=None, priority="Medium", category="Corrective", 
             "custom_equipment": equipment or None, "custom_customer": customer,
             "custom_service_contract": service_contract if not parent else None,
             "custom_work_request": request if not parent else None,
-            "custom_asset_maintenance_log": pm_log if not parent else None})
+            "custom_asset_maintenance_log": pm_log if not parent else None,
+            "custom_machine_down": int(bool(machine_down) and not parent),
+            "custom_down_from": now_datetime() if machine_down and not parent else None})
         doc.insert(ignore_permissions=ignore_permissions)
         if assignees:
             add({"doctype": "Task", "name": doc.name, "assign_to": assignees, "description": title})
@@ -179,7 +182,7 @@ def create(subject, description=None, priority="Medium", category="Corrective", 
 @frappe.whitelist(methods=["POST"])
 def create_work_order(subject, description=None, priority="Medium", category="Corrective", asset=None,
         location=None, assignees=None, due_date=None, steps=None, project=None, procedure=None, equipment=None,
-        chat_message=None):
+        chat_message=None, machine_down=0):
     """chat_message: the chat message this job comes from; its photos are copied and its thread gets a link."""
     ops.system_user()
     if not frappe.has_permission("Task", "create"):
@@ -192,7 +195,7 @@ def create_work_order(subject, description=None, priority="Medium", category="Co
     from projectit import chat
     message = chat.message_source(chat_message) if chat_message else None
     doc = create(subject, description, priority, category, asset, location, people, due_date, steps, project,
-        procedure=procedure, equipment=equipment)
+        procedure=procedure, equipment=equipment, machine_down=cint(machine_down) and bool(asset or equipment))
     if message:
         chat.link_work_order(message, doc)
     return {"name": doc.name}
@@ -325,6 +328,7 @@ def validate_task(doc, method=None):
         if missing:
             frappe.throw(_("Finish the procedure first: {0} required step(s) still need an answer.").format(missing))
         parts.check_open(doc.name)
+        failures.on_complete(doc)
     if not doc.get("custom_asset_maintenance_log"):
         return
     if frappe.db.get_value("Asset Maintenance Log", doc.custom_asset_maintenance_log, "has_certificate") \

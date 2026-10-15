@@ -90,6 +90,7 @@
           </div>
         </div>
 
+        <FailureCard v-if="data.failure && (data.failure.has_machine || data.failure.problem || data.failure.required || ['Corrective', 'Inspection', 'Safety'].includes(wo.custom_work_category))" :failure="data.failure" :work-order="wo.name" @updated="set" @error="warn" />
         <PartsCard v-if="data.parts && (data.parts.rows.length || data.parts.can_edit)" :parts="data.parts" :work-order="wo.name" @updated="set" @error="warn" @reload="load" />
         <LabourCard v-if="data.billing?.customer" :billing="data.billing" :logged="data.timer?.total || 0" :work-order="wo.name" @updated="set" @error="warn" />
         <ServiceReportCard v-if="data.report" :report="data.report" :work-order="wo.name" @updated="set" @error="warn" />
@@ -231,6 +232,7 @@ import LabourCard from '@/components/ops/LabourCard.vue'
 import MetersCard from '@/components/ops/MetersCard.vue'
 import ServiceReportCard from '@/components/ops/ServiceReportCard.vue'
 import TimerCard from '@/components/ops/TimerCard.vue'
+import FailureCard from '@/components/ops/FailureCard.vue'
 import PhotoButtons from '@/components/ops/PhotoButtons.vue'
 import ProcedureSelect from '@/components/ops/ProcedureSelect.vue'
 import { ui } from '@/data/apps'
@@ -308,6 +310,11 @@ function setStatus(status) {
     warn(`Finish the procedure first: ${procedure.missing} required step${procedure.missing === 1 ? '' : 's'} still need${procedure.missing === 1 ? 's' : ''} an answer.`)
     highlight.value = first?.name || ''
     document.getElementById(`step-${first?.name}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    return
+  }
+  if (status === 'Completed' && data.value.failure?.missing?.length) {
+    warn(`Choose the ${data.value.failure.missing.map((k) => k.toLowerCase()).join(' and ')} code before completing this repair.`)
+    document.getElementById('failure')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     return
   }
   update({ status })

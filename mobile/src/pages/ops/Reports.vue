@@ -1,6 +1,8 @@
 <template>
   <section class="mx-auto max-w-6xl space-y-5 p-4 md:p-8">
-    <PageHeader title="Reports" subtitle="How the maintenance work is going and whether service contracts pay." />
+    <PageHeader title="Reports" subtitle="How the maintenance work is going and whether service contracts pay.">
+      <button class="btn btn-secondary" @click="openCodes"><FeatherIcon name="tag" class="h-4 w-4" /><span class="hidden sm:inline">Failure codes</span></button>
+    </PageHeader>
     <div class="flex flex-wrap items-center justify-between gap-2">
       <div class="segmented" role="group" aria-label="Period">
         <button v-for="p in PERIODS" :key="p.days" :aria-pressed="days === p.days" :disabled="busy" @click="days = p.days; load()">{{ p.label }}</button>
@@ -95,6 +97,41 @@
         </div>
       </div>
 
+      <div class="grid gap-5 lg:grid-cols-2">
+        <div class="card overflow-hidden">
+          <div class="card-header"><h2 class="card-title">Downtime</h2><span class="text-xs text-gray-500">Machines marked down on jobs</span></div>
+          <div class="grid grid-cols-3 divide-x divide-gray-100 border-b border-gray-100 text-center">
+            <div class="p-3"><p class="text-lg font-semibold tabular-nums">{{ duration(r.downtime.hours) }}</p><p class="text-xs text-gray-500">Total down</p></div>
+            <div class="p-3"><p class="text-lg font-semibold tabular-nums">{{ r.downtime.stops }}</p><p class="text-xs text-gray-500">Stoppages</p></div>
+            <div class="p-3"><p class="text-lg font-semibold tabular-nums">{{ duration(r.downtime.mttr) }}</p><p class="text-xs text-gray-500">Avg time to repair</p></div>
+          </div>
+          <ul class="divide-y divide-gray-100">
+            <li v-for="m in r.downtime.machines" :key="m.name">
+              <router-link :to="m.kind === 'equipment' ? { name: 'OpsEquipmentDetail', params: { name: m.name } } : { name: 'OpsAsset', params: { name: m.name } }" class="flex items-center gap-3 px-5 py-3 hover:bg-gray-50">
+                <span class="min-w-0 flex-1"><span class="block truncate font-medium">{{ m.label }}<span v-if="m.down_now" class="ml-2 rounded bg-red-50 px-1.5 text-[11px] font-semibold text-red-700">Down now</span></span><span class="block truncate text-xs text-gray-500">{{ m.where }} · {{ m.stops }} stoppage{{ m.stops === 1 ? '' : 's' }}</span></span>
+                <span class="shrink-0 text-right text-xs"><span class="block font-semibold tabular-nums text-gray-900">{{ duration(m.hours) }} down</span><span class="block tabular-nums" :class="m.availability < 95 ? 'text-red-600' : 'text-gray-500'">{{ m.availability }}% available</span></span>
+              </router-link>
+            </li>
+            <li v-if="!r.downtime.machines.length" class="px-5 py-3 text-sm text-gray-500">No machine downtime recorded in this period.</li>
+          </ul>
+        </div>
+        <div class="card overflow-hidden">
+          <div class="card-header"><h2 class="card-title">Failures</h2><span class="text-xs text-gray-500">{{ r.failures.repairs ? `${r.failures.coded} of ${r.failures.repairs} repairs coded` : 'Codes on completed jobs' }}</span></div>
+          <div class="grid gap-5 p-5 sm:grid-cols-2">
+            <div v-for="g in [{ key: 'problems', label: 'Top problems', bar: 'bg-red-400' }, { key: 'causes', label: 'Top causes', bar: 'bg-amber-400' }]" :key="g.key">
+              <p class="section-label mb-2">{{ g.label }}</p>
+              <ul class="space-y-2">
+                <li v-for="c in r.failures[g.key]" :key="c.code" class="text-sm">
+                  <div class="flex justify-between gap-2"><span class="truncate">{{ c.title }}</span><span class="tabular-nums text-gray-600">{{ c.jobs }}</span></div>
+                  <div class="mt-1 h-1.5 rounded-full bg-gray-100"><div class="h-1.5 rounded-full" :class="g.bar" :style="{ width: `${(100 * c.jobs) / r.failures[g.key][0].jobs}%` }" /></div>
+                </li>
+                <li v-if="!r.failures[g.key].length" class="text-sm text-gray-500">None recorded.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="card overflow-hidden">
         <div class="card-header"><h2 class="card-title">Machines with the most repairs</h2><span class="text-xs text-gray-500">Repeat breakdowns are worth a closer look</span></div>
         <ul class="divide-y divide-gray-100">
@@ -134,11 +171,36 @@
         <p class="border-t border-gray-100 px-5 py-3 text-xs text-gray-500">Money in is the contract's submitted subscription invoices plus submitted invoices for extra work on its machines. Money out is the parts issued at stock cost plus labour hours at your cost per hour.</p>
       </div>
     </template>
+    <Modal v-model="showCodes" title="Failure codes" subtitle="Technicians pick these on jobs: what was wrong, why, and what fixed it." size="lg">
+      <div v-if="!codesLoading && !allCodes.length" class="rounded-lg border border-dashed border-gray-300 p-4 text-center text-sm text-gray-600">
+        No codes yet.
+        <button class="btn btn-secondary btn-sm mt-2" :disabled="savingCode" @click="addDefaults">Add common water-treatment codes</button>
+      </div>
+      <div v-for="k in ['Problem', 'Cause', 'Remedy']" v-else :key="k" class="mb-4">
+        <p class="section-label mb-1">{{ k === 'Problem' ? 'Problems' : k === 'Cause' ? 'Causes' : 'Remedies' }}</p>
+        <ul class="divide-y divide-gray-100 rounded-lg border border-gray-200">
+          <li v-for="c in codes[k]" :key="c.code" class="flex items-center gap-3 px-3 py-2 text-sm" :class="c.disabled ? 'text-gray-400' : ''">
+            <span class="w-32 shrink-0 truncate font-mono text-xs">{{ c.code }}</span>
+            <span class="min-w-0 flex-1 truncate">{{ c.title }}</span>
+            <button class="btn btn-ghost btn-sm" :disabled="savingCode" @click="saveCode({ ...c, disabled: c.disabled ? 0 : 1 })">{{ c.disabled ? 'Enable' : 'Disable' }}</button>
+          </li>
+        </ul>
+      </div>
+      <form class="mt-2 grid gap-2 border-t border-gray-100 pt-4 sm:grid-cols-[8rem_1fr_7rem_auto]" @submit.prevent="saveCode({ ...newCode, disabled: 0 })">
+        <input v-model="newCode.code" required maxlength="40" class="input font-mono uppercase" placeholder="CODE" aria-label="New code" />
+        <input v-model="newCode.title" required maxlength="140" class="input" placeholder="Title, e.g. Pump seal leaking" aria-label="New code title" />
+        <select v-model="newCode.kind" class="input" aria-label="New code kind"><option>Problem</option><option>Cause</option><option>Remedy</option></select>
+        <button class="btn btn-primary" :disabled="savingCode">Add</button>
+      </form>
+      <p v-if="codeError" role="alert" class="mt-2 text-sm text-red-600">{{ codeError }}</p>
+    </Modal>
   </section>
 </template>
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { FeatherIcon } from 'frappe-ui'
 import PageHeader from '@/components/ops/PageHeader.vue'
+import Modal from '@/components/ops/Modal.vue'
 import UserAvatar from '@/components/ops/UserAvatar.vue'
 import { api, formatDate } from '@/data/ops'
 
@@ -202,6 +264,45 @@ const requestStats = computed(() => [
   { label: 'Declined', value: r.value.requests.declined },
   { label: 'Waiting', value: r.value.requests.pending },
 ])
+
+// Failure codes ----------------------------------------------------------------------------------------------
+const showCodes = ref(false)
+const codes = reactive({ Problem: [], Cause: [], Remedy: [] })
+const allCodes = computed(() => [...codes.Problem, ...codes.Cause, ...codes.Remedy])
+const codesLoading = ref(false)
+const savingCode = ref(false)
+const codeError = ref('')
+const newCode = reactive({ code: '', title: '', kind: 'Problem' })
+async function openCodes() {
+  showCodes.value = true
+  codesLoading.value = true
+  try {
+    Object.assign(codes, await api('projectit.failures.options', { include_disabled: 1 }))
+  } catch (e) {
+    codeError.value = e.message
+  } finally {
+    codesLoading.value = false
+  }
+}
+async function codeCall(method, args = {}) {
+  savingCode.value = true
+  codeError.value = ''
+  try {
+    Object.assign(codes, await api(method, args))
+    return true
+  } catch (e) {
+    codeError.value = e.message
+    return false
+  } finally {
+    savingCode.value = false
+  }
+}
+const addDefaults = () => codeCall('projectit.failures.add_defaults')
+async function saveCode(c) {
+  if (await codeCall('projectit.failures.save_code', { code: c.code, title: c.title, kind: c.kind, description: c.description || null, disabled: c.disabled })) {
+    if (c === newCode || c.code === newCode.code) Object.assign(newCode, { code: '', title: '' })
+  }
+}
 
 async function load() {
   busy.value = true

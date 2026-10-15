@@ -100,6 +100,10 @@
             <span class="label">Our asset</span>
             <AssetPicker v-model="form.asset" :label="assetLabel" @picked="onAsset" />
           </div>
+          <label v-if="form.equipment || form.asset" class="flex items-center gap-2.5 rounded-lg border border-gray-200 px-3 py-2.5 text-sm">
+            <input v-model="form.machine_down" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-red-600" />
+            <span><span class="font-medium">Machine is down</span><span class="block text-xs text-gray-500">Downtime is counted from now until the job is completed.</span></span>
+          </label>
           <div v-if="!form.asset && !form.equipment">
             <label class="label" for="wo-location">Location</label>
             <select id="wo-location" v-model="form.location" class="input">
@@ -153,7 +157,7 @@ const priorities = [
   { value: 'Urgent', icon: 'alert-triangle', active: 'border-red-400 bg-red-50 text-red-700' },
 ]
 const options = reactive({ projects: [], locations: [] })
-const blank = () => ({ subject: '', description: '', priority: 'Medium', category: 'Corrective', due_date: '', asset: '', equipment: '', location: '', assignees: [], project: '', procedure: '' })
+const blank = () => ({ subject: '', description: '', priority: 'Medium', category: 'Corrective', due_date: '', asset: '', equipment: '', location: '', assignees: [], project: '', procedure: '', machine_down: false })
 const form = reactive(blank())
 const steps = ref([])
 const assignSelf = ref(true)
@@ -215,7 +219,7 @@ async function save() {
     const common = { priority: form.priority, category: form.category, due_date: form.due_date || null, assignees, project: form.project || null, procedure: form.procedure || null, steps: steps.value.map((s) => s.trim()).filter(Boolean) }
     const result = props.request
       ? await api('projectit.work_requests.approve_request', { name: props.request.name, ...common })
-      : await api('projectit.work_orders.create_work_order', { ...common, subject: form.subject, description: form.description, asset: form.equipment ? null : form.asset || null, equipment: form.equipment || null, location: form.asset || form.equipment ? null : form.location || null, chat_message: props.message?.name || null })
+      : await api('projectit.work_orders.create_work_order', { ...common, subject: form.subject, description: form.description, asset: form.equipment ? null : form.asset || null, equipment: form.equipment || null, location: form.asset || form.equipment ? null : form.location || null, chat_message: props.message?.name || null, machine_down: form.machine_down && (form.equipment || form.asset) ? 1 : 0 })
     emit('saved', result)
     emit('update:modelValue', false)
   } catch (e) {
