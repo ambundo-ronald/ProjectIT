@@ -9,7 +9,7 @@ import frappe
 from frappe import _
 from frappe.utils import cint, getdate, now_datetime, nowdate
 
-from projectit import billing, equipment as installed, meters, ops, parts, procedures
+from projectit import billing, equipment as installed, meters, ops, parts, procedures, service_report
 
 FIELDS = ["name", "subject", "status", "priority", "exp_end_date", "custom_work_category", "custom_asset",
     "custom_location", "custom_equipment", "custom_customer", "project", "is_group", "progress", "owner", "creation",
@@ -85,7 +85,11 @@ def list_work_orders(scope="mine", status=None, asset=None, location=None, searc
 
 @frappe.whitelist()
 def get_work_order(name):
-    doc = _work_order(name)
+    return detail(_work_order(name))
+
+
+def detail(doc):
+    """A work order's page data; callers have checked access (get_work_order, or an authorised report)."""
     steps = frappe.get_all("Task", filters={"parent_task": doc.name, "is_template": 0},
         fields=["name", "subject", "status", "modified"], order_by="creation asc", limit_page_length=0)
     # Comments and files are read only after the Task permission check above.
@@ -109,6 +113,7 @@ def get_work_order(name):
         "parts": parts.summary(doc.name, can_write and doc.status not in ("Completed", "Cancelled")),
         "billing": billing.summary(doc, can_write),
         "meters": meters.for_machine(doc.custom_equipment, None if doc.custom_equipment else doc.custom_asset),
+        "report": service_report.summary(doc, can_write),
         "pm_log": doc.custom_asset_maintenance_log, "workflow": _workflow(), "can_write": can_write,
         "manager": ops.manager()}
 
@@ -332,6 +337,7 @@ def on_task_update(doc, method=None):
         complete_log(doc)
     if doc.get("custom_equipment") and doc.custom_work_category == "Installation":
         installed.complete_installation(doc)
+    service_report.on_completed(doc)
     if doc.custom_work_request:
         request = frappe.get_doc("Issue", doc.custom_work_request)
         if request.status not in ("Resolved", "Closed"):

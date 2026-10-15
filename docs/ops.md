@@ -199,6 +199,32 @@ Customer equipment and our own Assets can have **meters**. Managers add them on 
 
 The records are *Techy Meter* (with its *Techy Meter Trigger* rows), *Techy Meter Reading* and, on Items, *Techy Meter Template*. All are visible in ERPNext Desk.
 
+## Service reports
+
+Every job has a **Service report** card. It produces a PDF for the customer.
+
+- **Contents:**
+  - the company's default ERPNext letter head;
+  - customer, site and equipment, with serial number and warranty or contract cover;
+  - when the job was reported, started and completed, and the technicians;
+  - the reported problem and the **Work done** summary;
+  - checklist steps, and procedure answers with readings and out-of-range results;
+  - meter readings taken on the visit;
+  - parts fitted, showing whether each was covered or chargeable (prices stay on the invoice);
+  - labour hours;
+  - up to 8 photos;
+  - the customer's signature (the procedure's Signature step);
+  - the next service: the next contract visit, and meter services with their estimated date;
+  - the footer from *Techy Ops Settings › Service Report Footer*.
+- **Work done:** the technician (or a manager) writes what was found and done in plain words. It can be written or corrected after the job is completed.
+- **Preview PDF** opens the report. Anyone who can open the job can preview it.
+- **Email to customer:**
+  - The report is sent through ERPNext with the PDF attached. It is logged on the job's timeline in Desk, and the card shows when and to whom it was last sent.
+  - Technicians on the job can send only to the customer's addresses on file: the customer's email and its contacts' emails. Managers can add other addresses.
+  - Emails need an outgoing *Email Account* in ERPNext.
+- **Automatic email:** tick *Techy Ops Settings › Email the Service Report when a Customer Job is Completed* to send it to the customer's first address on file as soon as the job is completed. It is off by default.
+- **Invoices:** creating an invoice attaches each job's report PDF to the draft Sales Invoice.
+
 ## Reports
 
 Managers open **Reports** from the sidebar, or from the account menu on a phone. Choose a period: 7 days, 30 days, 90 days or 12 months. The headline figures are compared with the period before.

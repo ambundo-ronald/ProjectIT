@@ -218,8 +218,10 @@ def create_invoice(jobs):
     # Managers may lack Sales Invoice roles; the draft is reviewed and submitted by accounts in ERPNext.
     invoice.flags.ignore_permissions = True
     invoice.insert()
+    from projectit import service_report
     for task in tasks:
         frappe.db.set_value("Task", task.name, "custom_sales_invoice", invoice.name)
+        service_report.attach_to_invoice(invoice.name, task.name)
         task.add_comment("Info", escape(_("{0} created draft invoice {1}.").format(frappe.utils.get_fullname(),
             invoice.name)))
     return {"invoice": invoice.name, "grand_total": invoice.grand_total, "currency": invoice.currency}

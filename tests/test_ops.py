@@ -43,7 +43,7 @@ class OpsTestCase(unittest.TestCase):
         frappe.conf = SimpleNamespace(socketio_port=9000)
         frappe.get_roles = MagicMock(return_value=["Employee"])
         for name in ("get_doc", "get_list", "get_all", "has_permission", "get_cached_doc", "publish_realtime",
-                "delete_doc", "log_error", "set_user"):
+                "delete_doc", "log_error", "set_user", "enqueue"):
             setattr(frappe, name, MagicMock())
         frappe.get_cached_value = MagicMock(return_value="System User")
         frappe.get_cached_doc.return_value = SimpleNamespace(allow_guest_requests=0, pm_lead_days=3)
@@ -63,6 +63,8 @@ class OpsTestCase(unittest.TestCase):
         utils.add_days = lambda value, days: str(date.fromisoformat(str(value)) .__add__(__import__("datetime").timedelta(days=days)))
         utils.get_datetime = lambda value: datetime.fromisoformat(str(value))
         utils.now_datetime = lambda: datetime(2026, 10, 11, 9)
+        utils.format_date = lambda value, fmt=None: str(value)[:10] if value else ""
+        utils.format_datetime = lambda value, fmt=None: str(value)[:16] if value else ""
         utils.get_fullname = lambda user=None: (user or frappe.session.user).split("@")[0].title()
         utils.validate_email_address = lambda value, throw=False: value if "@" in value else fail("Invalid email")
         frappe.utils = utils

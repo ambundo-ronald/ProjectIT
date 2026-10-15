@@ -91,6 +91,7 @@
 
         <PartsCard v-if="data.parts && (data.parts.rows.length || data.parts.can_edit)" :parts="data.parts" :work-order="wo.name" @updated="set" @error="warn" @reload="load" />
         <LabourCard v-if="data.billing?.customer" :billing="data.billing" :work-order="wo.name" @updated="set" @error="warn" />
+        <ServiceReportCard v-if="data.report" :report="data.report" :work-order="wo.name" @updated="set" @error="warn" />
         <MetersCard v-if="data.meters?.length" :meters="data.meters" :work-order="wo.name" :can-record="data.can_write && !closed" @reload="load" />
 
         <!-- Quick checklist (child Tasks) -->
@@ -231,6 +232,7 @@ import CustomerSiteCard from '@/components/ops/CustomerSiteCard.vue'
 import PartsCard from '@/components/ops/PartsCard.vue'
 import LabourCard from '@/components/ops/LabourCard.vue'
 import MetersCard from '@/components/ops/MetersCard.vue'
+import ServiceReportCard from '@/components/ops/ServiceReportCard.vue'
 import ProcedureSelect from '@/components/ops/ProcedureSelect.vue'
 import { ui } from '@/data/apps'
 import { api, onRealtime, formatDate, fromNow, isOverdue, readFile, safeFile } from '@/data/ops'
