@@ -84,6 +84,16 @@ let listening = false
 export function listenForChat() {
   if (listening) return
   listening = true
+  onRealtime('techy_reminder', ({ name, channel, message, note }) => {
+    popups.value = [{ id: `reminder-${name}`, channel, message, where: 'Now', name: 'Reminder', body: note, sticky: true }, ...popups.value].slice(0, 3)
+    if (notify.enabled && document.visibilityState === 'hidden') {
+      try {
+        new Notification('Reminder', { body: note, tag: `techy-reminder-${name}`, icon: `${import.meta.env.BASE_URL}techy-app.svg` })
+      } catch (e) {
+        /* notifications need a service worker on some phones */
+      }
+    }
+  })
   onRealtime('techy_chat', async ({ channel, message }) => {
     let row = channels.value.find((c) => c.name === channel)
     if (!row) {

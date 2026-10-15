@@ -28,16 +28,30 @@
       <p v-else-if="!searching && searched" class="card px-4 py-6 text-center text-sm text-gray-500">No messages match “{{ searched }}” in the conversations you can open.</p>
     </div>
 
+    <div v-if="reminders.length && query.trim().length < 2">
+      <h2 class="section-label mb-2 px-1">Your reminders</h2>
+      <ul class="card divide-y divide-gray-100 overflow-hidden">
+        <li v-for="r in reminders" :key="r.name" class="flex items-center gap-3 px-4 py-3">
+          <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-700"><FeatherIcon name="clock" class="h-4 w-4" /></span>
+          <router-link :to="{ name: 'OpsChannel', params: { channel: r.channel }, query: { message: r.message } }" class="min-w-0 flex-1">
+            <span class="block truncate text-sm text-gray-900">{{ r.note }}</span>
+            <span class="block text-xs text-gray-500">{{ formatDate(r.remind_at) }} · {{ formatTime(r.remind_at) }} · {{ r.is_direct ? r.title : `#${r.title}` }}</span>
+          </router-link>
+          <button class="btn btn-ghost btn-sm text-gray-500" :aria-label="`Cancel reminder: ${r.note}`" @click="cancelReminder(r)">Cancel</button>
+        </li>
+      </ul>
+    </div>
+
     <div v-for="group in (query.trim().length >= 2 ? [] : groups)" :key="group.label">
       <h2 class="section-label mb-2 px-1">{{ group.label }}</h2>
       <ul class="card divide-y divide-gray-100 overflow-hidden">
         <li v-for="c in group.rows" :key="c.name">
           <router-link :to="{ name: 'OpsChannel', params: { channel: c.name } }" class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50">
-            <UserAvatar v-if="c.is_direct" :name="c.title" size="lg" />
+            <span v-if="c.is_direct" class="relative shrink-0"><UserAvatar :name="c.title" size="lg" /><PresenceDot :user="c.other" class="absolute -bottom-0.5 -right-0.5" /></span>
             <span v-else class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" :class="c.is_member ? 'bg-brand-50 text-brand-700' : 'bg-gray-100 text-gray-500'"><FeatherIcon :name="c.is_private ? 'lock' : 'hash'" class="h-4 w-4" /></span>
             <span class="min-w-0 flex-1">
               <span class="block truncate" :class="c.unread ? 'font-bold text-gray-900' : 'font-medium text-gray-800'">{{ c.title }}</span>
-              <span class="block truncate text-xs text-gray-500">{{ c.description || (c.is_direct ? 'Direct message' : c.is_private ? 'Private channel' : 'Public channel') }}</span>
+              <span class="block truncate text-xs text-gray-500">{{ c.is_direct ? statusLine(presence[c.other]) || (presence[c.other]?.online ? 'Online' : 'Direct message') : c.description || (c.is_private ? 'Private channel' : 'Public channel') }}</span>
             </span>
             <span v-if="c.unread" class="rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">{{ c.unread }}</span>
             <span v-else-if="!c.is_member" class="btn btn-secondary btn-sm pointer-events-none">Join</span>
@@ -95,7 +109,7 @@
   </section>
 </template>
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { FeatherIcon } from 'frappe-ui'
 import Modal from '@/components/ops/Modal.vue'
@@ -103,7 +117,9 @@ import PeoplePicker from '@/components/ops/PeoplePicker.vue'
 import PageHeader from '@/components/ops/PageHeader.vue'
 import EmptyState from '@/components/ops/EmptyState.vue'
 import UserAvatar from '@/components/ops/UserAvatar.vue'
-import { api, me, formatDate } from '@/data/ops'
+import PresenceDot from '@/components/ops/PresenceDot.vue'
+import { presence, statusLine } from '@/data/presence'
+import { api, me, formatDate, formatTime, onRealtime } from '@/data/ops'
 import { channels, loadChannels } from '@/data/chat'
 
 const router = useRouter()
@@ -114,6 +130,22 @@ const creating = ref(false)
 const dm = ref(false)
 const projects = ref([])
 const form = reactive({ channel_name: '', description: '', is_private: false, project: '', members: [] })
+const reminders = ref([])
+async function loadReminders() {
+  try {
+    reminders.value = await api('projectit.reminders.my_reminders')
+  } catch (e) {
+    reminders.value = []
+  }
+}
+async function cancelReminder(r) {
+  try {
+    await api('projectit.reminders.cancel', { name: r.name })
+    reminders.value = reminders.value.filter((x) => x.name !== r.name)
+  } catch (e) {
+    error.value = e.message
+  }
+}
 const query = ref('')
 const searched = ref('')
 const results = ref([])
@@ -192,5 +224,10 @@ async function openDirect(user) {
   }
 }
 
-onMounted(() => loadChannels().catch((e) => (error.value = e.message)))
+const stopReminders = onRealtime('techy_reminder', ({ name }) => (reminders.value = reminders.value.filter((r) => r.name !== name)))
+onMounted(() => {
+  loadChannels().catch((e) => (error.value = e.message))
+  loadReminders()
+})
+onBeforeUnmount(stopReminders)
 </script>

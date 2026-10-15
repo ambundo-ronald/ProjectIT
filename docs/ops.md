@@ -303,6 +303,20 @@ Jobs record when they were first started and when they were completed (*Started 
   - The magnifier in a conversation header searches only that conversation.
   - Opening a result jumps to the message and highlights it. A reply opens in its thread. **Jump to latest messages** returns to the newest messages.
 - **Typing.** "Tina is typing…" shows under the conversation, or under the thread for replies, while someone writes.
+- **Status.** Open your name menu and choose **Set a status**.
+  - Pick a quick status (🚐 On site, 🚗 Driving, 🍽️ At lunch, 🤝 In a meeting, 🤒 Off sick, 🏖️ On leave) or type your own with an emoji.
+  - Choose when it clears: 30 minutes, 1 hour, 4 hours, today, or never.
+  - The emoji shows next to your name in messages. The full status shows in direct messages, the member list and the Chat page.
+- **Online and away.**
+  - A green dot means the person has a Techy app open now (checked about once a minute).
+  - A grey ring means away or offline. **Set yourself away** in the name menu shows the grey ring even while your app is open, and keeps your status text.
+  - Dots appear on direct messages in the sidebar and on the Chat page, in a direct message's header, and in a channel's member list.
+- **Reminders.** The clock button on a message reminds you about it in 20 minutes, 1 hour, 3 hours, tomorrow at 8:00 or next Monday at 8:00.
+  - When it is due, a pop-up appears in any open Techy app and stays until dismissed. A notification also lands in the bell in Desk and Techy.
+  - Tapping the pop-up opens the message.
+  - Upcoming reminders are listed on the Chat page, where you can cancel them. You can have up to 50 waiting.
+  - Deleting a message cancels reminders still waiting on it.
+  - Reminders are sent by a job that runs every minute, so the site's scheduler must be running (`bench enable-scheduler`, with the `bench schedule` process running in production).
 - Members of a direct message are notified of every message. In channels, only @mentioned members are notified.
 - Authors can delete their own messages; managers can delete any message. Deleting a thread root also deletes its replies.
 - Private channels are hidden in Desk from non-members through permission hooks. System Managers can administer all channels in Desk.

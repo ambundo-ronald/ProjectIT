@@ -1,10 +1,11 @@
 <template>
-  <div v-if="visible" class="ops contents">
+  <div v-if="visible || (session.isLoggedIn && shownPopups.length)" class="ops contents">
     <!-- Incoming message pop-ups: banners at the top on phones, cards above the bubble on desktop -->
     <TransitionGroup tag="div" class="pointer-events-none fixed inset-x-3 top-3 z-[70] flex flex-col gap-2 md:inset-x-auto md:right-6 md:w-[22rem]" :class="dock.open ? 'md:top-4' : 'md:bottom-28 md:top-auto md:flex-col-reverse'" enter-from-class="opacity-0 -translate-y-2 md:translate-y-2" leave-to-class="opacity-0" enter-active-class="transition duration-200" leave-active-class="transition duration-150" aria-live="polite">
-      <div v-for="p in popups" :key="p.id" class="pointer-events-auto flex w-full items-start gap-3 rounded-2xl border border-gray-200 bg-white/95 p-3 text-left shadow-pop backdrop-blur">
+      <div v-for="p in shownPopups" :key="p.id" class="pointer-events-auto flex w-full items-start gap-3 rounded-2xl border border-gray-200 bg-white/95 p-3 text-left shadow-pop backdrop-blur">
         <button class="flex min-w-0 flex-1 items-start gap-3 text-left" :aria-label="`Open message from ${p.name}`" @click="openFromPopup(p)">
-          <UserAvatar :name="p.name" :image="p.image" size="lg" />
+          <span v-if="p.sticky" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-50 text-amber-700"><FeatherIcon name="clock" class="h-4 w-4" /></span>
+          <UserAvatar v-else :name="p.name" :image="p.image" size="lg" />
           <span class="min-w-0 flex-1">
             <span class="flex items-baseline gap-2"><span class="truncate text-sm font-semibold text-gray-900">{{ p.name }}</span><span class="shrink-0 text-[11px] text-gray-400">{{ p.where }}</span></span>
             <span class="mt-0.5 line-clamp-2 block text-[13px] text-gray-600">{{ p.body }}</span>
@@ -14,6 +15,7 @@
       </div>
     </TransitionGroup>
 
+    <template v-if="visible">
     <!-- Floating chat bubble -->
     <button
       v-show="!dock.open"
@@ -105,11 +107,12 @@
         </template>
       </section>
     </Transition>
+    </template>
   </div>
 </template>
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { FeatherIcon } from 'frappe-ui'
 import UserAvatar from './ops/UserAvatar.vue'
 import Composer from './ops/Composer.vue'
@@ -118,9 +121,11 @@ import PeoplePicker from './ops/PeoplePicker.vue'
 import { api, me, loadMe, onRealtime, formatTime } from '@/data/ops'
 import { channels, unread, popups, dock, notify, activeChannel, loadChannels, listenForChat, openDock, setNotifications, preview } from '@/data/chat'
 import { myApps, loadApps, ui } from '@/data/apps'
+import { startPresence } from '@/data/presence'
 import { session } from '@/data/session'
 
 const route = useRoute()
+const router = useRouter()
 const ready = ref(false)
 const info = ref(null)
 const messages = ref([])
@@ -133,6 +138,8 @@ const isPhone = ref(window.innerWidth < 768)
 
 const hidden = computed(() => ['Login', 'PublicRequest'].includes(route.name) || route.path.startsWith('/ops/chat'))
 const visible = computed(() => ready.value && session.isLoggedIn && !hidden.value)
+// On the chat pages the bubble is hidden, but reminders still pop up there.
+const shownPopups = computed(() => (visible.value ? popups.value : popups.value.filter((p) => p.sticky)))
 const hasOps = computed(() => (myApps.value || []).some((a) => a.module === 'Ops'))
 const sorted = computed(() => [...channels.value].sort((a, b) => (b.unread || 0) - (a.unread || 0) || Number(b.is_member) - Number(a.is_member) || a.title.localeCompare(b.title)))
 const channelTitle = computed(() => {
@@ -148,6 +155,7 @@ async function start() {
     await loadMe()
     await loadChannels()
     listenForChat()
+    startPresence()
     loadApps()
     ready.value = true
   } catch (e) {
@@ -235,7 +243,9 @@ function close() {
 
 function openFromPopup(p) {
   dismiss(p)
-  openDock(p.channel)
+  // A reminder opens its message in the chat page; a new message opens in the panel.
+  if (p.message) router.push({ name: 'OpsChannel', params: { channel: p.channel }, query: { message: p.message } })
+  else openDock(p.channel)
 }
 
 function dismiss(p) {
@@ -251,7 +261,7 @@ watch(() => dock.open, (open) => {
 // Pop-ups disappear on their own after a few seconds.
 watch(popups, (list, old) => {
   const fresh = list.filter((p) => !(old || []).some((o) => o.id === p.id))
-  for (const p of fresh) setTimeout(() => dismiss(p), 7000)
+  for (const p of fresh) if (!p.sticky) setTimeout(() => dismiss(p), 7000) // reminders stay until dismissed
   if (fresh.length) {
     pulse.value = true
     setTimeout(() => (pulse.value = false), 1200)

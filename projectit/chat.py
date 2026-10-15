@@ -98,7 +98,10 @@ def list_channels():
         row.is_member = row.name in memberships
         row.unread = _unread(row.name, memberships[row.name]) if row.is_member else 0
         if row.is_direct:
-            row.title = _title(frappe.get_doc("Techy Channel", row.name))
+            doc = frappe.get_doc("Techy Channel", row.name)
+            row.title = _title(doc)
+            # The other person, for their online dot and status.
+            row.other = next((m.user for m in doc.members if m.user != user), None)
         else:
             row.title = row.channel_name
         result.append(row)
@@ -183,6 +186,7 @@ def add_members(name, users):
 def get_channel(name):
     doc = _channel(name, member=False)
     return {"name": doc.name, "channel_name": doc.channel_name, "title": _title(doc), "description": doc.description,
+        "other": next((m.user for m in doc.members if m.user != frappe.session.user), None) if doc.is_direct else None,
         "is_private": doc.is_private, "is_direct": doc.is_direct, "project": doc.project, "archived": doc.archived,
         "is_member": any(row.user == frappe.session.user for row in doc.members),
         "members": ops.people([row.user for row in doc.members])}
@@ -345,6 +349,7 @@ def delete_message(name):
     gone = [c.name for c in removed]
     frappe.db.delete("Techy Chat Reaction", {"message": ["in", gone]})
     frappe.db.delete("Techy Chat Pin", {"message": ["in", gone]})
+    frappe.db.delete("Techy Chat Reminder", {"message": ["in", gone], "sent": 0})
     # Copies made for work orders are separate File records and stay with the job.
     for photo in _photo_urls(comment.reference_name, [n for c in removed for n in _split(c.content)[1]]):
         frappe.delete_doc("File", photo, ignore_permissions=True)

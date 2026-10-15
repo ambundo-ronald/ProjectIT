@@ -87,7 +87,7 @@
   </div>
 </template>
 <script setup>
-import { computed, onMounted, onBeforeUnmount, provide, ref, h } from 'vue'
+import { computed, onMounted, onBeforeUnmount, provide, ref, h, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { FeatherIcon } from 'frappe-ui'
 import UserAvatar from '@/components/ops/UserAvatar.vue'
@@ -97,6 +97,8 @@ import UserMenu from '@/components/ops/UserMenu.vue'
 import RunningTimer from '@/components/ops/RunningTimer.vue'
 import { me, loadMe, online, onRealtime } from '@/data/ops'
 import { channels, loadChannels, listenForChat, unread } from '@/data/chat'
+import { startPresence, watchPeople } from '@/data/presence'
+import PresenceDot from '@/components/ops/PresenceDot.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -159,7 +161,7 @@ const ChannelLink = (props) =>
     },
     () => [
       props.channel.is_direct
-        ? h(UserAvatar, { name: props.channel.title, size: 'xs' })
+        ? h('span', { class: 'relative shrink-0' }, [h(UserAvatar, { name: props.channel.title, size: 'xs' }), h(PresenceDot, { user: props.channel.other, ring: 'ring-brand-800', class: 'absolute -bottom-0.5 -right-0.5 !h-2 !w-2' })])
         : h(FeatherIcon, { name: props.channel.is_private ? 'lock' : 'hash', class: 'h-3.5 w-3.5 text-brand-300' }),
       h('span', { class: 'min-w-0 flex-1 truncate' }, props.channel.title),
       props.channel.unread ? h('span', { class: 'rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white' }, props.channel.unread) : null,
@@ -177,9 +179,19 @@ onMounted(async () => {
     await loadMe()
     await loadChannels()
     listenForChat()
+    startPresence()
   } catch (e) {
     error.value = e.message
   }
 })
-onBeforeUnmount(stop)
+// Online dots for the people in my direct messages.
+let unwatch = () => {}
+watch(() => channels.value.filter((c) => c.is_direct).map((c) => c.other).join(','), (users) => {
+  unwatch()
+  unwatch = watchPeople(users.split(',').filter(Boolean))
+}, { immediate: true })
+onBeforeUnmount(() => {
+  stop()
+  unwatch()
+})
 </script>

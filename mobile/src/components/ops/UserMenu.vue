@@ -12,10 +12,17 @@
         <UserAvatar :name="fullName" size="lg" />
         <div class="min-w-0">
           <p class="truncate text-sm font-semibold">{{ fullName }}</p>
-          <p class="truncate text-xs text-gray-500">{{ userId }}</p>
+          <p class="truncate text-xs text-gray-500">{{ statusLine(mine) || userId }}</p>
         </div>
       </div>
       <div class="py-1">
+        <button class="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-gray-50" role="menuitem" @click="close(); statusDialog.open = true">
+          <FeatherIcon name="smile" class="h-4 w-4 text-gray-500" /><span class="flex-1">{{ mine.emoji || mine.text ? 'Change status' : 'Set a status' }}</span>
+        </button>
+        <button class="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-gray-50" role="menuitemcheckbox" :aria-checked="!!mine.away" @click="toggleAway">
+          <PresenceDot :user="me.user" />
+          <span class="flex-1">{{ mine.away ? 'Away · set yourself active' : 'Active · set yourself away' }}</span>
+        </button>
         <button v-if="notify.supported" class="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-gray-50" role="menuitem" :disabled="notify.permission === 'denied'" @click="toggleNotifications">
           <FeatherIcon :name="notify.enabled ? 'bell' : 'bell-off'" class="h-4 w-4 text-gray-500" />
           <span class="flex-1">
@@ -43,7 +50,10 @@ import { FeatherIcon } from 'frappe-ui'
 import Dropdown from './Dropdown.vue'
 import UserAvatar from './UserAvatar.vue'
 import { session } from '@/data/session'
+import { computed } from 'vue'
 import { me } from '@/data/ops'
+import PresenceDot from './PresenceDot.vue'
+import { presence, setStatus, statusDialog, statusLine } from '@/data/presence'
 import { notify, setNotifications } from '@/data/chat'
 
 defineProps({ align: { type: String, default: 'right' }, placement: { type: String, default: 'bottom' } })
@@ -51,4 +61,7 @@ const cookies = new URLSearchParams(document.cookie.split('; ').join('&'))
 const fullName = cookies.get('full_name') || ''
 const userId = cookies.get('user_id') || ''
 const toggleNotifications = () => setNotifications(!notify.enabled)
+const mine = computed(() => presence[me.user] || {})
+// Away only; the status text stays as it is.
+const toggleAway = () => setStatus({ away: mine.value.away ? 0 : 1 }).catch(() => {})
 </script>

@@ -4,12 +4,12 @@
     <section class="flex min-w-0 flex-1 flex-col bg-white" :class="thread ? 'hidden lg:flex' : 'flex'">
       <header v-if="channel" class="flex h-16 shrink-0 items-center gap-3 border-b border-gray-200 px-4 md:px-6">
         <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" :class="channel.is_direct ? '' : 'bg-brand-50 text-brand-700'">
-          <UserAvatar v-if="channel.is_direct" :name="channel.title" size="lg" />
+          <span v-if="channel.is_direct" class="relative"><UserAvatar :name="channel.title" size="lg" /><PresenceDot :user="channel.other" class="absolute -bottom-0.5 -right-0.5" /></span>
           <FeatherIcon v-else :name="channel.is_private ? 'lock' : 'hash'" class="h-4 w-4" />
         </span>
         <div class="min-w-0 flex-1">
           <h1 class="truncate text-[16px] font-semibold">{{ channel.title }}</h1>
-          <p class="truncate text-xs text-gray-500">{{ channel.description || (channel.is_direct ? 'Direct message' : `${channel.members.length} member${channel.members.length === 1 ? '' : 's'}`) }}<template v-if="channel.project"> · Project {{ channel.project }}</template></p>
+          <p class="truncate text-xs text-gray-500">{{ channel.is_direct ? [presence[channel.other]?.online ? 'Online' : presence[channel.other]?.away ? 'Away' : 'Offline', statusLine(presence[channel.other])].filter(Boolean).join(' · ') : channel.description || `${channel.members.length} member${channel.members.length === 1 ? '' : 's'}` }}<template v-if="channel.project"> · Project {{ channel.project }}</template></p>
         </div>
         <button class="btn btn-ghost btn-icon" aria-label="Search this conversation" title="Search" @click="openSearch"><FeatherIcon name="search" class="h-4 w-4" /></button>
         <button class="btn btn-ghost btn-sm" :aria-label="`Pinned messages (${pinCount})`" title="Pinned messages" @click="openPins"><FeatherIcon name="bookmark" class="h-4 w-4" /><span v-if="pinCount" class="text-xs">{{ pinCount }}</span></button>
@@ -101,8 +101,8 @@
     <Modal v-model="showMembers" :title="channel?.is_direct ? 'Conversation' : `#${channel?.title}`" :subtitle="channel ? `${channel.members.length} member${channel.members.length === 1 ? '' : 's'}` : ''">
       <ul v-if="channel" class="divide-y divide-gray-100">
         <li v-for="p in channel.members" :key="p.user" class="flex items-center gap-3 py-2.5 text-sm">
-          <UserAvatar :name="p.full_name" :image="p.image" size="md" />
-          <span class="flex-1 font-medium">{{ p.full_name }}<span v-if="p.user === me.user" class="ml-1 font-normal text-gray-400">(you)</span></span>
+          <span class="relative"><UserAvatar :name="p.full_name" :image="p.image" size="md" /><PresenceDot :user="p.user" class="absolute -bottom-0.5 -right-0.5" /></span>
+          <span class="min-w-0 flex-1"><span class="block font-medium">{{ p.full_name }}<span v-if="p.user === me.user" class="ml-1 font-normal text-gray-400">(you)</span></span><span v-if="statusLine(presence[p.user])" class="block truncate text-xs text-gray-500">{{ statusLine(presence[p.user]) }}</span></span>
           <button v-if="p.user !== me.user" class="btn btn-ghost btn-sm text-brand-700" @click="directMessage(p.user)"><FeatherIcon name="message-circle" class="h-4 w-4" />Message</button>
         </li>
       </ul>
@@ -120,7 +120,7 @@
 <script setup>
 import { ref, computed, nextTick, onMounted, onBeforeUnmount, h, inject, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { FeatherIcon } from 'frappe-ui'
+import { FeatherIcon, toast } from 'frappe-ui'
 import UserAvatar from '@/components/ops/UserAvatar.vue'
 import AvatarStack from '@/components/ops/AvatarStack.vue'
 import Composer from '@/components/ops/Composer.vue'
@@ -129,6 +129,8 @@ import PeoplePicker from '@/components/ops/PeoplePicker.vue'
 import RichText from '@/components/ops/RichText.vue'
 import { api, me, onRealtime, formatTime, formatDate, fromNow } from '@/data/ops'
 import { REACTIONS } from '@/data/chat'
+import { presence, statusLine, watchPeople } from '@/data/presence'
+import PresenceDot from '@/components/ops/PresenceDot.vue'
 import { activeChannel, channels, loadChannels } from '@/data/chat'
 
 const route = useRoute()
@@ -150,6 +152,14 @@ const threadScroller = ref(null)
 const hasNewer = ref(false) // showing older messages around a search result or pin
 const highlight = ref('')
 const picker = ref('') // message whose reaction picker is open
+const reminding = ref('') // message whose "remind me" menu is open
+const REMIND = [
+  { when: '20m', label: 'In 20 minutes' },
+  { when: '1h', label: 'In 1 hour' },
+  { when: '3h', label: 'In 3 hours' },
+  { when: 'tomorrow', label: 'Tomorrow at 8:00' },
+  { when: 'monday', label: 'Next Monday at 8:00' },
+]
 const pinCount = ref(0)
 const showPins = ref(false)
 const pinned = ref([])
@@ -161,6 +171,7 @@ const searched = ref('')
 const results = ref([])
 const searchError = ref('')
 const typers = ref({}) // user -> { full_name, thread, until }
+let unwatchPeople = () => {}
 let atBottom = true
 
 /** The words matched in a search result, in bold. */
@@ -204,7 +215,7 @@ const Message = (props, { emit }) => {
       : h(UserAvatar, { name: m.full_name, image: m.image, size: 'lg', class: 'mt-0.5' }),
     h('div', { class: 'min-w-0 flex-1' }, [
       m.pinned ? h('p', { class: 'mb-0.5 flex items-center gap-1 text-[11px] font-medium text-brand-700' }, [h(FeatherIcon, { name: 'bookmark', class: 'h-3 w-3' }), 'Pinned']) : null,
-      props.compact ? null : h('p', { class: 'flex items-baseline gap-2' }, [h('span', { class: 'text-[14px] font-semibold text-gray-900' }, m.full_name), h('span', { class: 'text-[11px] text-gray-400' }, formatTime(m.creation))]),
+      props.compact ? null : h('p', { class: 'flex items-baseline gap-2' }, [h('span', { class: 'text-[14px] font-semibold text-gray-900' }, m.full_name), presence[m.user]?.emoji ? h('span', { class: 'text-[13px]', title: statusLine(presence[m.user]), 'aria-label': `Status: ${statusLine(presence[m.user])}` }, presence[m.user].emoji) : null, h('span', { class: 'text-[11px] text-gray-400' }, formatTime(m.creation))]),
       m.content ? h(RichText, { text: m.content, names: names.value, class: 'text-[14px] leading-relaxed text-gray-800' }) : null,
       m.photos?.length
         ? h('div', { class: 'mt-1.5 flex flex-wrap gap-1.5' }, m.photos.map((p, n) =>
@@ -227,11 +238,16 @@ const Message = (props, { emit }) => {
           ])
         : null,
     ]),
-    h('div', { class: ['absolute -top-3 right-3 gap-0.5 rounded-lg border border-gray-200 bg-white p-0.5 shadow-pop group-focus-within:flex group-hover:flex', picker.value === m.name ? 'flex' : 'hidden'] }, [
+    h('div', { class: ['absolute -top-3 right-3 gap-0.5 rounded-lg border border-gray-200 bg-white p-0.5 shadow-pop group-focus-within:flex group-hover:flex', picker.value === m.name || reminding.value === m.name ? 'flex' : 'hidden'] }, [
       picker.value === m.name
         ? h('div', { class: 'absolute bottom-full right-0 mb-1 flex gap-0.5 rounded-xl border border-gray-200 bg-white p-1 shadow-pop', role: 'group', 'aria-label': 'Reactions' }, REACTIONS.map((e) =>
             h('button', { class: 'flex h-8 w-8 items-center justify-center rounded-lg text-lg hover:bg-gray-100', 'aria-label': `React with ${e}`, onClick: () => react(m, e) }, e)))
         : null,
+      reminding.value === m.name
+        ? h('div', { class: 'absolute right-0 top-full z-10 mt-1 w-52 rounded-xl border border-gray-200 bg-white p-1 shadow-pop', role: 'menu', 'aria-label': 'Remind me' }, REMIND.map((r) =>
+            h('button', { class: 'flex w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-50', role: 'menuitem', onClick: () => remindMe(m, r) }, r.label)))
+        : null,
+      h('button', { class: 'rounded-md p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800', 'aria-label': 'Remind me about this', 'aria-expanded': reminding.value === m.name, title: 'Remind me', onClick: () => { picker.value = ''; reminding.value = reminding.value === m.name ? '' : m.name } }, [h(FeatherIcon, { name: 'clock', class: 'h-4 w-4' })]),
       channel.value?.is_member ? h('button', { class: 'rounded-md p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800', 'aria-label': 'Add reaction', 'aria-expanded': picker.value === m.name, title: 'Add reaction', onClick: () => (picker.value = picker.value === m.name ? '' : m.name) }, [h(FeatherIcon, { name: 'smile', class: 'h-4 w-4' })]) : null,
       channel.value?.is_member ? h('button', { class: ['rounded-md p-1.5 hover:bg-gray-100', m.pinned ? 'text-brand-700' : 'text-gray-500 hover:text-gray-800'], 'aria-label': m.pinned ? 'Unpin message' : 'Pin to this conversation', title: m.pinned ? 'Unpin' : 'Pin', onClick: () => togglePin(m, !m.pinned) }, [h(FeatherIcon, { name: 'bookmark', class: 'h-4 w-4' })]) : null,
       props.threadRoot ? null : h('button', { class: 'rounded-md p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800', 'aria-label': 'Reply in thread', title: 'Reply in thread', onClick: () => emit('reply') }, [h(FeatherIcon, { name: 'message-circle', class: 'h-4 w-4' })]),
@@ -272,6 +288,8 @@ async function load(around = null) {
       loadPinCount(),
     ])
     channel.value = info
+    unwatchPeople()
+    unwatchPeople = watchPeople(info.members.map((p) => p.user))
     messages.value = data.messages
     hasMore.value = data.has_more
     hasNewer.value = data.has_newer
@@ -348,6 +366,15 @@ async function togglePin(m, on) {
     mark(m.name, { pinned: on })
     pinned.value = on ? pinned.value : pinned.value.filter((p) => p.name !== m.name)
     loadPinCount()
+  } catch (e) {
+    error.value = e.message
+  }
+}
+async function remindMe(m, option) {
+  reminding.value = ''
+  try {
+    await api('projectit.reminders.remind', { message: m.name, when: option.when })
+    toast({ title: `I'll remind you ${option.label.charAt(0).toLowerCase()}${option.label.slice(1)}`, icon: 'clock', position: 'top-center' })
   } catch (e) {
     error.value = e.message
   }
@@ -540,6 +567,7 @@ onBeforeUnmount(() => {
   stop()
   stopTypingEvents()
   stopUpdates()
+  unwatchPeople()
   if (activeChannel.value === name) activeChannel.value = null
 })
 </script>
