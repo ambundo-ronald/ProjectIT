@@ -14,7 +14,7 @@
     <div v-if="busy && !rows.length" class="space-y-2">
       <div v-for="i in 3" :key="i" class="h-20 animate-pulse rounded-xl bg-gray-200/70" />
     </div>
-    <ul v-else-if="rows.length" class="card divide-y divide-gray-100 overflow-hidden">
+    <ul v-else-if="rows.length" class="card divide-y divide-gray-100 overflow-hidden" :class="busy && 'opacity-60'">
       <li v-for="r in rows" :key="r.name" class="flex flex-col gap-3 p-4 hover:bg-gray-50/70 sm:flex-row sm:items-center">
         <button class="flex min-w-0 flex-1 items-start gap-3 text-left" @click="open(r.name)">
           <UserAvatar :name="r.raised_by_name || r.raised_by" size="lg" />
@@ -40,7 +40,7 @@
       </li>
     </ul>
     <EmptyState v-else :icon="state === 'Pending' ? 'check-circle' : 'inbox'" :title="state === 'Pending' ? 'All caught up' : 'No requests here'" :text="state === 'Pending' ? 'New problem reports will appear here for review.' : 'Requests move here as they are approved, declined or completed.'" />
-    <button v-if="hasMore" class="btn btn-secondary w-full" :disabled="busy" @click="load(true)">Load more</button>
+    <Pager :total="total" :start="start" :page-length="pageLength" :busy="busy" label="Request pages" @change="load" @update:page-length="(n) => { pageLength = n; load() }" />
 
     <!-- New request -->
     <Modal v-model="creating" title="Report a problem" subtitle="A manager will review it and turn it into a work order.">
@@ -137,6 +137,8 @@ import AssetPicker from '@/components/ops/AssetPicker.vue'
 import EquipmentPicker from '@/components/ops/EquipmentPicker.vue'
 import CoverageBadge from '@/components/ops/CoverageBadge.vue'
 import WorkOrderForm from '@/components/ops/WorkOrderForm.vue'
+import Pager from '@/components/ops/Pager.vue'
+import { usePageLength } from '@/data/paging'
 import { api, me, loadMe, formatDate, fromNow, readFile, safeFile } from '@/data/ops'
 
 const route = useRoute()
@@ -148,7 +150,9 @@ const states = computed(() =>
 )
 const state = ref(me.manager ? 'Pending' : '')
 const rows = ref([])
-const hasMore = ref(false)
+const pageLength = usePageLength()
+const start = ref(0)
+const total = ref(0)
 const busy = ref(false)
 const error = ref('')
 const creating = ref(false)
@@ -161,13 +165,18 @@ const reason = ref('')
 const approving = ref(null)
 const approvingOpen = computed({ get: () => !!approving.value, set: (v) => !v && (approving.value = null) })
 
-async function load(append = false) {
+async function load(from = 0) {
   busy.value = true
   error.value = ''
   try {
-    const data = await api('projectit.work_requests.list_requests', { state: state.value, start: append ? rows.value.length : 0 })
-    rows.value = append ? [...rows.value, ...data.requests] : data.requests
-    hasMore.value = data.has_more
+    let data = await api('projectit.work_requests.list_requests', { state: state.value, start: from, page_length: pageLength.value })
+    if (!data.requests.length && from > 0) {
+      // The last request on this page was just approved or declined: show the page before.
+      data = await api('projectit.work_requests.list_requests', { state: state.value, start: Math.max(0, from - pageLength.value), page_length: pageLength.value })
+    }
+    rows.value = data.requests
+    start.value = data.start
+    total.value = data.total
   } catch (e) {
     error.value = e.message
   } finally {
@@ -219,7 +228,7 @@ async function decline() {
     await api('projectit.work_requests.decline_request', { name: declining.value.name, reason: reason.value })
     declining.value = null
     loadMe(true).catch(() => {})
-    await load()
+    await load(start.value)
   } catch (e) {
     detailError.value = e.message
   } finally {

@@ -16,7 +16,7 @@ ASSET_FIELDS = ["name", "asset_name", "item_code", "asset_category", "location",
 
 
 @frappe.whitelist()
-def list_assets(search=None, location=None, start=0):
+def list_assets(search=None, location=None, start=0, page_length=None):
     ops.require_asset_access()
     filters = {"docstatus": ["<", 2]}
     if location:
@@ -25,10 +25,8 @@ def list_assets(search=None, location=None, start=0):
     if search:
         search = f"%{str(search).strip()[:80]}%"
         or_filters = {"name": ["like", search], "asset_name": ["like", search], "item_code": ["like", search]}
-    start = max(0, cint(start))
-    rows = frappe.get_all("Asset", filters=filters, or_filters=or_filters, fields=ASSET_FIELDS,
-        order_by="asset_name asc", limit_start=start, limit_page_length=51)
-    rows, has_more = rows[:50], len(rows) > 50
+    start, size = max(0, cint(start)), ops.page_size(page_length, 50)
+    rows, total = ops.paged("Asset", filters, or_filters, "asset_name asc", start, size, ASSET_FIELDS)
     counts = {}
     if rows:  # Counts only, for Assets the user may already list.
         counts = dict(frappe.db.sql("""SELECT custom_asset, COUNT(*) FROM `tabTask`
@@ -36,7 +34,7 @@ def list_assets(search=None, location=None, start=0):
             GROUP BY custom_asset""", {"assets": tuple(r.name for r in rows)}))
     for row in rows:
         row.open_work_orders = counts.get(row.name, 0)
-    return {"assets": rows, "has_more": has_more}
+    return {"assets": rows, "total": total, "start": start, "page_length": size, "has_more": start + len(rows) < total}
 
 
 @frappe.whitelist()

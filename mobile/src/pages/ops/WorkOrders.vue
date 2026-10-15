@@ -20,6 +20,7 @@
         <div v-if="me.manager" class="segmented shrink-0" role="group" aria-label="Whose work">
           <button v-for="s in scopes" :key="s.value" :aria-pressed="scope === s.value" @click="scope = s.value; load()">{{ s.label }}</button>
         </div>
+        <ViewToggle v-model="phoneView" class="md:hidden" />
         <button class="btn btn-ghost btn-icon shrink-0" aria-label="Refresh" :disabled="busy" @click="load()"><FeatherIcon name="refresh-cw" class="h-4 w-4" :class="busy ? 'animate-spin' : ''" /></button>
       </div>
       <div class="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0" role="group" aria-label="Filter">
@@ -56,9 +57,16 @@
         <div class="hidden grid-cols-[minmax(0,1fr)_8rem_7rem_10rem_7rem_6rem] gap-4 border-b border-gray-100 bg-gray-50/80 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-gray-500 md:grid">
           <span>Work order</span><span>Status</span><span>Priority</span><span>Asset / location</span><span>Due</span><span>Assigned</span>
         </div>
-        <ul class="space-y-2 md:space-y-0 md:divide-y md:divide-gray-100">
-          <li v-for="wo in visible" :key="wo.name">
-            <WorkOrderCard :wo="wo" show-status class="md:hidden" />
+        <ul class="md:space-y-0 md:divide-y md:divide-gray-100" :class="phoneView === 'list' ? 'card divide-y divide-gray-100 overflow-hidden md:rounded-none md:border-0 md:shadow-none' : 'space-y-2'">
+          <li v-for="wo in paged" :key="wo.name">
+            <WorkOrderCard v-if="phoneView === 'cards'" :wo="wo" show-status class="md:hidden" />
+            <router-link v-else :to="{ name: 'OpsWorkOrder', params: { name: wo.name } }" class="flex items-center gap-3 px-4 py-3 active:bg-gray-50 md:hidden">
+              <span class="min-w-0 flex-1">
+                <span class="block truncate text-[15px] font-medium text-gray-900">{{ wo.subject }}</span>
+                <span class="block truncate text-xs text-gray-500">#{{ wo.name }}<template v-if="wo.exp_end_date"> · <span :class="isOverdue(wo) ? 'font-semibold text-red-600' : ''">due {{ formatDate(wo.exp_end_date) }}</span></template><template v-if="wo.equipment || wo.asset_name"> · {{ wo.equipment ? wo.equipment.customer_name : wo.asset_name }}</template></span>
+              </span>
+              <StatusPill :status="wo.status !== 'Completed' && isOverdue(wo) ? 'Overdue' : wo.status" class="shrink-0" />
+            </router-link>
             <router-link :to="{ name: 'OpsWorkOrder', params: { name: wo.name } }" class="hidden grid-cols-[minmax(0,1fr)_8rem_7rem_10rem_7rem_6rem] items-center gap-4 px-4 py-3 hover:bg-gray-50 md:grid">
               <span class="min-w-0">
                 <span class="block truncate font-medium text-gray-900">{{ wo.subject }}</span>
@@ -76,7 +84,8 @@
       <EmptyState v-else icon="check-circle" :title="filter === 'active' ? 'No active work orders' : 'Nothing matches this filter'" :text="filter === 'active' ? 'New work, approved requests and due preventive maintenance will show up here.' : 'Try another filter or clear the search.'">
         <button v-if="filter === 'active'" class="btn btn-primary btn-sm" @click="openNew()"><FeatherIcon name="plus" class="h-4 w-4" />New work order</button>
       </EmptyState>
-      <button v-if="hasMore" class="btn btn-secondary w-full" :disabled="busy" @click="load(true)">Load more</button>
+      <Pager :total="total" :start="start" :page-length="pageLength" label="Work order pages" @change="(s) => (start = s)" @update:page-length="(n) => (pageLength = n)" />
+      <p v-if="hasMore" class="text-center text-xs text-gray-500">Showing the {{ rows.length }} most recently updated work orders. <button class="font-medium text-brand-600 hover:underline" :disabled="busy" @click="load(true)">Load older ones</button> or search to find them.</p>
     </template>
 
     <!-- Mobile create button -->
@@ -94,6 +103,9 @@ import WorkOrderCard from '@/components/ops/WorkOrderCard.vue'
 import StatusPill from '@/components/ops/StatusPill.vue'
 import PriorityFlag from '@/components/ops/PriorityFlag.vue'
 import AvatarStack from '@/components/ops/AvatarStack.vue'
+import Pager from '@/components/ops/Pager.vue'
+import ViewToggle from '@/components/ops/ViewToggle.vue'
+import { usePaged, useView } from '@/data/paging'
 import { api, me, onRealtime, formatDate, isOverdue, dueIn } from '@/data/ops'
 import { ui } from '@/data/apps'
 
@@ -152,6 +164,8 @@ const filters = computed(() => [
   { key: 'done', label: 'Done', icon: 'check', tone: 'text-green-600', count: counts.value.done },
 ])
 const visible = computed(() => rows.value.filter(predicates[filter.value]))
+const { start, pageLength, total, paged } = usePaged(visible, [filter, search, scope])
+const phoneView = useView('work_orders_phone')
 
 const columns = computed(() => {
   // On the board, a filter narrows every column; "Done" shows recent completions.
@@ -168,7 +182,7 @@ async function load(append = false) {
   busy.value = true
   error.value = ''
   try {
-    const data = await api('projectit.work_orders.list_work_orders', { scope: scope.value, status: '', search: search.value, start: append ? rows.value.length : 0 })
+    const data = await api('projectit.work_orders.list_work_orders', { scope: scope.value, status: '', search: search.value, start: append ? rows.value.length : 0, page_length: 500 })
     rows.value = append ? [...rows.value, ...data.work_orders] : data.work_orders
     hasMore.value = data.has_more
     loaded.value = true

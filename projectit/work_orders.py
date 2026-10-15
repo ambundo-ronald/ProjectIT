@@ -51,7 +51,7 @@ def _workflow():
 
 
 @frappe.whitelist()
-def list_work_orders(scope="mine", status=None, asset=None, location=None, search=None, start=0):
+def list_work_orders(scope="mine", status=None, asset=None, location=None, search=None, start=0, page_length=None):
     ops.system_user()
     filters = {"custom_work_order": 1, "is_template": 0, "parent_task": ["is", "not set"]}
     if status == "Open":
@@ -69,8 +69,10 @@ def list_work_orders(scope="mine", status=None, asset=None, location=None, searc
     if search:
         filters["subject"] = ["like", f"%{str(search).strip()[:80]}%"]
     start = max(0, cint(start))
+    # The screen filters and counts what it loads, so it may ask for a large batch (at most 500).
+    size = min(max(cint(page_length) or 100, 1), 500)
     rows = frappe.get_list("Task", filters=filters, or_filters=or_filters, fields=FIELDS,
-        order_by="modified desc", limit_start=start, limit_page_length=101)
+        order_by="modified desc", limit_start=start, limit_page_length=size + 1)
     assigned = _assignees([row.name for row in rows])
     labels = ops.asset_names(row.custom_asset for row in rows)
     machines = installed.labels(row.custom_equipment for row in rows)
@@ -78,7 +80,7 @@ def list_work_orders(scope="mine", status=None, asset=None, location=None, searc
         row.assignees = ops.people(assigned[row.name])
         row.asset_name = labels.get(row.custom_asset)
         row.equipment = machines.get(row.custom_equipment)
-    return {"work_orders": rows[:100], "has_more": len(rows) > 100, "manager": ops.manager()}
+    return {"work_orders": rows[:size], "has_more": len(rows) > size, "manager": ops.manager()}
 
 
 @frappe.whitelist()

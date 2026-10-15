@@ -19,15 +19,39 @@
       </div>
     </div>
 
-    <div class="relative">
-      <FeatherIcon name="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-      <input v-model="search" type="search" class="input pl-9" placeholder="Search projects or people" aria-label="Search projects or people" />
+    <div class="flex gap-2">
+      <div class="relative min-w-0 flex-1">
+        <FeatherIcon name="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <input v-model="search" type="search" class="input pl-9" placeholder="Search projects or people" aria-label="Search projects or people" />
+      </div>
+      <ViewToggle v-model="view" />
     </div>
     <p v-if="error" role="alert" class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>
 
     <div v-if="!data && !error" class="grid gap-3 md:grid-cols-2"><div v-for="i in 4" :key="i" class="h-36 animate-pulse rounded-xl bg-gray-200/70" /></div>
+    <div v-else-if="visible.length && view === 'list'" class="card overflow-hidden">
+      <div class="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1.4fr)_7rem_7rem] gap-4 border-b border-gray-100 bg-gray-50/80 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-gray-500 md:grid">
+        <span>Project</span><span>Site instructions</span><span>Crew</span><span>On site</span>
+      </div>
+      <ul class="divide-y divide-gray-100">
+        <li v-for="p in paged" :key="p.name">
+          <router-link :to="{ name: 'ManageProject', params: { project: p.name } }" class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 md:grid md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.4fr)_7rem_7rem] md:gap-4">
+            <span class="min-w-0 flex-1">
+              <span class="block truncate font-medium text-gray-900">{{ p.project_name }}</span>
+              <span class="block truncate text-xs text-gray-500">{{ p.name }}<template v-if="p.expected_end_date"> · due {{ formatDate(p.expected_end_date) }}</template><span class="md:hidden"> · {{ p.crew.length }} crew</span></span>
+            </span>
+            <span class="hidden truncate text-sm md:block" :class="p.work_instruction ? 'text-gray-600' : 'italic text-gray-400'">{{ p.work_instruction || 'None yet' }}</span>
+            <span class="hidden text-sm md:block" :class="p.crew.length ? 'text-gray-600' : 'font-medium text-amber-700'">{{ p.crew.length ? `${p.crew.length} ${p.crew.length === 1 ? 'person' : 'people'}` : 'No crew' }}</span>
+            <span class="shrink-0 text-xs">
+              <span v-if="onSite(p)" class="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2 py-0.5 font-semibold text-green-700"><span class="h-1.5 w-1.5 rounded-full bg-green-500" />{{ onSite(p) }}</span>
+              <span v-else class="text-gray-400">—</span>
+            </span>
+          </router-link>
+        </li>
+      </ul>
+    </div>
     <div v-else-if="visible.length" class="grid gap-3 md:grid-cols-2">
-      <router-link v-for="p in visible" :key="p.name" :to="{ name: 'ManageProject', params: { project: p.name } }" class="card group flex flex-col p-4 transition hover:-translate-y-px hover:border-gray-300 hover:shadow-pop">
+      <router-link v-for="p in paged" :key="p.name" :to="{ name: 'ManageProject', params: { project: p.name } }" class="card group flex flex-col p-4 transition hover:-translate-y-px hover:border-gray-300 hover:shadow-pop">
         <div class="flex items-start gap-3">
           <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700"><FeatherIcon name="briefcase" class="h-5 w-5" /></span>
           <div class="min-w-0 flex-1">
@@ -53,6 +77,7 @@
       </router-link>
     </div>
     <EmptyState v-else-if="data" icon="briefcase" :title="search ? 'No matches' : 'No open projects'" :text="search ? 'Try a different project or person name.' : 'Create a Project in ERPNext and it will appear here, ready for a crew.'" />
+    <Pager :total="total" :start="start" :page-length="pageLength" label="Project pages" @change="(s) => (start = s)" @update:page-length="(n) => (pageLength = n)" />
   </div>
 </template>
 <script setup>
@@ -61,7 +86,10 @@ import { FeatherIcon } from 'frappe-ui'
 import PageHeader from '@/components/ops/PageHeader.vue'
 import EmptyState from '@/components/ops/EmptyState.vue'
 import UserAvatar from '@/components/ops/UserAvatar.vue'
+import Pager from '@/components/ops/Pager.vue'
+import ViewToggle from '@/components/ops/ViewToggle.vue'
 import { api, formatDate } from '@/data/ops'
+import { usePaged, useView } from '@/data/paging'
 
 const data = ref(null)
 const error = ref('')
@@ -73,6 +101,9 @@ const visible = computed(() => {
   const rows = data.value?.projects || []
   return q ? rows.filter((p) => p.project_name.toLowerCase().includes(q) || p.name.toLowerCase().includes(q) || p.crew.some((m) => m.name.toLowerCase().includes(q))) : rows
 })
+
+const view = useView('manage_projects')
+const { start, pageLength, total, paged } = usePaged(visible, [search])
 
 async function load() {
   loading.value = true

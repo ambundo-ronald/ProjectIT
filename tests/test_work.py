@@ -22,7 +22,7 @@ class WorkTests(OpsTestCase):
 
     def test_endpoints_take_no_employee_argument(self):
         self.assertEqual(list(inspect.signature(self.work.today).parameters), [])
-        self.assertEqual(list(inspect.signature(self.work.history).parameters), ["start"])
+        self.assertEqual(list(inspect.signature(self.work.history).parameters), ["start", "page_length"])
 
     def test_history_is_scoped_to_session_employee(self):
         self.frappe.get_all.return_value = []
@@ -38,13 +38,14 @@ class WorkTests(OpsTestCase):
         logs = [Dict(parent="TS-1", from_time="2026-10-11 08:00:00", to_time="2026-10-11 17:00:00", hours=9, activity_type="Field Work", task=None),
             Dict(parent="TS-1", from_time="2026-10-11 17:00:00", to_time="2026-10-11 18:00:00", hours=1, activity_type="Overtime", task=None)]
         week = [Dict(start_date="2026-10-11", total_hours=10), Dict(start_date="2026-10-06", total_hours=8)]
-        self.frappe.get_all.side_effect = [sheets, logs, [("P1", "Pump Station")], [], week]
+        self.frappe.get_all.side_effect = [["TS-1"], sheets, logs, [("P1", "Pump Station")], [], week]
         self.frappe.db.get_single_value.return_value = "Overtime"
         result = self.work.history()
         sheet = result["timesheets"][0]
         self.assertEqual(sheet.project_name, "Pump Station")
         self.assertEqual(sheet.overtime_hours, 1)
         self.assertEqual(result["totals"], {"today": 10, "week": 18, "week_start": "2026-10-05"})
+        self.assertEqual((result["total"], result["has_more"]), (1, False))
 
     def test_no_allocations_means_no_projects(self):
         self.frappe.db.sql.return_value = []

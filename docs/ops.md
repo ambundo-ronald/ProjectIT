@@ -24,6 +24,14 @@ Techy Ops is a maintenance and team-collaboration workspace (similar to Maintain
 5. Optional: in **Techy Ops Settings**, enable public requests from asset QR codes and set how many days before the due date PM work orders are created (the default is 3).
 6. Realtime updates use the site's standard Frappe socket.io service. The green dot in the Ops header shows that live updates are connected. Without a connection, pages still work, and Refresh reloads the data.
 
+## Lists
+
+- **Pages:** long lists show numbered pages under the list, with *Showing 26–50 of 132*, previous and next buttons, and 25, 50 or 100 rows per page. The page size is remembered on each device.
+  - Work requests, customer equipment, assets, project tasks and work history are paged by the server, so the total covers every record.
+  - Work orders, procedures, contracts and projects are paged in the browser over what was loaded. Work orders loads the 500 most recently updated jobs; *Load older ones* fetches more.
+  - Changing a search, filter or tab returns to page 1. A live refresh keeps the current page.
+- **Cards or List:** customer equipment, assets, procedures and ManageIT projects have a **Cards / List** switch. On phones, work orders has the same switch; on a computer it has *Board / List*. Each page remembers its choice on each device.
+
 ## Work orders
 
 - Create a work order from **Work orders**, from an asset, or by approving a request. Each one has a priority, category, due date, asset or location, assignees, an optional project, an optional procedure from the library (see [Procedures](#procedures)) and an optional quick checklist.

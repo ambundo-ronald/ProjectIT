@@ -7,13 +7,13 @@
         <button v-if="manager && canManage" class="btn btn-primary" @click="openCreate"><FeatherIcon name="plus" class="h-4 w-4" />New task</button>
       </PageHeader>
       <div class="segmented" role="group" aria-label="Filter">
-        <button v-for="f in filters" :key="f.key" :aria-pressed="filter === f.key" @click="filter = f.key">{{ f.label }}<span class="text-xs text-gray-400">{{ f.count }}</span></button>
+        <button v-for="f in filters" :key="f.key" :aria-pressed="filter === f.key" :disabled="busy" @click="filter = f.key; reload()">{{ f.label }}<span class="text-xs text-gray-400">{{ f.count }}</span></button>
       </div>
       <p v-if="error" role="alert" class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>
 
       <div v-if="busy && !rows.length" class="space-y-2"><div v-for="i in 3" :key="i" class="h-20 animate-pulse rounded-xl bg-gray-200/70" /></div>
-      <ul v-else-if="visible.length" class="space-y-2">
-        <li v-for="task in visible" :key="task.name">
+      <ul v-else-if="rows.length" class="space-y-2" :class="busy && 'opacity-60'">
+        <li v-for="task in rows" :key="task.name">
           <button class="card group flex w-full items-start gap-3 p-4 text-left transition hover:border-gray-300 hover:shadow-pop" :disabled="busy" @click="open(task.name)">
             <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2" :class="task.status === 'Completed' ? 'border-green-500 bg-green-500 text-white' : 'border-gray-300'">
               <FeatherIcon v-if="task.status === 'Completed'" name="check" class="h-3 w-3" />
@@ -32,7 +32,7 @@
         </li>
       </ul>
       <EmptyState v-else :icon="filter === 'open' ? 'check-circle' : 'inbox'" :title="filter === 'open' ? 'Nothing to do right now' : 'No tasks here'" :text="manager ? 'Create a task or checklist for someone on a project.' : 'Tasks your manager assigns to you will show up here.'" />
-      <button v-if="hasMore" class="btn btn-secondary w-full" :disabled="busy" @click="loadMore">Load more</button>
+      <Pager :total="total" :start="start" :page-length="pageLength" :busy="busy" label="Task pages" @change="(s) => run(() => list(s))" @update:page-length="(n) => { pageLength = n; reload() }" />
     </template>
 
     <!-- Detail -->
@@ -163,6 +163,8 @@ import PriorityFlag from '@/components/ops/PriorityFlag.vue'
 import UserAvatar from '@/components/ops/UserAvatar.vue'
 import Composer from '@/components/ops/Composer.vue'
 import Modal from '@/components/ops/Modal.vue'
+import Pager from '@/components/ops/Pager.vue'
+import { usePageLength } from '@/data/paging'
 import { api, STATUS_LABEL, formatDate, fromNow, dueIn, readFile, safeFile } from '@/data/ops'
 
 const route = useRoute()
@@ -171,7 +173,10 @@ const rows = ref([])
 const detail = ref(null)
 const error = ref('')
 const busy = ref(false)
-const hasMore = ref(false)
+const pageLength = usePageLength()
+const start = ref(0)
+const total = ref(0)
+const counts = ref({})
 const canManage = ref(false)
 const creating = ref(false)
 const steps = ref('')
@@ -182,11 +187,10 @@ const form = reactive({ project: '', subject: '', assignee: '', due_date: '', pr
 const closedStatus = (s) => ['Completed', 'Cancelled'].includes(s)
 const statuses = computed(() => ['Open', 'Working', 'Pending Review', 'Completed', ...(detail.value?.manager ? ['Cancelled'] : [])])
 const filters = computed(() => [
-  { key: 'open', label: 'To do', count: rows.value.filter((t) => !closedStatus(t.status)).length },
-  { key: 'done', label: 'Done', count: rows.value.filter((t) => t.status === 'Completed').length },
-  { key: 'all', label: 'All', count: rows.value.length },
+  { key: 'open', label: 'To do', count: counts.value.open ?? '' },
+  { key: 'done', label: 'Done', count: counts.value.done ?? '' },
+  { key: 'all', label: 'All', count: counts.value.all ?? '' },
 ])
-const visible = computed(() => rows.value.filter((t) => (filter.value === 'open' ? !closedStatus(t.status) : filter.value === 'done' ? t.status === 'Completed' : true)))
 const files = computed(() => (detail.value?.files || []).filter((f) => safeFile(f.file_url)))
 const dueLabel = (t) => {
   const d = dueIn(String(t.exp_end_date).slice(0, 10))
@@ -209,10 +213,12 @@ async function run(work) {
     busy.value = false
   }
 }
-async function list(append = false) {
-  const data = await api('projectit.tasks.list_tasks', { mine: props.manager ? 0 : 1, start: append ? rows.value.length : 0 })
-  rows.value = append ? [...rows.value, ...data.tasks] : data.tasks
-  hasMore.value = data.has_more
+async function list(from = 0) {
+  const data = await api('projectit.tasks.list_tasks', { mine: props.manager ? 0 : 1, start: from, page_length: pageLength.value, status: filter.value })
+  rows.value = data.tasks
+  start.value = data.start
+  total.value = data.total
+  counts.value = data.counts || {}
   canManage.value = data.manager
 }
 const setDetail = (data) => (detail.value = data)
@@ -220,10 +226,9 @@ const reload = () => run(async () => (detail.value ? setDetail(await api('projec
 const back = () =>
   run(async () => {
     detail.value = null
-    await list()
+    await list(start.value)
   })
 const open = (name) => run(async () => setDetail(await api('projectit.tasks.get_task', { name })))
-const loadMore = () => run(() => list(true))
 const saveStatus = (status) => run(async () => setDetail(await api('projectit.tasks.update_status', { name: detail.value.task.name, status, modified: detail.value.task.modified })))
 async function comment(content) {
   busy.value = true

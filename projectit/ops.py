@@ -7,7 +7,7 @@ from html import escape, unescape
 
 import frappe
 from frappe import _
-from frappe.utils import strip_html
+from frappe.utils import cint, strip_html
 
 MANAGER_ROLES = {"System Manager", "Projects Manager", "Maintenance Manager"}
 MENTION = re.compile(r"(?<![\w.])@([\w.+-]+@[\w-]+(?:\.[\w-]+)+)")
@@ -44,6 +44,36 @@ def require_asset_access():
     system_user()
     if not (manager() or "Maintenance User" in frappe.get_roles() or frappe.has_permission("Asset", "read")):
         frappe.throw(_("Ask an administrator for the Maintenance User role to view assets."), frappe.PermissionError)
+
+
+PAGE_SIZES = (25, 50, 100)
+
+
+def page_size(page_length, default):
+    """The requested rows per page (one of PAGE_SIZES), or the endpoint's old default for older callers."""
+    size = cint(page_length)
+    return size if size in PAGE_SIZES else default
+
+
+def paged(doctype, filters=None, or_filters=None, order_by="modified desc", start=0, page_length=25, fields=None,
+        reader=None, keep=None):
+    """One page of rows plus the total that match, for numbered pages.
+
+    `reader` is frappe.get_list (permission-aware) or frappe.get_all; both queries go through it. `keep`,
+    when given, filters candidate rows in Python (e.g. a computed coverage) before counting; it receives
+    rows with the `fields` it needs, so pass those fields as fields too."""
+    reader = reader or frappe.get_all
+    start = max(0, cint(start))
+    if keep:
+        rows = [r for r in reader(doctype, filters=filters, or_filters=or_filters, fields=fields, order_by=order_by,
+            limit_page_length=0) if keep(r)]
+        return rows[start:start + page_length], len(rows)
+    names = reader(doctype, filters=filters, or_filters=or_filters, pluck="name", order_by=order_by, limit_page_length=0)
+    page = names[start:start + page_length]
+    rows = reader(doctype, filters={"name": ["in", page]}, fields=fields, limit_page_length=0) if page else []
+    order = {name: i for i, name in enumerate(page)}
+    rows.sort(key=lambda r: order.get(r.name, 0))
+    return rows, len(names)
 
 
 def settings():

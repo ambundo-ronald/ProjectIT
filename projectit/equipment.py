@@ -102,7 +102,7 @@ def summary(name):
 # Screens -----------------------------------------------------------------------------------------------------
 
 @frappe.whitelist()
-def list_equipment(search=None, customer=None, status=None, cover=None, start=0):
+def list_equipment(search=None, customer=None, status=None, cover=None, start=0, page_length=None):
     ops.system_user()
     filters = {}
     if status in STATUSES:
@@ -121,12 +121,10 @@ def list_equipment(search=None, customer=None, status=None, cover=None, start=0)
         like = f"%{str(search).strip()[:80]}%"
         or_filters = {"name": ["like", like], "equipment_name": ["like", like], "customer_name": ["like", like],
             "tag": ["like", like], "site": ["like", like], "serial_no": ["like", like]}
-    start = max(0, cint(start))
+    start, size = max(0, cint(start)), ops.page_size(page_length, 100)
     # All staff may look up customer equipment (field work starts from a customer call); edits are manager-only.
-    rows = frappe.get_all("Techy Equipment", filters=filters, or_filters=or_filters, fields=FIELDS,
-        order_by="customer_name asc, equipment_name asc", limit_start=start, limit_page_length=101)
-    if cover == "Chargeable":
-        rows = [r for r in rows if coverage(r)["kind"] == "Chargeable"]
+    rows, total = ops.paged("Techy Equipment", filters, or_filters, "customer_name asc, equipment_name asc", start, size,
+        FIELDS, keep=(lambda r: coverage(r)["kind"] == "Chargeable") if cover == "Chargeable" else None)
     counts = {}
     if rows:
         counts = dict(frappe.db.sql("""SELECT custom_equipment, COUNT(*) FROM `tabTask`
@@ -135,7 +133,8 @@ def list_equipment(search=None, customer=None, status=None, cover=None, start=0)
     for row in rows:
         row.coverage = coverage(row)
         row.open_work_orders = counts.get(row.name, 0)
-    return {"equipment": rows[:100], "has_more": len(rows) > 100, "manager": ops.manager()}
+    return {"equipment": rows, "total": total, "start": start, "page_length": size,
+        "has_more": start + len(rows) < total, "manager": ops.manager()}
 
 
 @frappe.whitelist()

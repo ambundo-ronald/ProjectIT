@@ -18,7 +18,7 @@
 
     <div v-if="busy && !rows.length" class="space-y-3"><div v-for="i in 4" :key="i" class="h-20 animate-pulse rounded-xl bg-gray-200/70" /></div>
     <ul v-else-if="rows.length" class="card divide-y divide-gray-100 overflow-hidden">
-      <li v-for="c in rows" :key="c.name">
+      <li v-for="c in paged" :key="c.name">
         <router-link :to="{ name: 'OpsContract', params: { name: c.name } }" class="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50">
           <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700"><FeatherIcon name="file-text" class="h-5 w-5" /></span>
           <span class="min-w-0 flex-1">
@@ -41,6 +41,7 @@
     <EmptyState v-else-if="!busy && !error" icon="file-text" :title="search ? 'No contracts match' : view === 'Expiring' ? 'Nothing expiring in the next 60 days' : 'No contracts here'" text="A contract lists the customer's machines, how often you visit, and what's included. Link its ERPNext Subscription for billing.">
       <router-link v-if="manager && view === 'Active'" :to="{ name: 'OpsContract', params: { name: 'new' } }" class="btn btn-primary"><FeatherIcon name="plus" class="h-4 w-4" />New contract</router-link>
     </EmptyState>
+    <Pager :total="total" :start="start" :page-length="pageLength" label="Contract pages" @change="(s) => (start = s)" @update:page-length="(n) => (pageLength = n)" />
   </section>
 </template>
 <script setup>
@@ -49,6 +50,8 @@ import { FeatherIcon } from 'frappe-ui'
 import PageHeader from '@/components/ops/PageHeader.vue'
 import EmptyState from '@/components/ops/EmptyState.vue'
 import EquipmentTabs from '@/components/ops/EquipmentTabs.vue'
+import Pager from '@/components/ops/Pager.vue'
+import { usePaged } from '@/data/paging'
 import { api, dueIn, formatDate } from '@/data/ops'
 
 const rows = ref([])
@@ -58,6 +61,7 @@ const manager = ref(false)
 const busy = ref(false)
 const running = ref(false)
 const error = ref('')
+const { start, pageLength, total, paged } = usePaged(rows, [search, view])
 const notice = ref('')
 const views = [
   { key: 'Active', label: 'Active' },

@@ -6,7 +6,7 @@ requires the WorkIT module); no employee ID is accepted from the client.
 import frappe
 from frappe.utils import cint, flt, get_datetime, getdate, nowdate, strip_html
 
-from projectit import attendance
+from projectit import attendance, ops
 
 
 def _projects(employee):
@@ -60,14 +60,13 @@ def today():
 
 
 @frappe.whitelist()
-def history(start=0):
+def history(start=0, page_length=None):
     """The employee's own Techy timesheets, newest first, with per-entry time logs."""
     employee = attendance._employee()
-    start = max(0, cint(start))
-    sheets = frappe.get_all("Timesheet", filters={"employee": employee.name, "docstatus": ["<", 2]},
-        fields=["name", "start_date", "parent_project", "docstatus", "total_hours"],
-        order_by="start_date desc, creation desc", limit_start=start, limit_page_length=31)
-    sheets, has_more = sheets[:30], len(sheets) > 30
+    start, size = max(0, cint(start)), ops.page_size(page_length, 30)
+    sheets, total = ops.paged("Timesheet", {"employee": employee.name, "docstatus": ["<", 2]}, None,
+        "start_date desc, creation desc", start, size, ["name", "start_date", "parent_project", "docstatus", "total_hours"])
+    has_more = start + len(sheets) < total
     names = [s.name for s in sheets]
     logs = frappe.get_all("Timesheet Detail", filters={"parent": ["in", names or [""]], "parenttype": "Timesheet"},
         fields=["parent", "from_time", "to_time", "hours", "activity_type", "task"], order_by="from_time asc",
@@ -90,6 +89,6 @@ def history(start=0):
     # Totals come from all of this week's sheets, not just the loaded page.
     week = frappe.get_all("Timesheet", filters={"employee": employee.name, "docstatus": 1,
         "start_date": [">=", week_start]}, fields=["start_date", "total_hours"])
-    return {"timesheets": sheets, "has_more": has_more,
+    return {"timesheets": sheets, "has_more": has_more, "total": total, "start": start, "page_length": size,
         "totals": {"today": sum(flt(w.total_hours) for w in week if getdate(w.start_date) == today_date),
             "week": sum(flt(w.total_hours) for w in week), "week_start": str(week_start)}}

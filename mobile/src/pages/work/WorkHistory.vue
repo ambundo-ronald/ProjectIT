@@ -46,7 +46,7 @@
     </section>
 
     <EmptyState v-if="!loading && !rows.length && !error" icon="clock" title="No time recorded yet" text="Check in from Today when you start work. Your entries will appear here after you check out." />
-    <button v-if="hasMore" class="btn btn-secondary w-full" :disabled="loading" @click="load(true)">Load older entries</button>
+    <Pager :total="total" :start="start" :page-length="pageLength" :busy="loading" label="History pages" @change="load" @update:page-length="(n) => { pageLength = n; load() }" />
   </div>
 </template>
 <script setup>
@@ -54,13 +54,17 @@ import { ref, computed, onMounted } from 'vue'
 import { FeatherIcon } from 'frappe-ui'
 import PageHeader from '@/components/ops/PageHeader.vue'
 import EmptyState from '@/components/ops/EmptyState.vue'
+import Pager from '@/components/ops/Pager.vue'
 import { api, formatDate, formatTime, dueIn } from '@/data/ops'
+import { usePageLength } from '@/data/paging'
 
 const rows = ref([])
 const totals = ref({ today: 0, week: 0 })
 const loading = ref(false)
 const error = ref('')
-const hasMore = ref(false)
+const pageLength = usePageLength()
+const start = ref(0)
+const total = ref(0)
 
 const hours = (h) => {
   const minutes = Math.round((Number(h) || 0) * 60)
@@ -79,14 +83,15 @@ const days = computed(() => {
   return groups
 })
 
-async function load(append = false) {
+async function load(from = 0) {
   loading.value = true
   error.value = ''
   try {
-    const data = await api('projectit.work.history', { start: append ? rows.value.length : 0 })
-    rows.value = append ? [...rows.value, ...data.timesheets] : data.timesheets
+    const data = await api('projectit.work.history', { start: from, page_length: pageLength.value })
+    rows.value = data.timesheets
     totals.value = data.totals
-    hasMore.value = data.has_more
+    start.value = data.start
+    total.value = data.total
   } catch (e) {
     error.value = e.message
   } finally {

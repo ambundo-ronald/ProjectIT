@@ -91,7 +91,7 @@ def submit_guest_request(subject, email, description=None, asset=None, full_name
 
 
 @frappe.whitelist()
-def list_requests(state=None, start=0):
+def list_requests(state=None, start=0, page_length=None):
     ops.system_user()
     filters = {"custom_maintenance_request": 1}
     if state == "Pending":
@@ -104,10 +104,9 @@ def list_requests(state=None, start=0):
         filters.update({"custom_work_order": ["is", "set"], "status": ["in", ["Resolved", "Closed"]]})
     if not ops.manager():
         filters["raised_by"] = frappe.session.user
-    start = max(0, cint(start))
+    start, size = max(0, cint(start)), ops.page_size(page_length, 50)
     # Managers review every request; staff see only requests they raised.
-    rows = frappe.get_all("Issue", filters=filters, fields=FIELDS, order_by="creation desc",
-        limit_start=start, limit_page_length=51)
+    rows, total = ops.paged("Issue", filters, None, "creation desc", start, size, FIELDS)
     labels = ops.asset_names(row.custom_asset for row in rows)
     machines = installed.labels(row.custom_equipment for row in rows)
     for row in rows:
@@ -115,7 +114,8 @@ def list_requests(state=None, start=0):
         row.equipment = machines.get(row.custom_equipment)
         row.raised_by_name = frappe.utils.get_fullname(row.raised_by) if row.raised_by else ""
         row.asset_name = labels.get(row.custom_asset)
-    return {"requests": rows[:50], "has_more": len(rows) > 50, "manager": ops.manager()}
+    return {"requests": rows, "total": total, "start": start, "page_length": size,
+        "has_more": start + len(rows) < total, "manager": ops.manager()}
 
 
 def _request(name, manage=False):

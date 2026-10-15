@@ -65,7 +65,8 @@ def _workflow():
 
 
 @frappe.whitelist()
-def list_tasks(project=None, start=0, mine=1):
+def list_tasks(project=None, start=0, mine=1, page_length=None, status=None):
+    """One page of tasks; `status` is "open", "done" or all. Counts for each cover every page."""
     _login()
     filters = {"is_template": 0, "project": ["is", "set"]}
     if project:
@@ -80,9 +81,23 @@ def list_tasks(project=None, start=0, mine=1):
     if cint(mine) or not _manager():
         filters["name"] = ["in", _assigned_names() or [""]]
     start = max(0, cint(start))
-    rows = frappe.get_list("Task", filters=filters, fields=FIELDS,
-        order_by="modified desc", limit_start=start, limit_page_length=51)
-    return {"tasks": _project_names(rows[:50]), "has_more": len(rows) > 50, "manager": _manager()}
+    size = cint(page_length) if cint(page_length) in (25, 50, 100) else 50
+    # Count what the user may see, then read just this page (both through get_list permissions).
+    light = frappe.get_list("Task", filters=filters, fields=["name", "status"], order_by="modified desc",
+        limit_page_length=0)
+    closed = ("Completed", "Cancelled")
+    counts = {"open": sum(1 for r in light if r["status"] not in closed),
+        "done": sum(1 for r in light if r["status"] == "Completed"), "all": len(light)}
+    if status == "open":
+        light = [r for r in light if r["status"] not in closed]
+    elif status == "done":
+        light = [r for r in light if r["status"] == "Completed"]
+    names = [r["name"] for r in light]
+    total, page = len(names), names[start:start + size]
+    rows = frappe.get_list("Task", filters={"name": ["in", page]}, fields=FIELDS, limit_page_length=0) if page else []
+    rows.sort(key=lambda r: page.index(r["name"]))
+    return {"tasks": _project_names(rows), "total": total, "start": start, "page_length": size, "counts": counts,
+        "has_more": start + len(rows) < total, "manager": _manager()}
 
 
 @frappe.whitelist()
