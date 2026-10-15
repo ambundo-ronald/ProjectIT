@@ -137,7 +137,7 @@
               <UserAvatar v-if="c.comment_type === 'Comment'" :name="c.comment_by" size="md" />
               <span v-else class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500"><FeatherIcon name="activity" class="h-4 w-4" /></span>
               <div class="min-w-0 flex-1">
-                <p class="text-xs text-gray-500"><span class="text-[13px] font-semibold text-gray-900">{{ c.comment_type === 'Comment' ? c.comment_by : 'System' }}</span> · {{ fromNow(c.creation) }}</p>
+                <p class="text-xs text-gray-500"><span class="text-[13px] font-semibold text-gray-900">{{ c.comment_type === 'Comment' ? c.comment_by : 'System' }}</span> · {{ c.pending ? 'saved on this phone, waiting to send' : fromNow(c.creation) }}</p>
                 <RichText :text="c.content" :names="names" class="mt-0.5 text-[14px] leading-relaxed" :class="c.comment_type === 'Info' ? 'text-gray-500' : 'text-gray-800'" />
               </div>
             </li>
@@ -263,7 +263,7 @@ const closed = computed(() => ['Completed', 'Cancelled'].includes(wo.value.statu
 const overdue = computed(() => !closed.value && (wo.value.status === 'Overdue' || isOverdue(wo.value)))
 const canAct = computed(() => data.value?.can_write && !data.value?.workflow)
 const doneSteps = computed(() => data.value.steps.filter((s) => s.status === 'Completed').length)
-const files = computed(() => data.value.files.filter((f) => safeFile(f.file_url)))
+const files = computed(() => data.value.files.filter((f) => f.pending || safeFile(f.file_url)))
 const deskLink = computed(() => `/desk/task/${encodeURIComponent(route.params.name)}`)
 const names = computed(() => Object.fromEntries(mentionable.value.map((p) => [p.user, p.full_name])))
 
@@ -361,6 +361,9 @@ async function upload(photos) {
   uploading.value = false
 }
 
+const synced = (e) => e.detail.includes(route.params.name) && load()
+window.addEventListener('techy-synced', synced)
+onBeforeUnmount(() => window.removeEventListener('techy-synced', synced))
 const stop = onRealtime('techy_work_order', (msg) => {
   if (msg.name === route.params.name && !busy.value && !Object.keys(saving).length) load()
 })

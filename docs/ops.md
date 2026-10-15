@@ -46,6 +46,24 @@ Techy Ops is a maintenance and team-collaboration workspace (similar to Maintain
   - **Upload** (or **Photos** where several can be added at once) opens the gallery or file picker.
   - Photos are shrunk to at most 1600 px and saved as JPEG before upload, so they send quickly on mobile data.
 
+## Offline mode
+
+Technicians can keep working where there is no signal.
+
+- **Getting ready.** Open the Techy app once while online, ideally from the home-screen icon.
+  - The app saves itself on the phone, then quietly saves the open jobs assigned to you (up to 40), with their checklists, procedures, parts and history.
+  - Any other job you open is saved too, as are the photos you have looked at.
+- **Without a connection,** a bar says *You're offline. Showing what's saved on this phone.* You can then:
+  - open your jobs and the work order list, and read chat you have already seen;
+  - change a job's status, post updates, tick checklist steps, answer procedure steps (photos included), add photos, start and stop the timer, record failure codes and downtime, and write the service report's *Work done*.
+  - Each change shows on the job straight away, and updates are marked *saved on this phone, waiting to send*. The bar counts what is waiting.
+- **Back online,** the changes are sent in the order they were made. **Send now** sends them straight away.
+  - Timer starts and stops keep the time they happened on the phone (up to three days back).
+  - A status change made offline wins over one made on the server in the meantime.
+- **Refused changes.** If the server refuses a change (for example the job was reassigned or cancelled meanwhile), the bar says so. **Review** lists each one with the reason: **Try again**, or **Discard** to see the job as it is now.
+- **Needs a connection:** jobs never opened on the phone, creating jobs, chat messages, parts requests, invoices, and every manager screen.
+- **How it works:** a service worker served at `/techy-sw.js` keeps the app's files and page. Jobs and queued changes are stored in the browser (IndexedDB) on that phone only. Signing out of the phone's browser profile, or clearing its site data, removes them; changes not yet sent are lost.
+
 ## Dispatch calendar
 
 Managers plan the work under **Dispatch** (sidebar on a computer, name menu on a phone).

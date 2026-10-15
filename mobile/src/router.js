@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { session } from './data/session'
 import { userResource } from '@/data/user'
-import { createResource } from 'frappe-ui'
+import { api } from '@/data/offline'
 
 const routes = [
   { path: '/', redirect: '/home' },
@@ -79,49 +79,29 @@ let router = createRouter({
 router.beforeEach(async (to, from, next) => {
   if (to.meta.public) return next()
   let isLoggedIn = session.isLoggedIn
+  // Without a connection the session cookie is all there is; the server checks again once back online.
+  const offline = typeof navigator !== 'undefined' && !navigator.onLine
+  if (!offline) {
+    try {
+      // A deep link or reload with an existing session never ran the login flow, so load the user here.
+      if (isLoggedIn && !userResource.data) await userResource.fetch()
+      await userResource.Promise
+    } catch (error) {
+      isLoggedIn = false
+    }
+  }
+  if (to.name === 'Login' && isLoggedIn) return next({ name: 'Home' })
+  if (to.name === 'Login') return next()
+  if (!isLoggedIn) return next({ name: 'Login' })
+  let modules
   try {
-    // A deep link or reload with an existing session never ran the login flow, so load the user here.
-    if (isLoggedIn && !userResource.data) await userResource.fetch()
-    await userResource.Promise
+    // Saved on the phone by api(), so the apps this person may open are known offline too.
+    modules = await api('projectit.api.get_modules_for_router', {})
   } catch (error) {
-    isLoggedIn = false
+    // Offline before the list was ever saved: let them in; every screen checks access on the server.
+    return next()
   }
-  if (to.name === 'Login' && isLoggedIn) {
-    next({ name: "Home" })
-  } else if (to.name !== 'Login' && !isLoggedIn) {
-    next({ name: 'Login' })
-  } 
-  else if(to.name === 'Login' && !isLoggedIn){
-    next()
-  }
-  else {
-    const mobileModules = createResource({
-      type: "POST",
-      url: "projectit.api.get_modules_for_router",
-      makeParams() {
-        return {
-          user_id: userResource.data
-        }
-      },
-      onSuccess(data) {
-        let allowed = false;
-        for (let d of data){
-          if(to.path.match(d)){
-            allowed =  true;
-            break;
-          }
-        }
-        if(allowed === true){
-            next()
-        }
-        else{
-          next({name : "Home"})
-        }
-      },
-    })
-
-    await mobileModules.fetch()
-  }
+  next(modules.some((d) => to.path.match(d)) ? undefined : { name: 'Home' })
 })
 
 export default router

@@ -12,13 +12,14 @@ from collections import defaultdict
 
 import frappe
 from frappe import _
-from frappe.utils import add_to_date, cint, flt, now_datetime, time_diff_in_seconds
+from frappe.utils import add_to_date, cint, flt, get_datetime, now_datetime, time_diff_in_seconds
 
 from projectit import ops
 
 DOCTYPE = "Techy Time Log"
 FIELDS = ["name", "work_order", "user", "started_at", "ended_at", "hours", "source"]
 MAX_MINUTES = 24 * 60  # one entry; longer means the clock was left running
+OFFLINE_HOURS = 72  # how far back a phone that was offline may date a start or stop
 CLOSED = ("Completed", "Cancelled")
 
 
@@ -63,8 +64,22 @@ def _sync(work_order, before):
     return after
 
 
+def _at(value):
+    """When a start or stop really happened: the phone's time if it was offline (within limits), else now."""
+    now = now_datetime()
+    if not value:
+        return now
+    try:
+        when = get_datetime(str(value).replace("T", " "))
+    except Exception:
+        return now
+    if when > add_to_date(now, minutes=5) or when < add_to_date(now, hours=-OFFLINE_HOURS):
+        return now
+    return min(when, now)
+
+
 def _close(entry, ended_at=None):
-    ended_at = ended_at or now_datetime()
+    ended_at = max(get_datetime(ended_at or now_datetime()), get_datetime(entry.started_at))
     frappe.db.set_value(DOCTYPE, entry.name, {"ended_at": ended_at, "hours": _hours(entry.started_at, ended_at)})
 
 
@@ -91,9 +106,11 @@ def _finished(work_order, changes):
 
 
 @frappe.whitelist(methods=["POST"])
-def start(work_order):
-    """Start my clock on this job (stopping it on any other job) and move the job to in progress."""
+def start(work_order, at=None):
+    """Start my clock on this job (stopping it on any other job) and move the job to in progress.
+    `at`: when it was started on a phone that was offline."""
     doc = _job(work_order)
+    when = _at(at)
     if doc.status in CLOSED:
         frappe.throw(_("Reopen the job before starting the timer."))
     me = frappe.session.user
@@ -102,8 +119,8 @@ def start(work_order):
         if entry.work_order == doc.name:
             return _finished(doc.name, changes)
         changes[entry.work_order] = logged_total(entry.work_order)
-        _close(entry)
-    frappe.get_doc({"doctype": DOCTYPE, "work_order": doc.name, "user": me, "started_at": now_datetime(),
+        _close(entry, when)
+    frappe.get_doc({"doctype": DOCTYPE, "work_order": doc.name, "user": me, "started_at": when,
         "source": "Timer"}).insert(ignore_permissions=True)
     from projectit.work_orders import _workflow
     if doc.status in ("Open", "Overdue", "Pending Review") and not _workflow():
@@ -113,8 +130,8 @@ def start(work_order):
 
 
 @frappe.whitelist(methods=["POST"])
-def stop(work_order, entry=None):
-    """Stop my clock on this job; managers may stop someone else's (`entry`)."""
+def stop(work_order, entry=None, at=None):
+    """Stop my clock on this job; managers may stop someone else's (`entry`). `at`: when, if the phone was offline."""
     doc = _job(work_order)
     running = _running(work_order=doc.name)
     if entry:
@@ -126,8 +143,9 @@ def stop(work_order, entry=None):
     if not running:
         frappe.throw(_("The timer is not running."))
     before = logged_total(doc.name)
+    when = _at(at)
     for row in running:
-        _close(row)
+        _close(row, when)
     return _finished(doc.name, {doc.name: before})
 
 

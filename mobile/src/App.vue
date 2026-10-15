@@ -12,6 +12,9 @@ import Camera from './components/Camera.vue'
 import ChatDock from './components/ChatDock.vue'
 import StatusModal from './components/ops/StatusModal.vue'
 import { statusDialog } from './data/presence'
+import { startOffline } from './data/offline'
+
+startOffline()
 import { showCamera, cameraMode, imageFile } from './data/camera_context'
 
 const employeeId = inject('employee_id')

@@ -1,35 +1,11 @@
 import { reactive, ref } from 'vue'
 import { io } from 'socket.io-client'
 
-/** POST a whitelisted method; throws an Error whose message is the server's user-facing text. */
-export async function api(method, args = {}) {
-  const headers = { Accept: 'application/json', 'Content-Type': 'application/json; charset=utf-8' }
-  if (window.csrf_token && !window.csrf_token.includes('{{')) headers['X-Frappe-CSRF-Token'] = window.csrf_token
-  const res = await fetch(`/api/method/${method}`, { method: 'POST', headers, body: JSON.stringify(args) })
-  let data = {}
-  try {
-    data = await res.json()
-  } catch (e) {
-    /* non-JSON error page */
-  }
-  if (res.ok && !data.exc) return data.message
-  let messages = []
-  try {
-    messages = JSON.parse(data._server_messages || '[]').map((m) => {
-      try {
-        return JSON.parse(m).message
-      } catch (e) {
-        return m
-      }
-    })
-  } catch (e) {
-    /* ignore */
-  }
-  const text = messages.filter(Boolean).join(' ').replace(/<[^>]*>/g, '')
-  const error = new Error(text || data.exception || (res.status === 429 ? 'Too many requests. Try again later.' : `Request failed (${res.status}).`))
-  error.status = res.status
-  throw error
-}
+/** Call a whitelisted method (see data/request.js); works offline for the reads and job changes in data/offline.js. */
+import { api } from './offline'
+import { request } from './request'
+
+export { api, request }
 
 /** Session details for the Ops shell. */
 export const me = reactive({ loaded: false, user: '', full_name: '', image: '', manager: false, unread: 0 })

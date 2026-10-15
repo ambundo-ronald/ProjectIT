@@ -63,6 +63,7 @@
         <UserMenu class="mr-1" />
       </header>
       <p v-if="error" role="alert" class="bg-red-50 px-4 py-2 text-sm text-red-700">{{ error }}</p>
+      <OfflineBar />
       <RunningTimer />
       <main class="min-h-0 flex-1 overflow-y-auto" :class="route.name === 'OpsChannel' ? 'pb-16 md:pb-0' : 'pb-24 md:pb-0'">
         <router-view v-if="me.loaded" :key="route.path" />
@@ -95,6 +96,8 @@ import WorkOrderForm from '@/components/ops/WorkOrderForm.vue'
 import AppSwitcher from '@/components/ops/AppSwitcher.vue'
 import UserMenu from '@/components/ops/UserMenu.vue'
 import RunningTimer from '@/components/ops/RunningTimer.vue'
+import OfflineBar from '@/components/ops/OfflineBar.vue'
+import { prefetch } from '@/data/offline'
 import { me, loadMe, online, onRealtime } from '@/data/ops'
 import { channels, loadChannels, listenForChat, unread } from '@/data/chat'
 import { startPresence, watchPeople } from '@/data/presence'
@@ -178,6 +181,8 @@ const stop = onRealtime('techy_work_order', () => {
 onMounted(async () => {
   try {
     await loadMe()
+    // Save my open jobs on this phone for use without a connection (in the background).
+    if (me.ops_access !== false) setTimeout(prefetch, 2000)
     await loadChannels()
     listenForChat()
     startPresence()

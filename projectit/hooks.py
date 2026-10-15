@@ -290,6 +290,9 @@ scheduler_events = {
 
 
 # Keep the original entry points for existing bookmarks and installed PWAs.
+# Serves the app's service worker at /techy-sw.js so it can work offline under /techy-app.
+page_renderer = ["projectit.offline.ServiceWorker"]
+
 website_route_rules = [
     {'from_route': '/techy-app', 'to_route': 'techy-app'},
     {'from_route': '/techy-app/<path:app_path>', 'to_route': 'techy-app'},

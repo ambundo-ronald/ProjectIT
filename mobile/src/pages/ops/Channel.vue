@@ -19,7 +19,7 @@
       </header>
       <p v-if="error" role="alert" class="bg-red-50 px-4 py-2 text-sm text-red-700">{{ error }}</p>
 
-      <div ref="scroller" class="min-h-0 flex-1 overflow-y-auto px-2 py-4 md:px-4" @scroll="onScroll">
+      <div ref="scroller" class="min-h-0 flex-1 overflow-y-auto px-2 py-4 md:px-4" @scroll="onScroll" @load.capture="atBottom && !hasNewer && !highlight && scrollToEnd()">
         <div v-if="loading" class="space-y-4 px-2" aria-label="Loading">
           <div v-for="i in 4" :key="i" class="flex gap-3"><div class="h-9 w-9 animate-pulse rounded-full bg-gray-200" /><div class="flex-1 space-y-2"><div class="h-3 w-32 animate-pulse rounded bg-gray-200" /><div class="h-3 w-2/3 animate-pulse rounded bg-gray-100" /></div></div>
         </div>
@@ -54,7 +54,7 @@
         <div><h2 class="font-semibold">Thread</h2><p class="text-xs text-gray-500">{{ channel?.is_direct ? channel.title : `#${channel?.title}` }}</p></div>
         <button class="btn btn-ghost btn-icon" aria-label="Close thread" @click="thread = null"><FeatherIcon name="x" class="h-5 w-5" /></button>
       </header>
-      <div ref="threadScroller" class="min-h-0 flex-1 overflow-y-auto px-2 py-4 md:px-3">
+      <div ref="threadScroller" class="min-h-0 flex-1 overflow-y-auto px-2 py-4 md:px-3" @load.capture="!highlight && scrollToEnd(threadScroller)">
         <Message :m="thread" thread-root @job="toJob(thread)" />
         <div class="mx-2 my-3 flex items-center gap-3 text-xs font-medium text-gray-500"><span>{{ replies.length }} repl{{ replies.length === 1 ? 'y' : 'ies' }}</span><span class="h-px flex-1 bg-gray-200" /></div>
         <Message v-for="r in replies" :key="r.name" :m="r" thread-root @remove="remove(r)" @job="toJob(r)" />

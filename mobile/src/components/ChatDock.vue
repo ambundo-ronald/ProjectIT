@@ -77,7 +77,7 @@
 
         <!-- Conversation -->
         <template v-else>
-          <div ref="scroller" class="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-3">
+          <div ref="scroller" class="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-3" @load.capture="scrollToEnd">
             <p v-if="loading" class="py-10 text-center text-sm text-gray-400">Loading…</p>
             <p v-else-if="!messages.length" class="py-10 text-center text-sm text-gray-500">No messages yet. Say hello 👋</p>
             <template v-for="(m, i) in messages" :key="m.name">
