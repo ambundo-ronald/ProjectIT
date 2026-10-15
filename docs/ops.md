@@ -294,6 +294,15 @@ Jobs record when they were first started and when they were completed (*Started 
   - The message's photos are copied to the new job, and the job's activity says which message it came from.
   - A link to the job is posted in the message's thread.
   - It works for any message you can read, including one in a channel you have not joined, but not for a private channel you are not in.
+- **Reactions.** Hover over a message (or tap it on a phone) and press the smiley to react with 👍 ✅ 👀 🙏 🎉 ❤️ 😂 or ⚠️. Tap a reaction to add yours or take it back. Hovering a reaction shows who reacted. Everyone sees reactions as they happen.
+- **Pins.** The bookmark button pins a message to the conversation, such as a gate code or a delivery date. A note says who pinned it.
+  - The bookmark in the conversation header lists the pinned messages, with **Show in chat** and **Unpin**.
+  - Any member can pin or unpin, up to 50 pins per conversation.
+- **Search.**
+  - **Search all messages** on the Chat page covers every conversation you can open. Private channels and direct messages you are not in are never searched.
+  - The magnifier in a conversation header searches only that conversation.
+  - Opening a result jumps to the message and highlights it. A reply opens in its thread. **Jump to latest messages** returns to the newest messages.
+- **Typing.** "Tina is typing…" shows under the conversation, or under the thread for replies, while someone writes.
 - Members of a direct message are notified of every message. In channels, only @mentioned members are notified.
 - Authors can delete their own messages; managers can delete any message. Deleting a thread root also deletes its replies.
 - Private channels are hidden in Desk from non-members through permission hooks. System Managers can administer all channels in Desk.

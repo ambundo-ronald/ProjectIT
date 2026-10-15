@@ -2,6 +2,9 @@ import { ref, computed, reactive, watch } from 'vue'
 import { api, me, onRealtime, tokens } from './ops'
 import { KIND } from './links'
 
+/** The reactions offered on messages (the server accepts only these). */
+export const REACTIONS = ['👍', '✅', '👀', '🙏', '🎉', '❤️', '😂', '⚠️']
+
 export const channels = ref([])
 export const activeChannel = ref(null) // channel currently on screen (chat page or chat panel)
 export const unread = computed(() => channels.value.reduce((sum, c) => sum + (c.is_member ? c.unread : 0), 0))

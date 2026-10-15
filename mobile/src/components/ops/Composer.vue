@@ -93,6 +93,7 @@ const props = defineProps({
   submit: Function, // async (text, photos) => void; photos are base64 JPEGs when `photos` is on
   photos: Boolean, // offer Camera and Photos buttons
 })
+const emit = defineEmits(['typing'])
 const MAX_PHOTOS = 6
 const pending = ref([]) // [{ content, preview }]
 const photoError = ref('')
@@ -149,6 +150,7 @@ function detect() {
 }
 
 function onInput() {
+  if (text.value.trim()) emit('typing')
   const el = input.value
   el.style.height = 'auto'
   el.style.height = `${el.scrollHeight}px`

@@ -14,7 +14,6 @@
           tabindex="-1"
           class="flex max-h-[94dvh] w-full flex-col rounded-t-2xl bg-white shadow-pop outline-none sm:rounded-2xl"
           :class="{ md: 'sm:max-w-lg', lg: 'sm:max-w-2xl', xl: 'sm:max-w-4xl' }[wide ? 'lg' : size]"
-          @keydown.esc="close"
         >
           <div class="mx-auto mt-2 h-1 w-10 rounded-full bg-gray-300 sm:hidden" aria-hidden="true" />
           <header class="flex items-start justify-between gap-3 px-5 pb-3 pt-4">
@@ -38,14 +37,30 @@
   </Teleport>
 </template>
 <script setup>
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, onBeforeUnmount } from 'vue'
 import { FeatherIcon } from 'frappe-ui'
 const props = defineProps({ modelValue: Boolean, title: String, subtitle: String, size: { type: String, default: 'md' }, wide: Boolean })
 const emit = defineEmits(['update:modelValue'])
 const panel = ref(null)
 const close = () => emit('update:modelValue', false)
+// Escape closes the top-most dialog even when focus has left it (e.g. the button pressed was removed).
+const onKey = (e) => {
+  if (e.key !== 'Escape' || e.defaultPrevented) return
+  const dialogs = document.querySelectorAll('[role="dialog"][aria-modal="true"]')
+  if (dialogs[dialogs.length - 1] === panel.value) {
+    e.preventDefault()
+    close()
+  }
+}
 watch(
   () => props.modelValue,
-  (open) => open && nextTick(() => panel.value?.querySelector('input:not([type=hidden]),textarea,select')?.focus() || panel.value?.focus()),
+  (open) => {
+    if (open) {
+      document.addEventListener('keydown', onKey)
+      nextTick(() => panel.value?.querySelector('input:not([type=hidden]),textarea,select')?.focus() || panel.value?.focus())
+    } else document.removeEventListener('keydown', onKey)
+  },
+  { immediate: true },
 )
+onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
 </script>

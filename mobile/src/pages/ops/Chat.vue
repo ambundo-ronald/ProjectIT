@@ -6,7 +6,29 @@
     </PageHeader>
     <p v-if="error" role="alert" class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>
 
-    <div v-for="group in groups" :key="group.label">
+    <form class="relative" role="search" @submit.prevent="runSearch">
+      <FeatherIcon name="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+      <input v-model="query" type="search" class="input h-11 pl-9" placeholder="Search all messages" aria-label="Search all messages" @input="searchSoon" />
+    </form>
+
+    <div v-if="query.trim().length >= 2">
+      <h2 class="section-label mb-2 px-1">{{ searching ? 'Searching…' : `${results.length}${results.length === 30 ? '+' : ''} message${results.length === 1 ? '' : 's'}` }}</h2>
+      <p v-if="searchError" class="text-sm text-red-600">{{ searchError }}</p>
+      <ul v-else-if="results.length" class="card divide-y divide-gray-100 overflow-hidden">
+        <li v-for="r in results" :key="r.message.name">
+          <router-link :to="{ name: 'OpsChannel', params: { channel: r.channel }, query: { message: r.message.name } }" class="flex gap-3 px-4 py-3 hover:bg-gray-50">
+            <UserAvatar :name="r.message.full_name" :image="r.message.image" size="md" />
+            <span class="min-w-0 flex-1">
+              <span class="flex flex-wrap items-baseline gap-x-2 text-sm"><span class="font-semibold text-gray-900">{{ r.message.full_name }}</span><span class="text-xs text-gray-500">{{ r.is_direct ? r.title : `#${r.title}` }} · {{ formatDate(r.message.creation) }}</span></span>
+              <span class="mt-0.5 line-clamp-2 block text-sm text-gray-700">{{ r.message.content || '📷 Photo' }}</span>
+            </span>
+          </router-link>
+        </li>
+      </ul>
+      <p v-else-if="!searching && searched" class="card px-4 py-6 text-center text-sm text-gray-500">No messages match “{{ searched }}” in the conversations you can open.</p>
+    </div>
+
+    <div v-for="group in (query.trim().length >= 2 ? [] : groups)" :key="group.label">
       <h2 class="section-label mb-2 px-1">{{ group.label }}</h2>
       <ul class="card divide-y divide-gray-100 overflow-hidden">
         <li v-for="c in group.rows" :key="c.name">
@@ -81,7 +103,7 @@ import PeoplePicker from '@/components/ops/PeoplePicker.vue'
 import PageHeader from '@/components/ops/PageHeader.vue'
 import EmptyState from '@/components/ops/EmptyState.vue'
 import UserAvatar from '@/components/ops/UserAvatar.vue'
-import { api, me } from '@/data/ops'
+import { api, me, formatDate } from '@/data/ops'
 import { channels, loadChannels } from '@/data/chat'
 
 const router = useRouter()
@@ -92,6 +114,34 @@ const creating = ref(false)
 const dm = ref(false)
 const projects = ref([])
 const form = reactive({ channel_name: '', description: '', is_private: false, project: '', members: [] })
+const query = ref('')
+const searched = ref('')
+const results = ref([])
+const searching = ref(false)
+const searchError = ref('')
+
+let searchTimer = null
+function searchSoon() {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(runSearch, 300)
+}
+async function runSearch() {
+  const words = query.value.trim()
+  searchError.value = ''
+  if (words.length < 2) return
+  searching.value = true
+  try {
+    const found = await api('projectit.chat.search', { query: words })
+    if (words === query.value.trim()) {
+      results.value = found
+      searched.value = words
+    }
+  } catch (e) {
+    searchError.value = e.message
+  } finally {
+    searching.value = false
+  }
+}
 
 const groups = computed(() =>
   [

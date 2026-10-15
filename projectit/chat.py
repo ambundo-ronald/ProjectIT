@@ -7,8 +7,13 @@ Photos are private Files attached to the channel, so only people who can read th
 The message keeps a [[photo:<File name>]] token per photo; readers get the text and the photo URLs separately.
 A message can be turned into a work order (work_orders.create_work_order with chat_message), which copies its
 photos to the job and posts a link back in the message's thread.
+
+Members react with a fixed set of emoji (Techy Chat Reaction) and pin messages to the channel (Techy Chat Pin).
+Reactions, pins and typing are pushed to the other members as they happen. Search covers every channel the
+reader can open; get_messages(around=...) loads the conversation around a search result.
 """
 import hashlib
+from collections import defaultdict
 import re
 from html import escape
 
@@ -21,6 +26,9 @@ from projectit import links, ops
 SLUG = re.compile(r"[^a-z0-9_-]+")
 PHOTO = re.compile(r"\s*\[\[photo:([0-9A-Za-z]{6,40})\]\]")
 MAX_PHOTOS = 6
+REACTIONS = ("👍", "✅", "👀", "🙏", "🎉", "❤️", "😂", "⚠️")
+MAX_PINS = 50
+NO_MARKS = ({}, set())
 MESSAGE_FIELDS = ["name", "content", "comment_type", "comment_email", "comment_by", "creation", "modified",
     "subject", "reference_name"]
 
@@ -180,19 +188,26 @@ def get_channel(name):
         "members": ops.people([row.user for row in doc.members])}
 
 
-def _messages(channel, thread=None, before=None, limit=50):
+def _messages(channel, thread=None, before=None, limit=50, around=None):
+    """(messages, has_more older, has_newer). `around` is a creation time to centre on (a search result)."""
     filters = {"reference_doctype": "Techy Channel", "reference_name": channel,
-        "comment_type": ["in", ["Comment", "Info"]]}
-    if thread:
-        filters["subject"] = thread
+        "comment_type": ["in", ["Comment", "Info"]], "subject": thread if thread else ["is", "not set"]}
+    limit = min(max(cint(limit), 1), 100)
+
+    def fetch(extra, order):
+        return frappe.get_all("Comment", filters={**filters, **extra}, fields=MESSAGE_FIELDS, order_by=order,
+            limit_page_length=limit + 1)
+    has_newer = False
+    if around:
+        older = fetch({"creation": ["<=", get_datetime(around)]}, "creation desc")
+        newer = fetch({"creation": [">", get_datetime(around)]}, "creation asc")
+        has_more, has_newer = len(older) > limit, len(newer) > limit
+        rows = list(reversed(older[:limit])) + newer[:limit]
     else:
-        filters["subject"] = ["is", "not set"]
-    if before:
-        filters["creation"] = ["<", get_datetime(before)]
-    rows = frappe.get_all("Comment", filters=filters, fields=MESSAGE_FIELDS, order_by="creation desc",
-        limit_page_length=min(max(cint(limit), 1), 100) + 1)
-    has_more, rows = len(rows) > limit, list(reversed(rows[:limit]))
+        rows = fetch({"creation": ["<", get_datetime(before)]} if before else {}, "creation desc")
+        has_more, rows = len(rows) > limit, list(reversed(rows[:limit]))
     urls = _photo_urls(channel, [n for row in rows for n in _split(row.content)[1]])
+    marks = _marks([row.name for row in rows])
     replies = {}
     if rows and not thread:
         for root, total, last in frappe.db.sql("""SELECT subject, COUNT(*), MAX(creation) FROM `tabComment`
@@ -200,15 +215,30 @@ def _messages(channel, thread=None, before=None, limit=50):
                   AND subject IN %(roots)s GROUP BY subject""",
                 {"channel": channel, "roots": tuple(r.name for r in rows)}):
             replies[root] = {"count": total, "last": last}
-    return [_message(row, replies.get(row.name), urls) for row in rows], has_more
+    return [_message(row, replies.get(row.name), urls, marks) for row in rows], has_more, has_newer
 
 
-def _message(row, replies=None, urls=None):
+def _marks(names):
+    """({message: [{emoji, users}]}, {pinned message names}) for these messages."""
+    names = list(names or [])
+    if not names:
+        return NO_MARKS
+    grouped = defaultdict(dict)
+    for row in frappe.get_all("Techy Chat Reaction", filters={"message": ["in", names]},
+            fields=["message", "emoji", "user"], order_by="creation asc", limit_page_length=0):
+        grouped[row.message].setdefault(row.emoji, []).append(row.user)
+    reactions = {m: [{"emoji": e, "users": u} for e, u in by.items()] for m, by in grouped.items()}
+    return reactions, set(frappe.get_all("Techy Chat Pin", filters={"message": ["in", names]}, pluck="message"))
+
+
+def _message(row, replies=None, urls=None, marks=None):
     text, names = _split(row.content)
     if urls is None:
         urls = _photo_urls(row.reference_name, names)
+    reactions, pinned = marks if marks is not None else _marks([row.name])
     return {"name": row.name, "content": ops.plain(text), "system": row.comment_type == "Info",
         "photos": [{"name": n, "url": urls[n]} for n in names if n in urls],
+        "reactions": reactions.get(row.name, []), "pinned": row.name in pinned,
         "user": row.comment_email, "full_name": row.comment_by or frappe.utils.get_fullname(row.comment_email),
         "image": frappe.get_cached_value("User", row.comment_email, "user_image") if row.comment_email else None,
         "creation": row.creation, "edited": row.modified != row.creation, "thread": row.subject or None,
@@ -216,9 +246,18 @@ def _message(row, replies=None, urls=None):
 
 
 @frappe.whitelist()
-def get_messages(channel, thread=None, before=None, limit=50):
+def get_messages(channel, thread=None, before=None, limit=50, around=None):
+    """`around`: a message name to open the conversation at (its thread root when it is a reply)."""
     _channel(channel, member=False)
-    messages, has_more = _messages(channel, thread, before, cint(limit) or 50)
+    focus, pivot = None, None
+    if around and not thread:
+        target = frappe.db.get_value("Comment", {"name": around, "reference_doctype": "Techy Channel",
+            "reference_name": channel}, ["name", "subject", "creation"], as_dict=True)
+        if not target:
+            frappe.throw(_("Message not found."))
+        focus = {"message": target.name, "thread": target.subject}
+        pivot = frappe.db.get_value("Comment", target.subject, "creation") if target.subject else target.creation
+    messages, has_more, has_newer = _messages(channel, thread, before, cint(limit) or 50, pivot)
     root = None
     if thread:
         root = frappe.get_all("Comment", filters={"name": thread, "reference_doctype": "Techy Channel",
@@ -226,7 +265,7 @@ def get_messages(channel, thread=None, before=None, limit=50):
         if not root:
             frappe.throw(_("Thread not found."))
         root = _message(root[0])
-    return {"messages": messages, "has_more": has_more, "root": root}
+    return {"messages": messages, "has_more": has_more, "has_newer": has_newer, "root": root, "focus": focus}
 
 
 def _photos(value):
@@ -255,7 +294,7 @@ def post_message(channel, content=None, thread=None, photos=None):
     _mark_read(doc.name)
     message = _message(frappe._dict(name=comment.name, content=comment.content, comment_type="Comment",
         comment_email=comment.comment_email, comment_by=comment.comment_by, creation=comment.creation,
-        modified=comment.creation, subject=thread), urls={f.name: f.file_url for f in files})
+        modified=comment.creation, subject=thread), urls={f.name: f.file_url for f in files}, marks=NO_MARKS)
     ops.push(members, "techy_chat", {"channel": doc.name, "message": message})
     mentioned = ops.mentions(content, set(members))
     if doc.is_direct:
@@ -281,7 +320,7 @@ def post_system_message(channel, content, thread=None):
     ops.push([row.user for row in doc.members], "techy_chat", {"channel": doc.name, "message": _message(
         frappe._dict(name=comment.name, content=comment.content, comment_type="Info", comment_email=None,
         comment_by=comment.comment_by, creation=comment.creation, modified=comment.creation, subject=thread),
-        urls={})})
+        urls={}, marks=NO_MARKS)})
 
 
 @frappe.whitelist(methods=["POST"])
@@ -303,10 +342,123 @@ def delete_message(name):
         removed.append(reply)
         frappe.delete_doc("Comment", reply.name, ignore_permissions=True)
     frappe.delete_doc("Comment", comment.name, ignore_permissions=True)
+    gone = [c.name for c in removed]
+    frappe.db.delete("Techy Chat Reaction", {"message": ["in", gone]})
+    frappe.db.delete("Techy Chat Pin", {"message": ["in", gone]})
     # Copies made for work orders are separate File records and stay with the job.
     for photo in _photo_urls(comment.reference_name, [n for c in removed for n in _split(c.content)[1]]):
         frappe.delete_doc("File", photo, ignore_permissions=True)
     return {"name": name}
+
+
+def _member_message(name):
+    """A chat message in a channel the user belongs to, with that channel."""
+    row = frappe.db.get_value("Comment", name, MESSAGE_FIELDS + ["reference_doctype"], as_dict=True)
+    if not row or row.reference_doctype != "Techy Channel" or row.comment_type != "Comment":
+        frappe.throw(_("Message not found."))
+    doc = _channel(row.reference_name)
+    if doc.archived:
+        frappe.throw(_("This channel is archived."))
+    return row, doc
+
+
+def _changed(doc, message, **changes):
+    ops.push([row.user for row in doc.members], "techy_chat_update",
+        {"channel": doc.name, "message": message, **changes})
+
+
+@frappe.whitelist(methods=["POST"])
+def react(message, emoji):
+    """Add my reaction, or take it back if I already reacted with this emoji."""
+    if emoji not in REACTIONS:
+        frappe.throw(_("Choose one of the reactions offered."))
+    row, doc = _member_message(message)
+    mine = {"message": row.name, "user": frappe.session.user, "emoji": emoji}
+    existing = frappe.db.get_value("Techy Chat Reaction", mine, "name")
+    if existing:
+        frappe.delete_doc("Techy Chat Reaction", existing, ignore_permissions=True)
+    else:
+        frappe.get_doc({"doctype": "Techy Chat Reaction", "channel": doc.name, **mine}).insert(ignore_permissions=True)
+    reactions = _marks([row.name])[0].get(row.name, [])
+    _changed(doc, row.name, reactions=reactions)
+    return reactions
+
+
+@frappe.whitelist(methods=["POST"])
+def pin(message, pinned=1):
+    """Pin a message to the channel (or unpin it). Any member may, as in Slack."""
+    row, doc = _member_message(message)
+    existing = frappe.db.get_value("Techy Chat Pin", {"message": row.name}, "name")
+    if cint(pinned) and not existing:
+        if frappe.db.count("Techy Chat Pin", {"channel": doc.name}) >= MAX_PINS:
+            frappe.throw(_("A channel can have at most {0} pinned messages. Unpin one first.").format(MAX_PINS))
+        frappe.get_doc({"doctype": "Techy Chat Pin", "channel": doc.name, "message": row.name,
+            "pinned_by": frappe.session.user}).insert(ignore_permissions=True)
+        post_system_message(doc.name, _("{0} pinned a message").format(frappe.utils.get_fullname()))
+    elif not cint(pinned) and existing:
+        frappe.delete_doc("Techy Chat Pin", existing, ignore_permissions=True)
+    _changed(doc, row.name, pinned=bool(cint(pinned)))
+    return {"pinned": bool(cint(pinned))}
+
+
+@frappe.whitelist()
+def pins(channel):
+    """The channel's pinned messages, most recently pinned first."""
+    doc = _channel(channel, member=False)
+    names = frappe.get_all("Techy Chat Pin", filters={"channel": doc.name}, order_by="creation desc", pluck="message")
+    rows = {r.name: r for r in frappe.get_all("Comment", filters={"name": ["in", names or [""]],
+        "reference_doctype": "Techy Channel", "reference_name": doc.name}, fields=MESSAGE_FIELDS)}
+    urls = _photo_urls(doc.name, [n for r in rows.values() for n in _split(r.content)[1]])
+    marks = _marks(list(rows))
+    return [_message(rows[n], urls=urls, marks=marks) for n in names if n in rows]
+
+
+def _readable_channels():
+    member = frappe.get_all("Techy Channel Member", filters={"user": frappe.session.user,
+        "parenttype": "Techy Channel"}, pluck="parent")
+    return frappe.get_all("Techy Channel", filters={"archived": 0}, or_filters={"is_private": 0,
+        "name": ["in", member or [""]]}, pluck="name")
+
+
+@frappe.whitelist()
+def search(query, channel=None, limit=30):
+    """Messages containing the words, newest first, from one channel or every channel the reader can open."""
+    ops.system_user()
+    words = str(query or "").strip()[:80]
+    if len(words) < 2:
+        frappe.throw(_("Type at least 2 characters to search."))
+    names = [_channel(channel, member=False).name] if channel else _readable_channels()
+    if not names:
+        return []
+    limit = min(max(cint(limit), 1), 50)
+    # Messages are stored HTML-escaped; LIKE wildcards in the words are matched literally.
+    stored = escape(words).replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    rows = frappe.get_all("Comment", filters={"reference_doctype": "Techy Channel", "reference_name": ["in", names],
+        "comment_type": "Comment", "content": ["like", f"%{stored}%"]}, fields=MESSAGE_FIELDS,
+        order_by="creation desc", limit_page_length=limit * 2)
+    # Ignore hits inside photo tokens.
+    rows = [r for r in rows if words.lower() in ops.plain(_split(r.content)[0]).lower()][:limit]
+    titles = {}
+    for name in {r.reference_name for r in rows}:
+        doc = frappe.get_doc("Techy Channel", name)
+        titles[name] = {"title": _title(doc), "is_direct": doc.is_direct, "is_private": doc.is_private}
+    urls = {}
+    for name in titles:
+        urls.update(_photo_urls(name, [n for r in rows if r.reference_name == name for n in _split(r.content)[1]]))
+    marks = _marks([r.name for r in rows])
+    return [{"channel": r.reference_name, **titles[r.reference_name], "message": _message(r, urls=urls, marks=marks)}
+        for r in rows]
+
+
+@frappe.whitelist(methods=["POST"])
+def typing(channel, thread=None):
+    """Tell the other members I am typing; the browser calls this at most every few seconds."""
+    doc = _channel(channel)
+    for row in doc.members:
+        if row.user != frappe.session.user:
+            frappe.publish_realtime("techy_typing", {"channel": doc.name, "thread": thread or None,
+                "user": frappe.session.user, "full_name": frappe.utils.get_fullname()}, user=row.user)
+    return {"ok": True}
 
 
 def message_source(name):

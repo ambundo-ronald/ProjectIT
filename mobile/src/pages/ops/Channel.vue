@@ -11,6 +11,8 @@
           <h1 class="truncate text-[16px] font-semibold">{{ channel.title }}</h1>
           <p class="truncate text-xs text-gray-500">{{ channel.description || (channel.is_direct ? 'Direct message' : `${channel.members.length} member${channel.members.length === 1 ? '' : 's'}`) }}<template v-if="channel.project"> · Project {{ channel.project }}</template></p>
         </div>
+        <button class="btn btn-ghost btn-icon" aria-label="Search this conversation" title="Search" @click="openSearch"><FeatherIcon name="search" class="h-4 w-4" /></button>
+        <button class="btn btn-ghost btn-sm" :aria-label="`Pinned messages (${pinCount})`" title="Pinned messages" @click="openPins"><FeatherIcon name="bookmark" class="h-4 w-4" /><span v-if="pinCount" class="text-xs">{{ pinCount }}</span></button>
         <button class="btn btn-secondary btn-sm" :aria-label="`${channel.members.length} members`" @click="showMembers = true">
           <AvatarStack :people="channel.members" :max="3" size="sm" /><span class="hidden sm:inline">{{ channel.members.length }}</span>
         </button>
@@ -33,10 +35,12 @@
           </div>
           <Message :m="m" :compact="compact(i)" @reply="openThread(m)" @remove="remove(m)" @job="toJob(m)" />
         </template>
+        <button v-if="hasNewer" class="btn btn-secondary btn-sm mx-auto mt-3 flex" @click="load()"><FeatherIcon name="arrow-down" class="h-4 w-4" />Jump to latest messages</button>
       </div>
+      <p class="h-5 shrink-0 truncate px-5 text-xs italic text-gray-500 md:px-7" aria-live="polite">{{ typingLine(null) }}</p>
 
       <div class="shrink-0 px-3 pb-3 pt-1 md:px-6 md:pb-5">
-        <Composer v-if="channel?.is_member" ref="composer" :people="channel.members" :placeholder="`Message ${channel.is_direct ? channel.title : '#' + channel.title}`" photos :submit="(t, p) => send(t, null, p)" />
+        <Composer v-if="channel?.is_member" ref="composer" :people="channel.members" :placeholder="`Message ${channel.is_direct ? channel.title : '#' + channel.title}`" photos :submit="(t, p) => send(t, null, p)" @typing="sayTyping(null)" />
         <div v-else-if="channel" class="flex flex-col items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4 text-center text-sm sm:flex-row sm:justify-between sm:text-left">
           <span>You're previewing <span class="font-semibold">#{{ channel.title }}</span>. Join to post and get notified.</span>
           <button class="btn btn-primary btn-sm" :disabled="busy" @click="join">Join channel</button>
@@ -55,10 +59,44 @@
         <div class="mx-2 my-3 flex items-center gap-3 text-xs font-medium text-gray-500"><span>{{ replies.length }} repl{{ replies.length === 1 ? 'y' : 'ies' }}</span><span class="h-px flex-1 bg-gray-200" /></div>
         <Message v-for="r in replies" :key="r.name" :m="r" thread-root @remove="remove(r)" @job="toJob(r)" />
       </div>
+      <p class="h-5 shrink-0 truncate px-4 text-xs italic text-gray-500" aria-live="polite">{{ typingLine(thread.name) }}</p>
       <div class="shrink-0 px-3 pb-3 pt-1">
-        <Composer v-if="channel?.is_member" :people="channel.members" placeholder="Reply…" photos :submit="(t, p) => send(t, thread.name, p)" />
+        <Composer v-if="channel?.is_member" :people="channel.members" placeholder="Reply…" photos :submit="(t, p) => send(t, thread.name, p)" @typing="sayTyping(thread.name)" />
       </div>
     </aside>
+
+    <Modal v-model="showPins" title="Pinned messages" :subtitle="channel?.is_direct ? channel.title : `#${channel?.title}`">
+      <p v-if="pinsLoading" class="py-6 text-center text-sm text-gray-400">Loading…</p>
+      <p v-else-if="!pinned.length" class="py-6 text-center text-sm text-gray-500">Nothing pinned yet. Pin a message from its <FeatherIcon name="bookmark" class="inline h-3.5 w-3.5" /> button so everyone can find it.</p>
+      <ul v-else class="divide-y divide-gray-100">
+        <li v-for="p in pinned" :key="p.name" class="py-3">
+          <p class="flex items-baseline gap-2 text-sm"><span class="font-semibold">{{ p.full_name }}</span><span class="text-xs text-gray-400">{{ formatDate(p.creation) }}</span></p>
+          <RichText v-if="p.content" :text="p.content" :names="names" class="mt-0.5 line-clamp-3 text-sm text-gray-700" />
+          <p v-if="p.photos.length" class="mt-0.5 text-xs text-gray-500">📷 {{ p.photos.length === 1 ? 'Photo' : `${p.photos.length} photos` }}</p>
+          <div class="mt-1.5 flex gap-2">
+            <button class="btn btn-secondary btn-sm" @click="showPins = false; jump(p.name)">Show in chat</button>
+            <button v-if="channel?.is_member" class="btn btn-ghost btn-sm text-gray-500" @click="togglePin(p, false)">Unpin</button>
+          </div>
+        </li>
+      </ul>
+    </Modal>
+
+    <Modal v-model="showSearch" title="Search" :subtitle="`In ${channel?.is_direct ? channel.title : '#' + channel?.title}`">
+      <form class="relative" role="search" @submit.prevent="runSearch">
+        <FeatherIcon name="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <input ref="searchInput" v-model="query" type="search" class="input pl-9" placeholder="Search messages" aria-label="Search messages" @input="searchSoon" />
+      </form>
+      <p v-if="searchError" class="mt-3 text-sm text-red-600">{{ searchError }}</p>
+      <p v-else-if="searched && !results.length" class="py-6 text-center text-sm text-gray-500">No messages match “{{ searched }}”.</p>
+      <ul class="mt-3 divide-y divide-gray-100">
+        <li v-for="r in results" :key="r.message.name">
+          <button class="w-full rounded-lg px-2 py-2.5 text-left hover:bg-gray-50" @click="showSearch = false; jump(r.message.name)">
+            <p class="flex items-baseline gap-2 text-sm"><span class="font-semibold">{{ r.message.full_name }}</span><span class="text-xs text-gray-400">{{ formatDate(r.message.creation) }} · {{ formatTime(r.message.creation) }}</span><span v-if="r.message.thread" class="text-xs text-gray-400">· in a thread</span></p>
+            <p class="mt-0.5 line-clamp-2 text-sm text-gray-700"><Highlight :text="r.message.content" :words="searched" /></p>
+          </button>
+        </li>
+      </ul>
+    </Modal>
 
     <Modal v-model="showMembers" :title="channel?.is_direct ? 'Conversation' : `#${channel?.title}`" :subtitle="channel ? `${channel.members.length} member${channel.members.length === 1 ? '' : 's'}` : ''">
       <ul v-if="channel" class="divide-y divide-gray-100">
@@ -80,7 +118,7 @@
   </div>
 </template>
 <script setup>
-import { ref, computed, nextTick, onMounted, onBeforeUnmount, h, inject } from 'vue'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount, h, inject, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { FeatherIcon } from 'frappe-ui'
 import UserAvatar from '@/components/ops/UserAvatar.vue'
@@ -90,6 +128,7 @@ import Modal from '@/components/ops/Modal.vue'
 import PeoplePicker from '@/components/ops/PeoplePicker.vue'
 import RichText from '@/components/ops/RichText.vue'
 import { api, me, onRealtime, formatTime, formatDate, fromNow } from '@/data/ops'
+import { REACTIONS } from '@/data/chat'
 import { activeChannel, channels, loadChannels } from '@/data/chat'
 
 const route = useRoute()
@@ -108,7 +147,30 @@ const showMembers = ref(false)
 const adding = ref([])
 const scroller = ref(null)
 const threadScroller = ref(null)
+const hasNewer = ref(false) // showing older messages around a search result or pin
+const highlight = ref('')
+const picker = ref('') // message whose reaction picker is open
+const pinCount = ref(0)
+const showPins = ref(false)
+const pinned = ref([])
+const pinsLoading = ref(false)
+const showSearch = ref(false)
+const searchInput = ref(null)
+const query = ref('')
+const searched = ref('')
+const results = ref([])
+const searchError = ref('')
+const typers = ref({}) // user -> { full_name, thread, until }
 let atBottom = true
+
+/** The words matched in a search result, in bold. */
+const Highlight = (props) => {
+  const words = (props.words || '').trim()
+  if (!words) return props.text
+  const parts = String(props.text || '').split(new RegExp(`(${words.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'ig'))
+  return parts.map((p, i) => (i % 2 ? h('mark', { class: 'rounded bg-amber-100 px-0.5 text-gray-900' }, p) : p))
+}
+Highlight.props = ['text', 'words']
 
 const names = computed(() => Object.fromEntries((channel.value?.members || []).map((p) => [p.user, p.full_name])))
 
@@ -136,11 +198,12 @@ const Message = (props, { emit }) => {
       h(RichText, { text: m.content, names: names.value, class: 'inline' }),
     ])
   const own = m.user === me.user
-  return h('div', { class: ['group relative flex gap-3 rounded-lg px-2 transition-colors hover:bg-gray-50', props.compact ? 'py-0.5' : 'mt-3 pb-0.5 pt-1'] }, [
+  return h('div', { id: `msg-${m.name}`, class: ['group relative flex gap-3 rounded-lg px-2 transition-colors', highlight.value === m.name ? 'bg-amber-50 ring-1 ring-amber-200' : m.pinned ? 'bg-brand-50/40 hover:bg-gray-50' : 'hover:bg-gray-50', props.compact && !m.pinned ? 'py-0.5' : 'mt-3 pb-0.5 pt-1'] }, [
     props.compact
       ? h('span', { class: 'w-9 shrink-0 pt-1 text-right text-[10px] text-transparent group-hover:text-gray-400' }, formatTime(m.creation))
       : h(UserAvatar, { name: m.full_name, image: m.image, size: 'lg', class: 'mt-0.5' }),
     h('div', { class: 'min-w-0 flex-1' }, [
+      m.pinned ? h('p', { class: 'mb-0.5 flex items-center gap-1 text-[11px] font-medium text-brand-700' }, [h(FeatherIcon, { name: 'bookmark', class: 'h-3 w-3' }), 'Pinned']) : null,
       props.compact ? null : h('p', { class: 'flex items-baseline gap-2' }, [h('span', { class: 'text-[14px] font-semibold text-gray-900' }, m.full_name), h('span', { class: 'text-[11px] text-gray-400' }, formatTime(m.creation))]),
       m.content ? h(RichText, { text: m.content, names: names.value, class: 'text-[14px] leading-relaxed text-gray-800' }) : null,
       m.photos?.length
@@ -148,6 +211,13 @@ const Message = (props, { emit }) => {
             h('a', { href: p.url, target: '_blank', rel: 'noopener', class: ['block overflow-hidden rounded-lg border border-gray-200 bg-gray-100', m.photos.length === 1 ? 'w-fit max-w-[min(20rem,100%)]' : 'h-28 w-28'] }, [
               h('img', { src: p.url, alt: `Photo ${n + 1} from ${m.full_name}`, loading: 'lazy', class: m.photos.length === 1 ? 'max-h-72 min-h-[6rem] min-w-[8rem] object-cover' : 'h-full w-full object-cover' }),
             ])))
+        : null,
+      m.reactions?.length
+        ? h('div', { class: 'mt-1 flex flex-wrap gap-1' }, m.reactions.map((r) => {
+            const mine = r.users.includes(me.user)
+            const who = r.users.map((u) => (u === me.user ? 'you' : names.value[u] || u)).join(', ')
+            return h('button', { class: ['inline-flex h-6 items-center gap-1 rounded-full border px-2 text-xs transition', mine ? 'border-brand-300 bg-brand-50 font-semibold text-brand-800' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'], title: `${r.emoji} ${who}`, 'aria-label': `${r.emoji} ${r.users.length}, from ${who}. ${mine ? 'Remove your reaction' : 'Add yours'}`, 'aria-pressed': mine, disabled: !channel.value?.is_member, onClick: () => react(m, r.emoji) }, [h('span', r.emoji), h('span', String(r.users.length))])
+          }))
         : null,
       !props.threadRoot && m.reply_count
         ? h('button', { class: '-ml-1.5 mt-1 inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs font-semibold text-brand-700 hover:bg-brand-50', onClick: () => emit('reply') }, [
@@ -157,7 +227,13 @@ const Message = (props, { emit }) => {
           ])
         : null,
     ]),
-    h('div', { class: 'absolute -top-3 right-3 hidden gap-0.5 rounded-lg border border-gray-200 bg-white p-0.5 shadow-pop group-focus-within:flex group-hover:flex' }, [
+    h('div', { class: ['absolute -top-3 right-3 gap-0.5 rounded-lg border border-gray-200 bg-white p-0.5 shadow-pop group-focus-within:flex group-hover:flex', picker.value === m.name ? 'flex' : 'hidden'] }, [
+      picker.value === m.name
+        ? h('div', { class: 'absolute bottom-full right-0 mb-1 flex gap-0.5 rounded-xl border border-gray-200 bg-white p-1 shadow-pop', role: 'group', 'aria-label': 'Reactions' }, REACTIONS.map((e) =>
+            h('button', { class: 'flex h-8 w-8 items-center justify-center rounded-lg text-lg hover:bg-gray-100', 'aria-label': `React with ${e}`, onClick: () => react(m, e) }, e)))
+        : null,
+      channel.value?.is_member ? h('button', { class: 'rounded-md p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800', 'aria-label': 'Add reaction', 'aria-expanded': picker.value === m.name, title: 'Add reaction', onClick: () => (picker.value = picker.value === m.name ? '' : m.name) }, [h(FeatherIcon, { name: 'smile', class: 'h-4 w-4' })]) : null,
+      channel.value?.is_member ? h('button', { class: ['rounded-md p-1.5 hover:bg-gray-100', m.pinned ? 'text-brand-700' : 'text-gray-500 hover:text-gray-800'], 'aria-label': m.pinned ? 'Unpin message' : 'Pin to this conversation', title: m.pinned ? 'Unpin' : 'Pin', onClick: () => togglePin(m, !m.pinned) }, [h(FeatherIcon, { name: 'bookmark', class: 'h-4 w-4' })]) : null,
       props.threadRoot ? null : h('button', { class: 'rounded-md p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800', 'aria-label': 'Reply in thread', title: 'Reply in thread', onClick: () => emit('reply') }, [h(FeatherIcon, { name: 'message-circle', class: 'h-4 w-4' })]),
       me.ops_access !== false ? h('button', { class: 'rounded-md p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800', 'aria-label': 'Create a work order from this message', title: 'Create work order', onClick: () => emit('job') }, [h(FeatherIcon, { name: 'tool', class: 'h-4 w-4' })]) : null,
       own || me.manager ? h('button', { class: 'rounded-md p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-600', 'aria-label': 'Delete message', title: 'Delete', onClick: () => emit('remove') }, [h(FeatherIcon, { name: 'trash-2', class: 'h-4 w-4' })]) : null,
@@ -186,15 +262,21 @@ async function markRead() {
   }
 }
 
-async function load() {
+async function load(around = null) {
   loading.value = true
   error.value = ''
   try {
-    const [info, data] = await Promise.all([api('projectit.chat.get_channel', { name }), api('projectit.chat.get_messages', { channel: name })])
+    const [info, data] = await Promise.all([
+      api('projectit.chat.get_channel', { name }),
+      api('projectit.chat.get_messages', { channel: name, around: around || undefined }),
+      loadPinCount(),
+    ])
     channel.value = info
     messages.value = data.messages
     hasMore.value = data.has_more
-    scrollToEnd()
+    hasNewer.value = data.has_newer
+    if (data.focus) await focusOn(data.focus)
+    else scrollToEnd()
     markRead()
   } catch (e) {
     error.value = e.message
@@ -218,6 +300,129 @@ async function older() {
     loadingOlder.value = false
   }
 }
+
+/** Scroll to a message (opening its thread for a reply) and highlight it for a few seconds. */
+async function focusOn({ message, thread: root }) {
+  if (root) {
+    const rootMessage = messages.value.find((m) => m.name === root)
+    if (rootMessage) await openThread(rootMessage)
+  }
+  highlight.value = message
+  await nextTick()
+  document.getElementById(`msg-${message}`)?.scrollIntoView({ block: 'center' })
+  setTimeout(() => highlight.value === message && (highlight.value = ''), 4000)
+}
+async function jump(message) {
+  const visible = messages.value.some((m) => m.name === message) || replies.value.some((m) => m.name === message)
+  if (visible) {
+    highlight.value = message
+    await nextTick()
+    document.getElementById(`msg-${message}`)?.scrollIntoView({ block: 'center' })
+    return
+  }
+  await load(message)
+}
+
+async function loadPinCount() {
+  try {
+    pinCount.value = (await api('projectit.chat.pins', { channel: name })).length
+  } catch (e) {
+    /* non-critical */
+  }
+}
+async function openPins() {
+  showPins.value = true
+  pinsLoading.value = true
+  try {
+    pinned.value = await api('projectit.chat.pins', { channel: name })
+    pinCount.value = pinned.value.length
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    pinsLoading.value = false
+  }
+}
+async function togglePin(m, on) {
+  try {
+    await api('projectit.chat.pin', { message: m.name, pinned: on ? 1 : 0 })
+    mark(m.name, { pinned: on })
+    pinned.value = on ? pinned.value : pinned.value.filter((p) => p.name !== m.name)
+    loadPinCount()
+  } catch (e) {
+    error.value = e.message
+  }
+}
+async function react(m, emoji) {
+  picker.value = ''
+  try {
+    mark(m.name, { reactions: await api('projectit.chat.react', { message: m.name, emoji }) })
+  } catch (e) {
+    error.value = e.message
+  }
+}
+/** Apply a reaction or pin change to every copy of the message on screen. */
+function mark(message, changes) {
+  for (const m of [...messages.value, ...replies.value, thread.value]) if (m?.name === message) Object.assign(m, changes)
+  messages.value = [...messages.value]
+  replies.value = [...replies.value]
+  if (atBottom && !hasNewer.value) scrollToEnd() // a new reaction row on the last message stays in view
+}
+
+function openSearch() {
+  showSearch.value = true
+  nextTick(() => searchInput.value?.focus())
+}
+let searchTimer = null
+function searchSoon() {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(runSearch, 300)
+}
+async function runSearch() {
+  const words = query.value.trim()
+  searchError.value = ''
+  if (words.length < 2) {
+    results.value = []
+    searched.value = ''
+    return
+  }
+  try {
+    results.value = await api('projectit.chat.search', { query: words, channel: name })
+    searched.value = words
+  } catch (e) {
+    searchError.value = e.message
+  }
+}
+
+// Typing: tell the others at most every 3 seconds; show who is typing for 6 seconds after their last signal.
+let lastTyping = 0
+function sayTyping(threadName) {
+  if (Date.now() - lastTyping < 3000) return
+  lastTyping = Date.now()
+  api('projectit.chat.typing', { channel: name, thread: threadName }).catch(() => {})
+}
+function typingLine(threadName) {
+  const who = Object.values(typers.value).filter((t) => (t.thread || null) === threadName).map((t) => t.full_name.split(' ')[0])
+  if (!who.length) return ''
+  return who.length === 1 ? `${who[0]} is typing…` : who.length === 2 ? `${who[0]} and ${who[1]} are typing…` : 'Several people are typing…'
+}
+function stopTyping(user) {
+  if (!typers.value[user]) return
+  const next = { ...typers.value }
+  delete next[user]
+  typers.value = next
+}
+const stopTypingEvents = onRealtime('techy_typing', (t) => {
+  if (t.channel !== name || t.user === me.user) return
+  typers.value = { ...typers.value, [t.user]: { full_name: t.full_name, thread: t.thread } }
+  clearTimeout(typingTimers[t.user])
+  typingTimers[t.user] = setTimeout(() => stopTyping(t.user), 6000)
+})
+const typingTimers = {}
+const stopUpdates = onRealtime('techy_chat_update', ({ channel: target, message, ...changes }) => {
+  if (target !== name) return
+  mark(message, changes)
+  if ('pinned' in changes) loadPinCount()
+})
 
 function upsert(list, message) {
   if (!list.value.some((m) => m.name === message.name)) list.value = [...list.value, message]
@@ -309,6 +514,7 @@ const directMessage = (user) => run(async () => {
 
 const stop = onRealtime('techy_chat', ({ channel: target, message }) => {
   if (target !== name) return
+  if (message.user) stopTyping(message.user)
   if (message.thread) {
     if (thread.value?.name === message.thread) {
       upsert(replies, message)
@@ -317,6 +523,7 @@ const stop = onRealtime('techy_chat', ({ channel: target, message }) => {
     if (message.user !== me.user) bumpReplies(message.thread, message.creation)
     return
   }
+  if (hasNewer.value) return // reading older messages; "Jump to latest" loads them
   const follow = atBottom
   upsert(messages, message)
   if (follow) scrollToEnd()
@@ -325,10 +532,14 @@ const stop = onRealtime('techy_chat', ({ channel: target, message }) => {
 
 onMounted(() => {
   activeChannel.value = name
-  load()
+  load(route.query.message ? String(route.query.message) : null)
 })
+// A search result in another screen links here with ?message=…
+watch(() => route.query.message, (message) => message && jump(String(message)))
 onBeforeUnmount(() => {
   stop()
+  stopTypingEvents()
+  stopUpdates()
   if (activeChannel.value === name) activeChannel.value = null
 })
 </script>

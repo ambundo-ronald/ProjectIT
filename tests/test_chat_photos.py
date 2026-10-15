@@ -52,7 +52,7 @@ class ChatPhotoTests(OpsTestCase):
         row = Dict(name="C2", content="Look\n[[photo:f1a2b3c4d5]]\n[[photo:otherchan99]]", comment_type="Comment",
             comment_email="tech@example.com", comment_by="Tech", creation="x", modified="x", subject=None,
             reference_name="general")
-        message = self.chat._message(row)
+        message = self.chat._message(row, marks=self.chat.NO_MARKS)
         self.assertEqual(message["photos"], [{"name": "f1a2b3c4d5", "url": "/private/files/a.jpg"}])
         filters = self.frappe.get_all.call_args.kwargs["filters"]
         self.assertEqual((filters["attached_to_doctype"], filters["attached_to_name"]), ("Techy Channel", "general"))
