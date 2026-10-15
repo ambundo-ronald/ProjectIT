@@ -50,6 +50,7 @@ const routes = [
       { path: 'assets', name: 'OpsAssets', component: () => import('@/pages/ops/Assets.vue') },
       { path: 'assets/:name', name: 'OpsAsset', component: () => import('@/pages/ops/AssetDetail.vue'), meta: { back: true, title: 'Asset' } },
       { path: 'pm', name: 'OpsPM', component: () => import('@/pages/ops/PMSchedule.vue') },
+      { path: 'dispatch', name: 'OpsDispatch', component: () => import('@/pages/ops/Dispatch.vue'), meta: { title: 'Dispatch' } },
       { path: 'chat', name: 'OpsChat', component: () => import('@/pages/ops/Chat.vue') },
       { path: 'procedures', name: 'OpsProcedures', component: () => import('@/pages/ops/Procedures.vue') },
       { path: 'procedures/:name', name: 'OpsProcedure', component: () => import('@/pages/ops/ProcedureEditor.vue'), meta: { back: true, title: 'Procedure' } },

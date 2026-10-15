@@ -46,6 +46,22 @@ Techy Ops is a maintenance and team-collaboration workspace (similar to Maintain
   - **Upload** (or **Photos** where several can be added at once) opens the gallery or file picker.
   - Photos are shrunk to at most 1600 px and saved as JPEG before upload, so they send quickly on mobile data.
 
+## Dispatch calendar
+
+Managers plan the work under **Dispatch** (sidebar on a computer, name menu on a phone).
+
+- **The board.** Technicians run down the side and days across, by day, week (Monday to Sunday) or two weeks. **Not assigned** holds planned jobs nobody has yet. Each person shows how many jobs they have in view, and a cell with more than four jobs is marked *Busy day*.
+  - Technicians are staff with the Maintenance User or Maintenance Manager role, plus anyone with a planned job in view.
+- **To plan.** Open jobs with no planned day are listed with the soonest due first, and can be filtered. *Planned earlier, not done* lists open jobs whose planned day has passed.
+- **Planning a job.**
+  - Drag a job onto a technician and day. Dragging it to another technician moves the job from the first to the second; dragging it to another day just moves the day.
+  - Dropping a job back on **To plan** takes it off the plan and keeps its technicians.
+  - Or tap a job to choose the day and technician in a dialog. That is also how to plan on a phone, or with the keyboard.
+  - A technician who gets a job, or whose job moves to another day, is notified.
+- **Due dates.** Planning a job after its due date asks first, then moves the due date to the planned day.
+- Completed and cancelled jobs stay where they were done and cannot be moved.
+- **In ERPNext:** the planned day is the Task's *Expected Start Date*, and technicians are its assignments, so the plan also shows in Desk.
+
 ## Procedures
 
 Procedures are reusable checklists with typed steps, like MaintainX procedures. Find them under **Procedures** in the desktop sidebar, or from the **PM** page on a phone.

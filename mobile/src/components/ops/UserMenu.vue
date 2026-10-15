@@ -34,6 +34,7 @@
           </span>
         </button>
         <router-link v-if="me.can_approve_parts" :to="{ name: 'OpsPartsRequests' }" class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm hover:bg-gray-50" role="menuitem" @click="close"><FeatherIcon name="package" class="h-4 w-4 text-gray-500" /><span class="flex-1">Parts requests</span><span v-if="me.counts?.pending_parts" class="rounded-full bg-amber-500 px-1.5 text-[11px] font-semibold text-white">{{ me.counts.pending_parts }}</span></router-link>
+        <router-link v-if="me.manager" :to="{ name: 'OpsDispatch' }" class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm hover:bg-gray-50" role="menuitem" @click="close"><FeatherIcon name="columns" class="h-4 w-4 text-gray-500" />Dispatch</router-link>
         <router-link v-if="me.manager" :to="{ name: 'OpsReports' }" class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm hover:bg-gray-50" role="menuitem" @click="close"><FeatherIcon name="bar-chart-2" class="h-4 w-4 text-gray-500" />Reports</router-link>
         <router-link v-if="me.can_invoice" :to="{ name: 'OpsBilling' }" class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm hover:bg-gray-50" role="menuitem" @click="close"><FeatherIcon name="file-text" class="h-4 w-4 text-gray-500" />Billing</router-link>
         <router-link :to="{ name: 'Home' }" class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm hover:bg-gray-50" role="menuitem" @click="close"><FeatherIcon name="grid" class="h-4 w-4 text-gray-500" />All apps</router-link>
