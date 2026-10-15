@@ -59,6 +59,7 @@
           </div>
         </div>
 
+        <TimerCard v-if="data.timer && (data.timer.entries.length || data.timer.can_start)" :timer="data.timer" :work-order="wo.name" :status="wo.status" :assignees="data.assignees" @updated="timed" @error="warn" />
         <CustomerSiteCard v-if="data.equipment" :equipment="data.equipment" class="lg:hidden" />
 
         <!-- Description -->
@@ -90,7 +91,7 @@
         </div>
 
         <PartsCard v-if="data.parts && (data.parts.rows.length || data.parts.can_edit)" :parts="data.parts" :work-order="wo.name" @updated="set" @error="warn" @reload="load" />
-        <LabourCard v-if="data.billing?.customer" :billing="data.billing" :work-order="wo.name" @updated="set" @error="warn" />
+        <LabourCard v-if="data.billing?.customer" :billing="data.billing" :logged="data.timer?.total || 0" :work-order="wo.name" @updated="set" @error="warn" />
         <ServiceReportCard v-if="data.report" :report="data.report" :work-order="wo.name" @updated="set" @error="warn" />
         <MetersCard v-if="data.meters?.length" :meters="data.meters" :work-order="wo.name" :can-record="data.can_write && !closed" @reload="load" />
 
@@ -233,9 +234,10 @@ import PartsCard from '@/components/ops/PartsCard.vue'
 import LabourCard from '@/components/ops/LabourCard.vue'
 import MetersCard from '@/components/ops/MetersCard.vue'
 import ServiceReportCard from '@/components/ops/ServiceReportCard.vue'
+import TimerCard from '@/components/ops/TimerCard.vue'
 import ProcedureSelect from '@/components/ops/ProcedureSelect.vue'
 import { ui } from '@/data/apps'
-import { api, onRealtime, formatDate, fromNow, isOverdue, readFile, safeFile } from '@/data/ops'
+import { api, loadMe, onRealtime, formatDate, fromNow, isOverdue, readFile, safeFile } from '@/data/ops'
 
 const route = useRoute()
 const data = ref(null)
@@ -319,6 +321,11 @@ const toggle = (step, done) => run(async () => set(await api('projectit.work_ord
 const attachProcedure = () => run(async () => set(await api('projectit.procedures.attach', { work_order: wo.value.name, procedure: picked.value }))).then(() => (picked.value = '')).catch(() => {})
 const detachProcedure = () => window.confirm('Remove this procedure from the work order?') && run(async () => set(await api('projectit.procedures.detach', { work_order: wo.value.name }))).catch(() => {})
 
+// Starting or stopping the timer also changes the running-timer banner in the app shell.
+function timed(result) {
+  set(result)
+  loadMe(true).catch(() => {})
+}
 const warn = (title) => toast({ title, icon: 'alert-circle', iconClasses: 'text-red-600', position: 'top-center' })
 
 // Answers save one at a time, in order, and show instantly while saving.

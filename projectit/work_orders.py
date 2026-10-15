@@ -9,7 +9,7 @@ import frappe
 from frappe import _
 from frappe.utils import cint, getdate, now_datetime, nowdate
 
-from projectit import billing, equipment as installed, meters, ops, parts, procedures, service_report
+from projectit import billing, equipment as installed, meters, ops, parts, procedures, service_report, timer
 
 FIELDS = ["name", "subject", "status", "priority", "exp_end_date", "custom_work_category", "custom_asset",
     "custom_location", "custom_equipment", "custom_customer", "project", "is_group", "progress", "owner", "creation",
@@ -113,7 +113,7 @@ def detail(doc):
         "parts": parts.summary(doc.name, can_write and doc.status not in ("Completed", "Cancelled")),
         "billing": billing.summary(doc, can_write),
         "meters": meters.for_machine(doc.custom_equipment, None if doc.custom_equipment else doc.custom_asset),
-        "report": service_report.summary(doc, can_write),
+        "report": service_report.summary(doc, can_write), "timer": timer.summary(doc, can_write),
         "pm_log": doc.custom_asset_maintenance_log, "workflow": _workflow(), "can_write": can_write,
         "manager": ops.manager()}
 
@@ -330,6 +330,8 @@ def on_task_update(doc, method=None):
         return
     people = set(_assignees([doc.name])[doc.name]) | {doc.owner}
     ops.push(people, "techy_work_order", {"name": doc.name, "status": doc.status})
+    if doc.status in ("Pending Review", "Completed", "Cancelled"):
+        timer.stop_all(doc)
     if doc.status != "Completed":
         return
     if doc.custom_asset_maintenance_log:

@@ -28,6 +28,11 @@
         <input v-if="b.can_edit" id="lab-fee" type="number" min="0" step="any" class="input w-40" :value="b.flat_fee" :disabled="busy" @change="save({ flat_fee: $event.target.value || 0 })" />
         <p v-else class="text-[15px] tabular-nums">{{ money(b.flat_fee) }}</p>
       </div>
+      <p v-if="b.mode === 'Hourly' && logged && Math.abs(logged - b.hours) >= 0.01" class="flex flex-wrap items-center gap-x-2 text-xs text-gray-600">
+        <span>Timer logged {{ duration(logged) }}.</span>
+        <button v-if="b.can_edit_hours" class="font-medium text-brand-600 hover:underline" :disabled="busy" @click="save({ hours: logged })">Use {{ logged }} hours</button>
+      </p>
+      <p v-else-if="b.mode === 'Hourly' && logged && b.can_edit_hours" class="text-xs text-gray-500">From the job timer. Type other hours to bill differently.</p>
       <p v-if="b.billing === 'Chargeable' && b.mode === 'Hourly' && !b.hours" class="text-xs font-medium text-amber-700">Record the hours worked so the labour can be invoiced.</p>
       <p v-if="b.billing !== b.default_billing && b.can_edit" class="text-xs text-gray-500">Changed from the default ({{ b.default_billing }}) for this machine's cover.</p>
 
@@ -52,9 +57,9 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { FeatherIcon, toast } from 'frappe-ui'
-import { api } from '@/data/ops'
+import { api, duration } from '@/data/ops'
 
-const props = defineProps({ billing: { type: Object, required: true }, workOrder: String })
+const props = defineProps({ billing: { type: Object, required: true }, workOrder: String, logged: { type: Number, default: 0 } })
 const emit = defineEmits(['updated', 'error'])
 const b = computed(() => props.billing)
 const busy = ref(false)

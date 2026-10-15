@@ -160,7 +160,7 @@ Managers can change the billing of any line until the job is invoiced. Each mach
   - *Included* when the machine is under warranty;
   - *Included* when its contract covers labour (scheduled visits) or call-outs (other jobs);
   - otherwise *Chargeable*.
-- **Who edits labour:** technicians record the hours worked. Managers and accounts staff change the billing, mode and rates.
+- **Who edits labour:** technicians record the hours worked, usually with the job timer (below). Managers and accounts staff change the billing, mode and rates.
 - **Creating invoices:**
   - Managers and Accounts Users create a **draft Sales Invoice**.
   - For one job, use **Create invoice** on the job.
@@ -168,6 +168,22 @@ Managers can change the billing of any line until the job is invoiced. Each mach
   - The invoice has a labour line per job (hours × hourly item, or 1 × flat-fee item) plus the job's approved chargeable parts, oldest job first. It does not update stock, because parts already left through the Material Request.
   - The invoice stays a draft for accounts to review and submit.
 - **No double invoicing:** each job is invoiced once. Cancelling or deleting the invoice in ERPNext frees its jobs to be invoiced again.
+
+## Job timer
+
+The **Time on job** card on each work order has a **Start timer** button.
+
+- **Starting:** the clock runs for the person who pressed it. Starting it moves an open or on-hold job to *In progress*.
+- **One clock per person:** starting on another job stops the clock on the first one.
+- **Running banner:** while your clock runs, a bar at the top of every Ops screen shows the job and the time. Tap it to go back to the job.
+- **Stopping:** press **Stop**. Putting the job on hold, completing it or cancelling it stops every clock on it, including teammates' clocks.
+- **Several people:** each person runs their own clock. The card shows who is on the job now. Managers can stop someone else's clock.
+- **Corrections:**
+  - **Add time you forgot to clock** records time without the clock. Managers can record it for an assignee.
+  - Each entry can be changed (in minutes) or deleted by the person who logged it, or by a manager, until the job is invoiced.
+- **Labour hours:** the job's billable hours follow the logged total. If someone types other hours (a minimum call-out charge, say), those hours are kept. The labour card then shows the logged total with a **Use … hours** button.
+- **Reports** use the logged time per person for technician hours and for the labour cost of contracts. Jobs without timer entries fall back to the typed hours, shared between the assignees.
+- **In ERPNext:** every entry is a *Techy Time Log* (job, technician, start, stop, hours, timer or added by hand). Managers can read and export them.
 
 ## Meter readings
 
@@ -237,7 +253,7 @@ Managers open **Reports** from the sidebar, or from the account menu on a phone.
   - a chart of jobs opened and completed per day, week or month.
 - **Preventive maintenance:** Preventive jobs due in the period are counted as on time (completed by the due date), late, missed (still open after the due date) or upcoming. *PM done on time* is on time ÷ (on time + late + missed). Late and missed jobs are listed.
 - **Requests:** received, turned into jobs, declined and waiting. Jobs are also broken down by type, with each type's average time to finish.
-- **Technicians:** jobs completed, average time to finish, labour hours logged (shared equally when a job has several assignees) and open jobs, with how many are overdue.
+- **Technicians:** jobs completed, average time to finish, labour hours (each person's timer entries; jobs without entries share their typed hours equally between the assignees) and open jobs, with how many are overdue.
 - **Machines with the most repairs:** customer equipment and our own assets with the most repair jobs opened in the period. Repeat breakdowns are worth a closer look.
 - **Service contract profit:**
   - **Money in** is the contract's subscription invoices plus invoices for extra work on its machines. Only submitted invoices count.

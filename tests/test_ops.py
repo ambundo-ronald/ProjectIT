@@ -3,7 +3,7 @@ import importlib
 import json
 import sys
 import unittest
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -63,6 +63,9 @@ class OpsTestCase(unittest.TestCase):
         utils.add_days = lambda value, days: str(date.fromisoformat(str(value)) .__add__(__import__("datetime").timedelta(days=days)))
         utils.get_datetime = lambda value: datetime.fromisoformat(str(value))
         utils.now_datetime = lambda: datetime(2026, 10, 11, 9)
+        utils.add_to_date = lambda value, minutes=0, hours=0: utils.get_datetime(value) + timedelta(minutes=minutes,
+            hours=hours)
+        utils.time_diff_in_seconds = lambda end, start: (utils.get_datetime(end) - utils.get_datetime(start)).total_seconds()
         utils.format_date = lambda value, fmt=None: str(value)[:10] if value else ""
         utils.format_datetime = lambda value, fmt=None: str(value)[:16] if value else ""
         utils.get_fullname = lambda user=None: (user or frappe.session.user).split("@")[0].title()

@@ -171,7 +171,7 @@ def bootstrap():
     system_user()
     from projectit.chat import unread_total
     from projectit.work_orders import summary
-    from projectit import billing, parts
+    from projectit import billing, parts, timer
     from projectit.api import my_apps
     user = frappe.session.user
     pending = frappe.db.count("Issue", {"custom_maintenance_request": 1, "custom_work_order": ["is", "not set"],
@@ -183,7 +183,7 @@ def bootstrap():
         "counts": {"work_orders": summary()["open"] if frappe.has_permission("Task", "read") else 0,
             "pending_requests": pending, "pending_parts": parts.pending_count()},
         "can_approve_parts": parts.can_approve(), "can_invoice": billing.can_invoice(),
-        "ops_access": "Ops" in my_apps()}
+        "ops_access": "Ops" in my_apps(), "timer": timer.mine()}
 
 
 @frappe.whitelist()

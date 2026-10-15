@@ -6,6 +6,9 @@ work, which machines keep breaking, requests received, and for each service cont
 (subscription invoices plus extra work billed) against the money out (parts at cost plus labour hours
 at the internal cost per hour from Techy Ops Settings).
 
+Labour hours are the time logged with the job timer, per person; jobs without timer entries fall back to
+their recorded labour hours, shared between the assignees.
+
 Jobs completed before start and finish times were recorded fall back to their last-modified time.
 """
 from collections import defaultdict
@@ -14,7 +17,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, add_months, cint, flt, get_datetime, getdate, nowdate
 
-from projectit import billing, contracts, ops
+from projectit import billing, contracts, ops, timer
 
 PERIODS = (7, 30, 90, 365)
 JOB_FIELDS = ["name", "subject", "status", "creation", "modified", "exp_end_date", "custom_work_category",
@@ -137,14 +140,20 @@ def by_category(jobs, start, end):
         key=lambda r: -(r["created"] + r["completed"]))
 
 
-def by_technician(jobs, assigned, start, end, today):
+def by_technician(jobs, assigned, start, end, today, logged=None):
+    logged = logged or {}
     rows = defaultdict(lambda: {"completed": 0, "open": 0, "overdue": 0, "labour_hours": 0.0, "hours": []})
     for job in jobs:
+        done = job.status == "Completed" and _in(completed_at(job), start, end)
+        if done and logged.get(job.name):
+            for user, hours in logged[job.name].items():
+                rows[user]["labour_hours"] += flt(hours)
         for user in assigned.get(job.name, []):
             row = rows[user]
-            if job.status == "Completed" and _in(completed_at(job), start, end):
+            if done:
                 row["completed"] += 1
-                row["labour_hours"] += flt(job.custom_labour_hours) / len(assigned[job.name])
+                if not logged.get(job.name):
+                    row["labour_hours"] += flt(job.custom_labour_hours) / len(assigned[job.name])
                 row["hours"].append(hours_between(job.creation, completed_at(job)))
             elif job.status not in OPEN:
                 row["open"] += 1
@@ -199,8 +208,9 @@ def request_summary(start, end):
         "pending": sum(1 for r in rows if not r.custom_work_order and r.status not in closed)}
 
 
-def contract_profit(start, end, jobs):
+def contract_profit(start, end, jobs, logged=None):
     """Money in and out for each service contract that ran during the period."""
+    logged = logged or {}
     cost_rate = flt(frappe.get_cached_doc("Techy Ops Settings").get("labour_cost_rate"))
     rows = frappe.get_all("Techy Service Contract", fields=["name", "title", "customer_name", "status", "subscription",
         "start_date", "end_date"], limit_page_length=0)
@@ -227,7 +237,7 @@ def contract_profit(start, end, jobs):
                 extra += labour["amount"] + part_total
         parts_cost = flt(frappe.db.sql("""SELECT SUM(qty * valuation_rate) FROM `tabTechy Part Usage`
             WHERE status = 'Issued' AND work_order IN %s""", (tuple(j.name for j in own) or ("",),))[0][0])
-        hours = sum(flt(j.custom_labour_hours) for j in own)
+        hours = sum(sum(logged[j.name].values()) if logged.get(j.name) else flt(j.custom_labour_hours) for j in own)
         income, cost = subscription + extra, parts_cost + hours * cost_rate
         result.append({"name": doc.name, "title": doc.title, "customer_name": doc.customer_name,
             "state": contracts.state(doc), "jobs": len(own), "subscription": subscription, "extra": extra,
@@ -246,6 +256,7 @@ def dashboard(days=30):
     before = getdate(add_days(start, -days))
     jobs = _jobs(before)
     assigned = _assignees([j.name for j in jobs])
+    logged = timer.hours_by_person([j.name for j in jobs if j.status == "Completed"])
     chart = buckets(start, end, days)
     for job in jobs:
         for col in chart:
@@ -260,8 +271,8 @@ def dashboard(days=30):
         "chart": [{k: c[k] for k in ("label", "created", "completed")} for c in chart],
         "pm": pm_summary(jobs, start, end, today),
         "categories": by_category(jobs, start, end),
-        "technicians": by_technician(jobs, assigned, start, end, today),
+        "technicians": by_technician(jobs, assigned, start, end, today, logged),
         "machines": repeat_failures(jobs, start, end),
         "requests": request_summary(start, end),
-        "contracts": contract_profit(start, end, jobs),
+        "contracts": contract_profit(start, end, jobs, logged),
     }

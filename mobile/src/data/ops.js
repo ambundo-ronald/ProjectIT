@@ -188,3 +188,34 @@ export function tokens(text, names = {}) {
   if (last < (text || '').length) parts.push({ text: text.slice(last) })
   return parts
 }
+
+/* Job timer ------------------------------------------------------------------------------------------- */
+/** 1:05:09 for a running clock. */
+export function clock(seconds) {
+  const s = Math.max(0, Math.floor(seconds || 0))
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${Math.floor(s / 3600)}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`
+}
+
+/** "2 h 15 min" for hours worked. */
+export function duration(hours) {
+  const minutes = Math.round((hours || 0) * 60)
+  if (minutes < 60) return `${minutes} min`
+  return minutes % 60 ? `${Math.floor(minutes / 60)} h ${minutes % 60} min` : `${minutes / 60} h`
+}
+
+/** A clock that ticks every second while any timer is shown; components read `now.value`. */
+export const now = ref(Date.now())
+let ticking = 0
+let tickTimer = null
+export function useTick() {
+  ticking += 1
+  if (!tickTimer) tickTimer = setInterval(() => (now.value = Date.now()), 1000)
+  return () => {
+    ticking -= 1
+    if (!ticking) {
+      clearInterval(tickTimer)
+      tickTimer = null
+    }
+  }
+}
