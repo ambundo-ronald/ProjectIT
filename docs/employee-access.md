@@ -22,6 +22,11 @@ bench --site your-site clear-cache
 
 Reload the Employee form. Look for **Techy App Access** and **Techy App Modules** near Grade. Staff use WorkIT; managers use ManageIT; managers recording their own time need both. Ensure User ID is linked to the employee's enabled account. Managers still need Projects Manager on the linked User for task management. Module selection does not grant native document permissions.
 
+**Project crews and instructions:**
+- Only **Projects Manager** and **System Manager** can change *Project Allocation and Instrucions*, which hold project crews and site instructions. This applies in ManageIT and in Desk.
+- **Projects User** can read allocations but not change them, because crew membership decides who may check in to a project.
+- The allocation's own code enforces this as well. A *Custom DocPerm* that grants write to other roles therefore has no effect.
+
 Installation and future migrations repair missing app-owned fields and module choices automatically. Existing Employee child rows and User roles are not changed. The repair removes only the exact obsolete Employee field-order export shipped by this app; independently customized layouts are preserved. If a site's custom layout explicitly hides the fields, adjust that layout in Customize Form.
 
 This code does not deploy itself. The server must have the updated source before running the repair method. Run locally available unit tests with `python -m unittest discover -s tests -v`; live schema creation requires a v16 Bench staging check.
