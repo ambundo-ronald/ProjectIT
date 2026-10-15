@@ -18,6 +18,7 @@ References: [HRMS Shift Type](https://docs.frappe.io/hr/shift-type), [HRMS Auto 
 ## Employee experience
 
 - Capture a photo and allow location access to check in or out.
+- Each IN/OUT punch stores the server time (site timezone) and the device GPS as latitude, longitude and a Desk map pin. Techy App punches show their Location section on the Employee Checkin form even when HR Settings geolocation tracking is off; turning that setting on additionally enables HRMS shift-location geofencing.
 - The server supplies the timestamp and employee identity. Timesheet, private photo, and punch are written in the same request transaction. A validation/permission failure is returned to the phone; Frappe rolls back database writes for that failed POST.
 - Open sessions survive page reloads and midnight. Retrying an existing check-in returns that session; retrying completed checkout does not create another OUT log.
 - My attendance shows the processing state and the latest 14 non-cancelled attendance records. Drafts are explicitly labeled. Use Refresh after HRMS processes the shift.

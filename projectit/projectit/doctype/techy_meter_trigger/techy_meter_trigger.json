@@ -1,0 +1,93 @@
+{
+ "actions": [],
+ "creation": "2026-10-14 15:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "trigger_type",
+  "value",
+  "job_title",
+  "priority",
+  "column_break_job",
+  "procedure",
+  "next_due",
+  "open_job",
+  "last_triggered_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "trigger_type",
+   "fieldtype": "Select",
+   "label": "When",
+   "options": "Every\nAbove\nBelow",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "Every: a service job each time the counter goes up by the value. Above / Below: a job when a reading crosses the limit."
+  },
+  {
+   "fieldname": "value",
+   "fieldtype": "Float",
+   "label": "Value",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "job_title",
+   "fieldtype": "Data",
+   "label": "Job Title",
+   "in_list_view": 1,
+   "description": "Leave blank for an automatic title."
+  },
+  {
+   "fieldname": "priority",
+   "fieldtype": "Select",
+   "label": "Priority",
+   "options": "Low\nMedium\nHigh\nUrgent",
+   "default": "Medium"
+  },
+  {
+   "fieldname": "column_break_job",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "procedure",
+   "fieldtype": "Link",
+   "label": "Procedure",
+   "options": "Techy Procedure"
+  },
+  {
+   "fieldname": "next_due",
+   "fieldtype": "Float",
+   "label": "Next Due At",
+   "description": "Every: the reading at which the next service job is raised."
+  },
+  {
+   "fieldname": "open_job",
+   "fieldtype": "Link",
+   "label": "Open Job",
+   "options": "Task",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "last_triggered_on",
+   "fieldtype": "Datetime",
+   "label": "Last Triggered On",
+   "read_only": 1,
+   "no_copy": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-14 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Projectit",
+ "name": "Techy Meter Trigger",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1,
+ "editable_grid": 1
+}

@@ -66,11 +66,29 @@ class TaskTests(unittest.TestCase):
         with self.assertRaises(PermissionError):self.module.list_tasks(project="PROJ-OTHER")
         self.frappe.get_list.assert_not_called()
 
-    def test_pagination_retains_extra_row_for_next_page(self):
-        self.frappe.get_list.return_value=[{}]*51
-        result=self.module.list_tasks(start=50)
-        self.assertEqual(len(result["tasks"]),50);self.assertTrue(result["has_more"])
-        self.assertEqual(self.frappe.get_list.call_args.kwargs["limit_start"],50)
+    def test_pages_report_the_total(self):
+        names=[f"TASK-{i}" for i in range(60)]
+        def get_list(doctype,**kw):
+            if kw.get("fields")==["name","status"]:return [{"name":n,"status":"Open"} for n in names]
+            return [{"name":n,"project":None} for n in reversed(kw["filters"]["name"][1])]
+        self.frappe.get_list.side_effect=get_list
+        result=self.module.list_tasks(start=25,page_length=25)
+        self.assertEqual([t["name"] for t in result["tasks"]],names[25:50])  # this page, in list order
+        self.assertEqual((result["total"],result["has_more"]),(60,True))
+        last=self.module.list_tasks(start=50,page_length=25)
+        self.assertEqual((len(last["tasks"]),last["has_more"]),(10,False))
+        self.assertEqual(len(self.module.list_tasks()["tasks"]),50)  # older callers keep 50 per page
+
+    def test_status_tabs_count_every_page(self):
+        light=[{"name":"T1","status":"Open"},{"name":"T2","status":"Completed"},{"name":"T3","status":"Cancelled"},{"name":"T4","status":"Working"}]
+        def get_list(doctype,**kw):
+            if kw.get("fields")==["name","status"]:return light
+            return [{"name":n,"project":None} for n in kw["filters"]["name"][1]]
+        self.frappe.get_list.side_effect=get_list
+        result=self.module.list_tasks(status="open",page_length=25)
+        self.assertEqual([t["name"] for t in result["tasks"]],["T1","T4"])
+        self.assertEqual(result["counts"],{"open":2,"done":1,"all":4})
+        self.assertEqual([t["name"] for t in self.module.list_tasks(status="done")["tasks"]],["T2"])
 
     def test_workflow_cannot_be_bypassed(self):
         self.frappe.db.get_value.return_value="Approval Workflow"

@@ -1,5 +1,18 @@
 frappe.ui.form.on("Task", {
   refresh(frm) {
+    if (!frm.is_new() && frm.doc.custom_work_order) {
+      frm.add_custom_button(
+        __("Open in Techy Ops"),
+        () => {
+          window.open(
+            `/techy-app/ops/work-orders/${encodeURIComponent(frm.doc.name)}`,
+            "_blank",
+            "noopener",
+          );
+        },
+        __("Techy App"),
+      );
+    }
     if (frm.is_new() || !frm.doc.project || frm.doc.is_template) return;
     frm.add_custom_button(
       __("Checklist Steps"),

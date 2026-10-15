@@ -1,131 +1,137 @@
 <template>
-    <div class="fixed pr-5 pt-5 w-full flex justify-end" @click="emit('close-event', true)">
-        <FeatherIcon name="x" class=" text-white size-8" />
+  <div class="fixed inset-0 z-[60] flex flex-col bg-black text-white" role="dialog" aria-modal="true" :aria-label="title">
+    <header class="flex items-center justify-between px-4 pb-2 pt-[max(env(safe-area-inset-top),1rem)]">
+      <button class="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 hover:bg-white/20" aria-label="Close camera" @click="close">
+        <FeatherIcon name="x" class="h-5 w-5" />
+      </button>
+      <p class="text-[15px] font-semibold">{{ title }}</p>
+      <span class="w-10" />
+    </header>
+
+    <div class="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden">
+      <video v-show="!preview && !failed" ref="video" autoplay muted playsinline class="h-full w-full object-cover" />
+      <img v-if="preview" :src="preview" alt="Captured photo" class="max-h-full max-w-full object-contain" />
+      <div v-if="failed && !preview" class="max-w-xs px-6 text-center">
+        <FeatherIcon name="camera-off" class="mx-auto h-10 w-10 text-white/60" />
+        <p class="mt-3 font-semibold">Camera unavailable</p>
+        <p class="mt-1 text-sm text-white/70">{{ failed }}</p>
+      </div>
+      <p v-if="!preview && !failed" class="absolute bottom-4 rounded-full bg-black/50 px-3 py-1 text-xs text-white/80">{{ hint }}</p>
     </div>
-    <div v-show="showPreview" class="flex justify-center items-center h-screen bg-black">
-        <img id="preview-image"/>
-    </div>
-    <div v-if="!showPreview" class="h-screen">
-        <video ref="video" autoplay muted hidden playsinline webkit-playsinline></video>
-        <div class="flex justify-center items-center h-screen bg-black">
-            <canvas ref="canvas" :width="width" :height="height"></canvas>
-        </div>
-        <div class="fixed bottom-12 w-full flex items-center justify-between pl-10 pr-10">
-            <div>
-                <button @click="swapCamera">
-                    <div>
-                        <SwapIcon class=" h-7 w-7"></SwapIcon>
-                    </div>
-                </button>
-            </div>
-            <div>
-                <button @click="captureImage">
-                    <CameraIcon class=" h-10 w-10"></CameraIcon>
-                </button>
-            </div>
-            <div></div>
-        </div>
-    </div>
-    <div v-else class="flex items-center flex-col pt-7 fixed bottom-12 w-full">
-        <PrimaryButton  @click="endCamera" :name="props.mode"> </PrimaryButton>
-    </div>
+
+    <footer class="px-6 pb-[max(env(safe-area-inset-bottom),1.5rem)] pt-5">
+      <div v-if="preview" class="mx-auto flex max-w-sm gap-3">
+        <button class="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-white/10 font-semibold hover:bg-white/20" @click="retake"><FeatherIcon name="rotate-ccw" class="h-5 w-5" />Retake</button>
+        <button class="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-accent-400 font-semibold text-brand-900 hover:bg-accent-500" @click="use"><FeatherIcon name="check" class="h-5 w-5" />{{ confirmLabel }}</button>
+      </div>
+      <div v-else class="mx-auto flex max-w-sm items-center justify-between">
+        <label class="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-white/10 hover:bg-white/20" aria-label="Choose a photo from the device">
+          <FeatherIcon name="image" class="h-5 w-5" />
+          <input type="file" accept="image/jpeg,image/png" class="sr-only" @change="pickFile" />
+        </label>
+        <button class="flex h-[72px] w-[72px] items-center justify-center rounded-full border-4 border-white disabled:opacity-40" :disabled="!!failed || !ready" aria-label="Take photo" @click="capture">
+          <span class="h-14 w-14 rounded-full bg-white transition active:scale-90" />
+        </button>
+        <button class="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-40" :disabled="!!failed" aria-label="Switch camera" @click="swap">
+          <FeatherIcon name="refresh-cw" class="h-5 w-5" />
+        </button>
+      </div>
+    </footer>
+    <canvas ref="canvas" class="hidden" />
+  </div>
 </template>
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from 'vue';
-import { FeatherIcon } from "frappe-ui";
-import SwapIcon from '../pages/icons/SwapIcon.vue';
-import CameraIcon from '../pages/icons/CameraIcon.vue';
-import PrimaryButton from './PrimaryButton.vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { FeatherIcon } from 'frappe-ui'
 
-const props = defineProps({
-    mode : String
-})
-
-const emit = defineEmits(['close-event','capture-event'])
+const props = defineProps({ mode: String })
+const emit = defineEmits(['close-event', 'capture-event'])
 const video = ref(null)
 const canvas = ref(null)
-const ctx = ref(null)
+const preview = ref('')
+const failed = ref('')
+const ready = ref(false)
+// Selfies for attendance; the back camera for everything else.
+const facing = ref(['Check-In', 'Check-Out'].includes(props.mode) ? 'user' : 'environment')
+let stream = null
+let file = null
 
-const width = ref(window.innerWidth);
-const height = ref(window.innerHeight);
+const title = computed(() => ({ 'Check-In': 'Check-in photo', 'Check-Out': 'Check-out photo', Upload: 'Photo update', Photo: 'Take a photo' })[props.mode] || 'Take a photo')
+const hint = computed(() => ({ Upload: 'Show the progress on site', Photo: 'Point the camera at what you want to show' })[props.mode] || 'Take a clear photo of yourself on site')
+const confirmLabel = computed(() => ({ 'Check-In': 'Check in', 'Check-Out': 'Check out', Upload: 'Upload', Photo: 'Use photo' })[props.mode] || 'Use photo')
 
-const constraints = ref({
-    video : {
-        facingMode : "environment",
+async function start() {
+  stop()
+  ready.value = false
+  failed.value = ''
+  if (!navigator.mediaDevices?.getUserMedia) {
+    failed.value = 'This browser cannot open the camera. Choose a photo from your device instead.'
+    return
+  }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing.value, width: { ideal: 1280 } }, audio: false })
+    video.value.srcObject = stream
+    await video.value.play()
+    ready.value = true
+  } catch (e) {
+    failed.value = e?.name === 'NotAllowedError' ? 'Allow camera access in your browser settings, or choose a photo from your device.' : 'No camera was found. Choose a photo from your device instead.'
+  }
+}
+
+function stop() {
+  stream?.getTracks().forEach((t) => t.stop())
+  stream = null
+}
+
+function capture() {
+  const v = video.value
+  const scale = Math.min(1, 1280 / Math.max(v.videoWidth, v.videoHeight))
+  canvas.value.width = Math.round(v.videoWidth * scale)
+  canvas.value.height = Math.round(v.videoHeight * scale)
+  canvas.value.getContext('2d').drawImage(v, 0, 0, canvas.value.width, canvas.value.height)
+  canvas.value.toBlob(
+    (blob) => {
+      file = new File([blob], `${props.mode || 'photo'}-${Date.now()}.jpg`, { type: 'image/jpeg' })
+      preview.value = URL.createObjectURL(blob)
+      stop()
     },
-    audio : false
-})
+    'image/jpeg',
+    0.85,
+  )
+}
 
-const showPreview = ref(false)
-const imageFile = ref(null)
+function pickFile(event) {
+  const picked = event.target.files?.[0]
+  if (!picked) return
+  file = picked
+  preview.value = URL.createObjectURL(picked)
+  stop()
+}
 
-onMounted(async () => {
-    if (video.value && canvas.value) {
-        ctx.value = canvas.value.getContext("2d")
-        getCamera()
-    }
-})
+function retake() {
+  URL.revokeObjectURL(preview.value)
+  preview.value = ''
+  file = null
+  start()
+}
 
+function swap() {
+  facing.value = facing.value === 'user' ? 'environment' : 'user'
+  start()
+}
+
+function use() {
+  emit('capture-event', file)
+  emit('close-event', true)
+}
+
+function close() {
+  emit('close-event', true)
+}
+
+onMounted(start)
 onBeforeUnmount(() => {
-    if(video.value)
-    {
-        stopCamera()
-    }
+  stop()
+  if (preview.value) URL.revokeObjectURL(preview.value)
 })
-
-function Draw() {
-    height.value = video.value.videoHeight / (video.value.videoWidth / canvas.value.width)
-    ctx.value.drawImage(video.value, 0, 0,canvas.value.width,height.value)
-    requestAnimationFrame(Draw)
-}
-
-function stopCamera(){
-    const mediaStream = video.value.srcObject
-    const tracks = mediaStream.getTracks();
-    tracks.forEach(track => track.stop())
-}
-
-function captureImage(){
-    var dataurl = canvas.value.toDataURL("image/png")
-    var image = document.getElementById('preview-image')
-    image.src = dataurl
-    stopCamera()
-    showPreview.value = true
-    imageFile.value = dataURLtoFile(dataurl,`${new Date().toISOString()}_${props.mode}.png`)
-}
-
-function dataURLtoFile(dataurl, filename) {
-    var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
-        bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-    while (n--) {
-        u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new File([u8arr], filename, { type: mime });
-}
-
-function endCamera(){
-    emit('capture-event',imageFile.value)
-    emit('close-event', true)
-}
-
-function swapCamera() {
-    stopCamera()
-    if (constraints.value.video.facingMode == "user") {
-        constraints.value.video.facingMode = "environment"
-    }
-    else {
-        constraints.value.video.facingMode = "user"
-    }
-    getCamera()
-}
-
-function getCamera() {
-    navigator.mediaDevices.getUserMedia(constraints.value)
-        .then((stream) => {
-            video.value.srcObject = stream
-            video.value.play()
-            requestAnimationFrame(Draw)
-        })
-}
-
 </script>

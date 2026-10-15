@@ -1,2 +1,110 @@
 @import './assets/Inter/inter.css';
 @import 'frappe-ui/src/style.css';
+
+/* Techy Ops design system. Scoped under .ops so legacy WorkIT/ManageIT screens keep their styles. */
+@layer components {
+  .ops {
+    @apply bg-gray-50 font-[Inter] text-[14px] text-gray-900;
+  }
+
+  /* Form controls: one height, one border, one focus ring. */
+  :where(.ops) .input {
+    @apply block h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 hover:border-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-gray-50 disabled:text-gray-500;
+  }
+  .ops textarea.input {
+    @apply h-auto py-2 leading-relaxed;
+  }
+  .ops select.input {
+    @apply pr-9;
+  }
+  :where(.ops) .label {
+    @apply mb-1.5 block text-[13px] font-medium text-gray-700;
+  }
+  :where(.ops) .hint {
+    @apply mt-1 text-xs text-gray-500;
+  }
+
+  /* Buttons */
+  :where(.ops) .btn {
+    @apply inline-flex h-10 select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg px-4 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  :where(.ops) .btn-sm {
+    @apply h-8 gap-1.5 px-3 text-[13px];
+  }
+  :where(.ops) .btn-lg {
+    @apply h-12 px-5 text-base;
+  }
+  :where(.ops) .btn-icon {
+    @apply h-9 w-9 px-0;
+  }
+  :where(.ops) .btn-primary {
+    @apply bg-brand-600 text-white shadow-sm hover:bg-brand-700;
+  }
+  :where(.ops) .btn-secondary {
+    @apply border border-gray-300 bg-white text-gray-800 shadow-sm hover:bg-gray-50;
+  }
+  :where(.ops) .btn-ghost {
+    @apply text-gray-700 hover:bg-gray-100;
+  }
+  :where(.ops) .btn-success {
+    @apply bg-green-600 text-white shadow-sm hover:bg-green-700;
+  }
+  :where(.ops) .btn-warning {
+    @apply bg-amber-500 text-white shadow-sm hover:bg-amber-600;
+  }
+  :where(.ops) .btn-danger {
+    @apply border border-red-200 bg-white text-red-700 hover:bg-red-50;
+  }
+
+  /* Surfaces */
+  :where(.ops) .card {
+    @apply rounded-xl border border-gray-200 bg-white shadow-card;
+  }
+  :where(.ops) .card-header {
+    @apply flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3;
+  }
+  :where(.ops) .card-title {
+    @apply text-[15px] font-semibold text-gray-900;
+  }
+  :where(.ops) .section-label {
+    @apply text-[11px] font-semibold uppercase tracking-wider text-gray-500;
+  }
+
+  /* Segmented control and filter chips */
+  :where(.ops) .segmented {
+    @apply inline-flex rounded-lg bg-gray-100 p-0.5;
+  }
+  :where(.ops) .segmented > button {
+    @apply inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-[13px] font-medium text-gray-600 transition-colors hover:text-gray-900;
+  }
+  :where(.ops) .segmented > button[aria-pressed='true'] {
+    @apply bg-white text-gray-900 shadow-sm;
+  }
+  :where(.ops) .chip {
+    @apply inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full border border-gray-200 bg-white px-3 text-[13px] font-medium text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50;
+  }
+  :where(.ops) .chip[aria-pressed='true'] {
+    @apply border-brand-600 bg-brand-600 text-white hover:bg-brand-700;
+  }
+  :where(.ops) .chip .count {
+    @apply rounded-full bg-gray-100 px-1.5 text-[11px] font-semibold text-gray-700;
+  }
+  :where(.ops) .chip[aria-pressed='true'] .count {
+    @apply bg-white/20 text-white;
+  }
+
+  /* Tabs */
+  :where(.ops) .tabs {
+    @apply flex gap-1 overflow-x-auto border-b border-gray-200;
+  }
+  :where(.ops) .tabs > button {
+    @apply -mb-px whitespace-nowrap border-b-2 border-transparent px-3 pb-2.5 pt-1 text-sm font-medium text-gray-500 hover:text-gray-800;
+  }
+  :where(.ops) .tabs > button[aria-selected='true'] {
+    @apply border-brand-600 text-brand-700;
+  }
+
+  :where(.ops) .link {
+    @apply font-medium text-brand-600 hover:text-brand-700 hover:underline;
+  }
+}

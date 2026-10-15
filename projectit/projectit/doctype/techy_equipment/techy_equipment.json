@@ -1,0 +1,266 @@
+{
+ "actions": [],
+ "autoname": "EQ-.#####",
+ "naming_rule": "Expression (old style)",
+ "creation": "2026-10-13 09:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "equipment_name",
+  "item_code",
+  "serial_no",
+  "tag",
+  "status",
+  "column_break_customer",
+  "customer",
+  "customer_name",
+  "site_address",
+  "site",
+  "project",
+  "dates_section",
+  "delivery_note",
+  "delivery_note_item",
+  "delivered_on",
+  "installed_on",
+  "installation_note",
+  "column_break_dates",
+  "warranty_until",
+  "contract_until",
+  "service_contract",
+  "built_section",
+  "built_from_work_order",
+  "column_break_built",
+  "built_from_bom",
+  "components",
+  "notes_section",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "equipment_name",
+   "fieldtype": "Data",
+   "label": "Equipment",
+   "length": 140,
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "Usually the model, e.g. RO System 500 LPH."
+  },
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "label": "Item",
+   "options": "Item",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "serial_no",
+   "fieldtype": "Link",
+   "label": "Serial No",
+   "options": "Serial No"
+  },
+  {
+   "fieldname": "tag",
+   "fieldtype": "Data",
+   "label": "Tag / Label No",
+   "length": 60,
+   "description": "Number on the machine's sticker or plate."
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Awaiting installation\nActive\nOut of service\nDecommissioned\nCancelled",
+   "default": "Active",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_customer",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "options": "Customer",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "label": "Customer Name",
+   "fetch_from": "customer.customer_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "site_address",
+   "fieldtype": "Link",
+   "label": "Site Address",
+   "options": "Address"
+  },
+  {
+   "fieldname": "site",
+   "fieldtype": "Data",
+   "label": "Site",
+   "length": 140,
+   "read_only": 1
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "options": "Project"
+  },
+  {
+   "fieldname": "dates_section",
+   "fieldtype": "Section Break",
+   "label": "Delivery, warranty and contract"
+  },
+  {
+   "fieldname": "delivery_note",
+   "fieldtype": "Link",
+   "label": "Delivery Note",
+   "options": "Delivery Note",
+   "read_only": 1
+  },
+  {
+   "fieldname": "delivery_note_item",
+   "fieldtype": "Data",
+   "label": "Delivery Note Item",
+   "hidden": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "delivered_on",
+   "fieldtype": "Date",
+   "label": "Delivered On"
+  },
+  {
+   "fieldname": "installed_on",
+   "fieldtype": "Date",
+   "label": "Installed On"
+  },
+  {
+   "fieldname": "installation_note",
+   "fieldtype": "Link",
+   "label": "Installation Note",
+   "options": "Installation Note",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_dates",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "warranty_until",
+   "fieldtype": "Date",
+   "label": "Warranty Until"
+  },
+  {
+   "fieldname": "contract_until",
+   "fieldtype": "Date",
+   "label": "Service Contract Until",
+   "description": "Set from the active Techy Service Contract. For machines without one, enter it by hand."
+  },
+  {
+   "fieldname": "service_contract",
+   "fieldtype": "Link",
+   "label": "Service Contract",
+   "options": "Techy Service Contract",
+   "read_only": 1
+  },
+  {
+   "fieldname": "built_section",
+   "fieldtype": "Section Break",
+   "label": "Built With",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "built_from_work_order",
+   "fieldtype": "Link",
+   "label": "Manufacturing Work Order",
+   "options": "Work Order",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_built",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "built_from_bom",
+   "fieldtype": "Link",
+   "label": "BOM",
+   "options": "BOM",
+   "read_only": 1
+  },
+  {
+   "fieldname": "components",
+   "fieldtype": "Table",
+   "label": "Components",
+   "options": "Techy Equipment Component",
+   "description": "What this unit was built from, copied from its manufacturing Work Order (or the item's BOM) when it was delivered."
+  },
+  {
+   "fieldname": "notes_section",
+   "fieldtype": "Section Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-14 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Projectit",
+ "name": "Techy Equipment",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Maintenance Manager",
+   "write": 1,
+   "export": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Projects Manager",
+   "write": 1,
+   "export": 1
+  },
+  {
+   "read": 1,
+   "role": "Employee"
+  }
+ ],
+ "search_fields": "customer_name,tag,site",
+ "show_title_field_in_link": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "equipment_name",
+ "track_changes": 1
+}

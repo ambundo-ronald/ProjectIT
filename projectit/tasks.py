@@ -1,5 +1,5 @@
 """Mobile/Desk access to native ERPNext Tasks, child Tasks and assignments."""
-from html import escape
+from html import escape, unescape
 import base64
 import binascii
 import io
@@ -50,12 +50,23 @@ def _task(name, write=False):
     return doc
 
 
+def _project_names(rows):
+    """Attach project_name to Task rows for display (labels for projects the rows already reference)."""
+    projects = list({r.get("project") for r in rows if r.get("project")})
+    names = dict(frappe.get_all("Project", filters={"name": ["in", projects]}, fields=["name", "project_name"],
+        as_list=True) or []) if projects else {}
+    for row in rows:
+        row["project_name"] = names.get(row.get("project"), row.get("project"))
+    return rows
+
+
 def _workflow():
     return frappe.db.get_value("Workflow", {"document_type": "Task", "is_active": 1}, "name")
 
 
 @frappe.whitelist()
-def list_tasks(project=None, start=0, mine=1):
+def list_tasks(project=None, start=0, mine=1, page_length=None, status=None):
+    """One page of tasks; `status` is "open", "done" or all. Counts for each cover every page."""
     _login()
     filters = {"is_template": 0, "project": ["is", "set"]}
     if project:
@@ -70,9 +81,23 @@ def list_tasks(project=None, start=0, mine=1):
     if cint(mine) or not _manager():
         filters["name"] = ["in", _assigned_names() or [""]]
     start = max(0, cint(start))
-    rows = frappe.get_list("Task", filters=filters, fields=FIELDS,
-        order_by="modified desc", limit_start=start, limit_page_length=51)
-    return {"tasks": rows[:50], "has_more": len(rows) > 50, "manager": _manager()}
+    size = cint(page_length) if cint(page_length) in (25, 50, 100) else 50
+    # Count what the user may see, then read just this page (both through get_list permissions).
+    light = frappe.get_list("Task", filters=filters, fields=["name", "status"], order_by="modified desc",
+        limit_page_length=0)
+    closed = ("Completed", "Cancelled")
+    counts = {"open": sum(1 for r in light if r["status"] not in closed),
+        "done": sum(1 for r in light if r["status"] == "Completed"), "all": len(light)}
+    if status == "open":
+        light = [r for r in light if r["status"] not in closed]
+    elif status == "done":
+        light = [r for r in light if r["status"] == "Completed"]
+    names = [r["name"] for r in light]
+    total, page = len(names), names[start:start + size]
+    rows = frappe.get_list("Task", filters={"name": ["in", page]}, fields=FIELDS, limit_page_length=0) if page else []
+    rows.sort(key=lambda r: page.index(r["name"]))
+    return {"tasks": _project_names(rows), "total": total, "start": start, "page_length": size, "counts": counts,
+        "has_more": start + len(rows) < total, "manager": _manager()}
 
 
 @frappe.whitelist()
@@ -88,10 +113,12 @@ def get_task(name):
         "comment_type": "Comment"}, fields=["name", "content", "comment_by", "creation"],
         order_by="creation desc", limit_page_length=30)
     for comment in comments:
-        comment.content = strip_html(comment.content or "")
+        comment.content = unescape(strip_html(comment.content or ""))
     files = frappe.get_list("File", filters={"attached_to_doctype": "Task", "attached_to_name": doc.name},
         fields=["name", "file_name", "file_url"], limit_page_length=50)
-    return {"task": {field: doc.get(field) for field in FIELDS}, "description": strip_html(doc.description or ""),
+    task = {field: doc.get(field) for field in FIELDS}
+    task["project_name"] = frappe.db.get_value("Project", doc.project, "project_name")
+    return {"task": task, "description": strip_html(doc.description or ""),
         "children": children, "comments": comments, "files": files, "workflow": _workflow(),
         "can_write": frappe.has_permission("Task", "write", doc=doc), "manager": _manager()}
 
@@ -133,7 +160,7 @@ def attach_photo(name, content):
                 raise ValueError
             extension = "jpg" if photo.format == "JPEG" else "png"
             photo.verify()
-    except (ValueError, binascii.Error, OSError):
+    except (ValueError, SyntaxError, binascii.Error, OSError):  # Pillow raises SyntaxError for corrupt images.
         frappe.throw(_("Choose a valid JPEG or PNG photo."))
     frappe.get_doc({"doctype": "File", "file_name": f"task-{frappe.generate_hash(length=12)}.{extension}",
         "content": data, "is_private": 1, "attached_to_doctype": "Task", "attached_to_name": doc.name}).insert()

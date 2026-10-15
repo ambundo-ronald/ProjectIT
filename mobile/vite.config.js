@@ -16,6 +16,8 @@ export default defineConfig(({ command }) => ({
       srcDir: 'public',
       filename: 'sw.js',
       devOptions: { enabled: true },
+      // The worker is served from /techy-sw.js (so it can control /techy-app), so precache absolute asset URLs.
+      injectManifest: { modifyURLPrefix: { '': '/assets/projectit/projectit/' }, maximumFileSizeToCacheInBytes: 6 * 1024 * 1024, globPatterns: ['**/*.{js,css,svg,png,woff2}'] },
       manifest: {
         display: 'standalone',
         name: 'Techy App',

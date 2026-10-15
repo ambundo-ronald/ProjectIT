@@ -51,7 +51,8 @@ fixtures = [
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-doctype_js = {"Project": "public/js/project.js", "Task": "public/js/task.js"}
+doctype_js = {"Project": "public/js/project.js", "Task": "public/js/task.js",
+    "Employee Checkin": "public/js/employee_checkin.js"}
 # doctype_js = {"doctype" : "public/js/doctype.js"}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -92,8 +93,8 @@ doctype_js = {"Project": "public/js/project.js", "Task": "public/js/task.js"}
 # ------------
 
 # before_install = "projectit.install.before_install"
-after_install = "projectit.setup.ensure_access_fields"
-after_migrate = "projectit.setup.ensure_access_fields"
+after_install = ["projectit.setup.ensure_access_fields", "projectit.setup.ensure_ops_defaults"]
+after_migrate = ["projectit.setup.ensure_access_fields", "projectit.setup.ensure_ops_defaults"]
 
 # Uninstallation
 # ------------
@@ -127,13 +128,13 @@ after_migrate = "projectit.setup.ensure_access_fields"
 # -----------
 # Permissions evaluated in scripted ways
 
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
-# has_permission = {
-# 	"Event": "frappe.desk.doctype.event.event.has_permission",
-# }
+permission_query_conditions = {
+    "Techy Channel": "projectit.chat.permission_query_conditions",
+}
+
+has_permission = {
+    "Techy Channel": "projectit.chat.has_permission",
+}
 
 # DocType Class
 # ---------------
@@ -158,7 +159,36 @@ after_migrate = "projectit.setup.ensure_access_fields"
 doc_events = {
     "Project" : {
         "after_insert" : "projectit.projectit.project.after_insert_of_project"
-    }
+    },
+    "Task": {
+        "validate": "projectit.work_orders.validate_task",
+        "on_update": "projectit.work_orders.on_task_update",
+    },
+    "Delivery Note": {
+        "on_submit": "projectit.equipment.on_delivery_note_submit",
+        "on_cancel": "projectit.equipment.on_delivery_note_cancel",
+    },
+    "Stock Entry": {
+        "on_submit": "projectit.parts.on_stock_entry_submit",
+        "on_cancel": "projectit.parts.on_stock_entry_cancel",
+    },
+    "Material Request": {
+        "on_cancel": "projectit.parts.on_material_request_cancel",
+    },
+    "Sales Invoice": {
+        "on_cancel": "projectit.billing.release_jobs",
+        "on_trash": "projectit.billing.release_jobs",
+    },
+    "Techy Service Contract": {
+        "validate": "projectit.contracts.validate",
+        "on_update": "projectit.contracts.on_update",
+        "after_delete": "projectit.contracts.after_delete",
+    },
+}
+
+scheduler_events = {
+    "daily": ["projectit.maintenance.generate_pm_work_orders", "projectit.contracts.generate_visits"],
+    "cron": {"* * * * *": ["projectit.reminders.send_due"]},
 }
 
 # Scheduled Tasks
@@ -260,6 +290,9 @@ doc_events = {
 
 
 # Keep the original entry points for existing bookmarks and installed PWAs.
+# Serves the app's service worker at /techy-sw.js so it can work offline under /techy-app.
+page_renderer = ["projectit.offline.ServiceWorker"]
+
 website_route_rules = [
     {'from_route': '/techy-app', 'to_route': 'techy-app'},
     {'from_route': '/techy-app/<path:app_path>', 'to_route': 'techy-app'},

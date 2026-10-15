@@ -1,0 +1,160 @@
+{
+ "actions": [],
+ "creation": "2026-10-11 09:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "requests_section",
+  "allow_guest_requests",
+  "pm_section",
+  "pm_lead_days",
+  "installation_procedure",
+  "parts_section",
+  "default_parts_warehouse",
+  "parts_expense_account",
+  "billing_section",
+  "labour_hour_item",
+  "flat_fee_item",
+  "labour_cost_rate",
+  "reports_section",
+  "service_report_auto_email",
+  "service_report_footer",
+  "failure_section",
+  "require_failure_codes"
+ ],
+ "fields": [
+  {
+   "fieldname": "requests_section",
+   "fieldtype": "Section Break",
+   "label": "Work Requests"
+  },
+  {
+   "default": "0",
+   "description": "Lets anyone with an asset's QR link submit a work request without signing in. Submissions are rate limited.",
+   "fieldname": "allow_guest_requests",
+   "fieldtype": "Check",
+   "label": "Allow Public Requests from Asset QR Codes"
+  },
+  {
+   "fieldname": "pm_section",
+   "fieldtype": "Section Break",
+   "label": "Preventive Maintenance"
+  },
+  {
+   "default": "3",
+   "fieldname": "pm_lead_days",
+   "fieldtype": "Int",
+   "label": "Create PM Work Orders (Days Before Due)",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "installation_procedure",
+   "fieldtype": "Link",
+   "label": "Installation Procedure",
+   "options": "Techy Procedure",
+   "description": "Attached to the installation job created for each delivered machine."
+  },
+  {
+   "fieldname": "parts_section",
+   "fieldtype": "Section Break",
+   "label": "Parts"
+  },
+  {
+   "fieldname": "default_parts_warehouse",
+   "fieldtype": "Link",
+   "label": "Default Parts Warehouse",
+   "options": "Warehouse",
+   "description": "Offered first when technicians record parts. They can pick another warehouse, such as their van."
+  },
+  {
+   "fieldname": "parts_expense_account",
+   "fieldtype": "Link",
+   "label": "Parts Expense Account",
+   "options": "Account",
+   "description": "Default expense account on Material Requests raised for job parts. Leave blank to use the company's."
+  },
+  {
+   "fieldname": "billing_section",
+   "fieldtype": "Section Break",
+   "label": "Billing"
+  },
+  {
+   "fieldname": "labour_hour_item",
+   "fieldtype": "Link",
+   "label": "Labour Item (per hour)",
+   "options": "Item",
+   "description": "Service item invoiced for hourly labour. Its Standard Selling price is the default hourly rate."
+  },
+  {
+   "fieldname": "flat_fee_item",
+   "fieldtype": "Link",
+   "label": "Labour Item (flat fee)",
+   "options": "Item",
+   "description": "Service item invoiced for flat-fee jobs, such as a call-out. Its Standard Selling price is the default fee."
+  },
+  {
+   "fieldname": "labour_cost_rate",
+   "fieldtype": "Currency",
+   "label": "Labour Cost per Hour",
+   "description": "What an hour of technician time costs you (wages and overheads). Reports use it to work out the profit on each service contract."
+  },
+  {
+   "fieldname": "reports_section",
+   "fieldtype": "Section Break",
+   "label": "Service Reports"
+  },
+  {
+   "fieldname": "service_report_auto_email",
+   "fieldtype": "Check",
+   "label": "Email the Service Report when a Customer Job is Completed",
+   "default": "0",
+   "description": "Sends the PDF report to the customer's email address on file as soon as the job is completed. Leave off to send reports by hand from the job."
+  },
+  {
+   "fieldname": "service_report_footer",
+   "fieldtype": "Small Text",
+   "label": "Service Report Footer",
+   "description": "Printed at the bottom of every report, for example warranty terms or a thank-you note."
+  },
+  {
+   "fieldname": "failure_section",
+   "fieldtype": "Section Break",
+   "label": "Failure Codes"
+  },
+  {
+   "fieldname": "require_failure_codes",
+   "fieldtype": "Check",
+   "default": "0",
+   "label": "Require Problem and Cause Codes to Complete a Repair",
+   "description": "Corrective jobs on a machine (customer equipment or our assets) cannot be completed until the technician chooses a problem and a cause code. Keeps the failure reports complete."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-10-15 16:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Projectit",
+ "name": "Techy Ops Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Maintenance Manager",
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

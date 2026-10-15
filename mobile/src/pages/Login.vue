@@ -1,32 +1,36 @@
 <template>
-  <InstallationPrompt />
-  <div class="pl-5 pr-5 pt-36">
-    <div class=" pt-5 pl-3 pr-3 pb-5 border-2 border-[#B9C8EA] rounded-lg bg-[#F5F8FF]">
-      <div class="font-[Inter] font-[500] text-[20px] text-[#4A6BB6] pb-3 text-center"> 
-        Login to Techy App
+  <div class="ops flex min-h-[100dvh] items-center justify-center bg-gradient-to-b from-brand-50 to-gray-50 p-4">
+    <InstallationPrompt />
+    <div class="w-full max-w-sm">
+      <div class="mb-6 flex flex-col items-center text-center">
+        <img src="/techy-app.svg" alt="" class="h-14 w-14 rounded-2xl shadow-card" />
+        <h1 class="mt-4 text-[24px] font-semibold tracking-tight">Sign in to Techy App</h1>
+        <p class="mt-1 text-sm text-gray-500">Work orders, field work and your team, in one place.</p>
       </div>
-      
-      <form class="flex flex-col space-y-2 w-full" @submit.prevent="submit">
-        <Input required name="email" type="text" placeholder="johndoe@email.com" label="User ID" />
-        <Input required name="password" type="password" placeholder="••••••" label="Password" />
-        <Button :loading="session.login.loading" variant="solid">Login</Button>
+      <form class="card space-y-4 p-6" @submit.prevent="submit">
+        <div>
+          <label class="label" for="login-email">Email or user ID</label>
+          <input id="login-email" required name="email" type="text" autocomplete="username" class="input" placeholder="you@company.com" @input="clearError" />
+        </div>
+        <div>
+          <label class="label" for="login-password">Password</label>
+          <input id="login-password" required name="password" type="password" autocomplete="current-password" class="input" placeholder="••••••••" @input="clearError" />
+        </div>
+        <p v-if="showAuthenticationError" role="alert" class="flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700"><FeatherIcon name="alert-circle" class="h-4 w-4" />Incorrect email or password.</p>
+        <button class="btn btn-primary w-full" :disabled="session.login.loading">{{ session.login.loading ? 'Signing in…' : 'Sign in' }}</button>
       </form>
     </div>
   </div>
-  <div v-if="showAuthenticationError">
-    <ErrorMessage @dialog-event="showAuthenticationError = $event" error-message="Invalid Login"></ErrorMessage>
-  </div>
 </template>
-<script lang="ts" setup>
+<script setup>
+import { FeatherIcon } from 'frappe-ui'
 import { session, showAuthenticationError } from '../data/session'
 import InstallationPrompt from './InstallationPrompt.vue'
-import ErrorMessage from '../components/ErrorMessage.vue'
+
+const clearError = () => (showAuthenticationError.value = false)
 
 function submit(e) {
-  let formData = new FormData(e.target)
-  session.login.submit({
-    email: formData.get('email'),
-    password: formData.get('password'),
-  })
+  const formData = new FormData(e.target)
+  session.login.submit({ email: formData.get('email'), password: formData.get('password') })
 }
 </script>

@@ -53,6 +53,10 @@ Techy App records IN/OUT punches and delegates Present/Half Day/Absent decisions
 
 Use ERPNext Tasks and child Tasks on mobile and desktop. See [task setup and usage](docs/tasks.md).
 
+## Techy Ops: maintenance and team chat
+
+Techy Ops (`/techy-app/ops`) adds MaintainX-style work orders, work requests, asset QR codes and preventive maintenance, plus Slack-style channels, threads, direct messages and @mentions. It is built on native ERPNext Tasks, Issues, Assets and Asset Maintenance. Enable it by adding the **Ops** module to an Employee. See [Techy Ops setup and usage](docs/ops.md).
+
 ## Development
 
 ```sh
