@@ -86,6 +86,7 @@
                 <div><label class="text-xs font-medium text-gray-600" :for="`min-${s.key}`">Minimum</label><input :id="`min-${s.key}`" v-model="s.min_value" inputmode="decimal" class="input h-9" placeholder="—" /></div>
                 <div><label class="text-xs font-medium text-gray-600" :for="`max-${s.key}`">Maximum</label><input :id="`max-${s.key}`" v-model="s.max_value" inputmode="decimal" class="input h-9" placeholder="—" /></div>
                 <div><label class="text-xs font-medium text-gray-600" :for="`unit-${s.key}`">Unit</label><input :id="`unit-${s.key}`" v-model="s.unit" maxlength="20" class="input h-9" placeholder="bar, °C, mm" /></div>
+                <div class="col-span-3"><label class="text-xs font-medium text-gray-600" :for="`meter-${s.key}`">Save to meter <span class="font-normal text-gray-400">(optional)</span></label><input :id="`meter-${s.key}`" v-model="s.meter" maxlength="80" class="input h-9" placeholder="e.g. Permeate TDS" /><p class="mt-0.5 text-[11px] text-gray-500">The answer is recorded as a reading on the machine's meter with this name.</p></div>
               </div>
 
               <label v-if="s.field_type === 'Pass/Fail' || s.field_type === 'Number'" class="flex items-start gap-2 rounded-lg bg-red-50/60 px-3 py-2 text-[13px] text-gray-700">
@@ -168,7 +169,7 @@ const PLACEHOLDER = {
   Signature: 'e.g. Technician sign-off',
 }
 let seq = 0
-const blankStep = (field_type) => ({ key: ++seq, field_type, label: '', help: '', required: false, options: ['', ''], min_value: '', max_value: '', unit: '', create_follow_up: false, showHelp: false })
+const blankStep = (field_type) => ({ key: ++seq, field_type, label: '', help: '', required: false, options: ['', ''], min_value: '', max_value: '', unit: '', meter: '', create_follow_up: false, showHelp: false })
 const fromServer = (s) => ({ ...blankStep(s.field_type), ...s, required: !!s.required, create_follow_up: !!s.create_follow_up, options: s.options ? s.options.split('\n') : ['', ''], key: ++seq })
 const answerable = computed(() => steps.value.filter((s) => s.field_type !== 'Heading').length)
 
@@ -205,7 +206,7 @@ const previewAnswer = (step, { value }) => {
 const clearAnswers = () => Object.keys(answers).forEach((k) => delete answers[k])
 
 function payload() {
-  return steps.value.map((s) => ({ field_type: s.field_type, label: s.label, help: s.help, required: s.required ? 1 : 0, options: s.field_type === 'Multiple Choice' ? s.options : [], min_value: s.min_value, max_value: s.max_value, unit: s.unit, create_follow_up: s.create_follow_up ? 1 : 0 }))
+  return steps.value.map((s) => ({ field_type: s.field_type, label: s.label, help: s.help, required: s.required ? 1 : 0, options: s.field_type === 'Multiple Choice' ? s.options : [], min_value: s.min_value, max_value: s.max_value, unit: s.unit, meter: s.field_type === 'Number' ? s.meter : '', create_follow_up: s.create_follow_up ? 1 : 0 }))
 }
 
 async function save() {

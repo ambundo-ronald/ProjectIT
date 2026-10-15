@@ -12,6 +12,7 @@
   "min_value",
   "max_value",
   "unit",
+  "meter",
   "create_follow_up"
  ],
  "fields": [
@@ -76,6 +77,13 @@
    "depends_on": "eval:doc.field_type=='Number'"
   },
   {
+   "fieldname": "meter",
+   "fieldtype": "Data",
+   "label": "Save to Meter",
+   "depends_on": "eval:doc.field_type=='Number'",
+   "description": "Name of a meter on the job's machine, such as Permeate TDS. The answer is recorded as a reading."
+  },
+  {
    "fieldname": "create_follow_up",
    "fieldtype": "Check",
    "label": "Create a follow-up work order when this fails",
@@ -85,7 +93,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-12 09:00:00.000000",
+ "modified": "2026-10-14 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Techy Procedure Step",

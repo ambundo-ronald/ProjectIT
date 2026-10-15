@@ -69,7 +69,30 @@
           </div>
         </div>
 
-        <MetersCard :meters="data.meters" :equipment="eq.name" :manager="data.manager" :can-record="!retired" @reload="reload" />
+        <MetersCard :meters="data.meters" :equipment="eq.name" :manager="data.manager" :can-record="!retired" :missing="data.missing_meters" @reload="reload" />
+
+        <div v-if="data.components.length || data.manager" class="card overflow-hidden">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Built with</h2>
+              <p class="mt-0.5 text-xs text-gray-500">
+                <template v-if="eq.built_from_work_order">From work order <a :href="`/desk/work-order/${eq.built_from_work_order}`" target="_blank" rel="noopener" class="link">{{ eq.built_from_work_order }}</a></template>
+                <template v-else-if="eq.built_from_bom">From BOM <a :href="`/desk/bom/${eq.built_from_bom}`" target="_blank" rel="noopener" class="link">{{ eq.built_from_bom }}</a></template>
+                <template v-else>Not recorded</template>
+              </p>
+            </div>
+            <button v-if="data.manager" class="btn btn-secondary btn-sm" :disabled="refreshing" @click="refreshComponents"><FeatherIcon name="refresh-cw" class="h-4 w-4" />{{ data.components.length ? 'Refresh' : 'Copy from BOM' }}</button>
+          </div>
+          <p v-if="buildError" role="alert" class="mx-5 mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ buildError }}</p>
+          <ul v-if="data.components.length" class="divide-y divide-gray-100">
+            <li v-for="c in data.components" :key="c.item_code" class="flex items-center gap-3 px-5 py-2.5 text-sm">
+              <FeatherIcon name="box" class="h-4 w-4 shrink-0 text-gray-400" />
+              <span class="min-w-0 flex-1"><span class="block truncate font-medium">{{ c.item_name || c.item_code }}</span><span class="font-mono text-[11px] text-gray-500">{{ c.item_code }}</span></span>
+              <span class="shrink-0 tabular-nums text-gray-600">{{ Number(c.qty).toLocaleString(undefined, { maximumFractionDigits: 3 }) }} {{ c.uom }}</span>
+            </li>
+          </ul>
+          <p v-else class="px-5 py-4 text-sm text-gray-500">Copy the parts list from this unit's manufacturing work order or its item's BOM, so technicians know which membranes and filters it takes.</p>
+        </div>
 
         <!-- Jobs -->
         <div class="card overflow-hidden">
@@ -177,7 +200,7 @@ const details = computed(() => {
     { label: 'Delivery note', value: e.delivery_note, desk: e.delivery_note && `/desk/delivery-note/${encodeURIComponent(e.delivery_note)}` },
     { label: 'Installed', value: e.installed_on ? formatDate(e.installed_on) : e.status === 'Awaiting installation' ? 'Not yet' : null },
     { label: 'Installation note', value: e.installation_note, desk: e.installation_note && `/desk/installation-note/${encodeURIComponent(e.installation_note)}` },
-    { label: 'Warranty until', value: e.warranty_until ? formatDate(e.warranty_until) : '—' },
+    { label: 'Warranty until', value: e.warranty_until ? formatDate(e.warranty_until) : data.value.coverage?.kind === 'Pending' ? 'At commissioning' : '—' },
     { label: 'Contract until', value: e.contract_until ? formatDate(e.contract_until) : '—' },
     { label: 'Project', value: e.project, kind: e.project && 'project' },
     { label: 'Item', value: e.item_code },
@@ -216,6 +239,19 @@ async function copy() {
 
 const reload = async () => {
   data.value = await api('projectit.equipment.get_equipment', { name: route.params.name })
+}
+const refreshing = ref(false)
+const buildError = ref('')
+async function refreshComponents() {
+  refreshing.value = true
+  buildError.value = ''
+  try {
+    data.value = await api('projectit.equipment.refresh_components', { name: eq.value.name })
+  } catch (e) {
+    buildError.value = e.message
+  } finally {
+    refreshing.value = false
+  }
 }
 onMounted(async () => {
   try {

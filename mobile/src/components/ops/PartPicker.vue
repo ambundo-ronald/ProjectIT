@@ -11,7 +11,7 @@
         <li v-for="r in results" :key="r.name">
           <button type="button" class="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-gray-50" @click="pick(r)">
             <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500"><FeatherIcon name="package" class="h-4 w-4" /></span>
-            <span class="min-w-0 flex-1"><span class="block truncate text-sm font-medium">{{ r.item_name }}</span><span class="block truncate font-mono text-[11px] text-gray-500">{{ r.name }}</span></span>
+            <span class="min-w-0 flex-1"><span class="block truncate text-sm font-medium">{{ r.item_name }}</span><span class="flex items-center gap-1.5 truncate text-[11px] text-gray-500"><span class="font-mono">{{ r.name }}</span><span v-if="r.fitted" class="rounded bg-brand-50 px-1 font-sans font-semibold text-brand-700">In this machine</span></span></span>
             <span class="shrink-0 text-xs font-medium" :class="r.in_stock ? 'text-green-700' : 'text-gray-400'">{{ r.in_stock ? `${fmt(r.in_stock)} ${r.stock_uom} in stock` : 'Out of stock' }}</span>
           </button>
         </li>
@@ -90,7 +90,7 @@ function search() {
   busy.value = true
   timer = setTimeout(async () => {
     try {
-      results.value = await api('projectit.parts.search_parts', { txt: query.value, warehouse: props.defaultWarehouse })
+      results.value = await api('projectit.parts.search_parts', { txt: query.value, warehouse: props.defaultWarehouse, work_order: props.workOrder })
     } catch (e) {
       error.value = e.message
     } finally {

@@ -70,6 +70,7 @@
                   <span v-if="step.unit" class="pr-3 text-sm text-gray-500">{{ step.unit }}</span>
                 </div>
                 <span v-if="rangeText(step)" class="text-xs" :class="step.failed ? 'font-semibold text-red-600' : 'text-gray-500'">{{ step.failed ? 'Out of range' : 'Expected' }} {{ rangeText(step) }}</span>
+                <span v-if="step.meter" class="inline-flex items-center gap-1 text-xs" :class="step.meter_reading ? 'text-green-700' : 'text-gray-500'"><FeatherIcon name="activity" class="h-3.5 w-3.5" />{{ step.meter_reading ? `Saved to ${step.meter}` : `Saves to ${step.meter}` }}</span>
               </div>
 
               <!-- Text -->

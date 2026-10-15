@@ -1,8 +1,9 @@
 """Labour and invoicing for jobs on customer equipment.
 
 Each job has labour charged by the hour or as a flat fee. Its default billing follows the cover:
-Included when the machine is under warranty, or when its service contract covers labour (scheduled
-visits) or call-outs (other jobs); Chargeable otherwise; jobs on our own equipment are not billed.
+Included when the machine is under warranty, when its service contract covers labour (scheduled
+visits) or call-outs (other jobs), or for the installation job (priced into the sale); Chargeable
+otherwise; jobs on our own equipment are not billed.
 A manager turns completed jobs into a draft Sales Invoice: one job, or several jobs for the same
 customer together. The invoice carries labour plus the chargeable approved parts and stays a draft
 for accounts to review. A job is invoiced once; cancelling or deleting the invoice frees it again.
@@ -31,6 +32,8 @@ def default_labour(task):
     """Chargeable, Included or No charge for a job's labour, from the machine's cover."""
     if not task.get("custom_equipment"):
         return "No charge"
+    if task.get("custom_work_category") == "Installation":
+        return "Included"  # installation is priced into the sale and costed on its project
     from projectit.equipment import coverage
     eq = frappe.db.get_value("Techy Equipment", task.custom_equipment, ["status", "warranty_until", "contract_until",
         "service_contract"], as_dict=True)

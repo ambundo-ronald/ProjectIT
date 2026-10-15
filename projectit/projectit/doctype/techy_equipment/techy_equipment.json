@@ -27,6 +27,11 @@
   "warranty_until",
   "contract_until",
   "service_contract",
+  "built_section",
+  "built_from_work_order",
+  "column_break_built",
+  "built_from_bom",
+  "components",
   "notes_section",
   "notes"
  ],
@@ -167,6 +172,37 @@
    "read_only": 1
   },
   {
+   "fieldname": "built_section",
+   "fieldtype": "Section Break",
+   "label": "Built With",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "built_from_work_order",
+   "fieldtype": "Link",
+   "label": "Manufacturing Work Order",
+   "options": "Work Order",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_built",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "built_from_bom",
+   "fieldtype": "Link",
+   "label": "BOM",
+   "options": "BOM",
+   "read_only": 1
+  },
+  {
+   "fieldname": "components",
+   "fieldtype": "Table",
+   "label": "Components",
+   "options": "Techy Equipment Component",
+   "description": "What this unit was built from, copied from its manufacturing Work Order (or the item's BOM) when it was delivered."
+  },
+  {
    "fieldname": "notes_section",
    "fieldtype": "Section Break",
    "label": "Notes"
@@ -179,7 +215,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-13 12:00:00.000000",
+ "modified": "2026-10-14 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Techy Equipment",

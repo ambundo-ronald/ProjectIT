@@ -110,6 +110,40 @@ class MeterTests(OpsTestCase):
                 "triggers": [{"trigger_type": "Every", "value": 100}]})
         self.assertIn("Only counters", str(raised.exception))
 
+    def test_standard_meters_from_the_item(self):
+        templates = [Dict(meter_name="Running hours", unit="h", meter_type="Counter", service_every=500, service_procedure=None,
+                alert_above=0, alert_below=0),
+            Dict(meter_name="Feed pressure", unit="bar", meter_type="Gauge", service_every=100, service_procedure=None,
+                alert_above=16, alert_below=2),
+            Dict(meter_name="Permeate TDS", unit="ppm", meter_type="Gauge", service_every=0, service_procedure=None,
+                alert_above=50, alert_below=0)]
+        self.frappe.get_all.side_effect = lambda doctype, **kw: templates if doctype == "Techy Meter Template" else ["permeate tds "]
+        inserted = []
+        self.frappe.get_doc.side_effect = lambda data: inserted.append(data) or MagicMock(name=data["meter_name"])
+        self.meters.apply_templates(Dict(name="EQ-1", item_code="RO-500"))
+        self.assertEqual([m["meter_name"] for m in inserted], ["Running hours", "Feed pressure"])  # TDS already there
+        hours, pressure = inserted
+        self.assertEqual([(t["trigger_type"], t["value"], t.get("next_due")) for t in hours["triggers"]], [("Every", 500, 500)])
+        self.assertEqual([(t["trigger_type"], t["value"]) for t in pressure["triggers"]], [("Above", 16), ("Below", 2)])  # no interval on a gauge
+        self.assertEqual(self.meters.missing_templates("EQ-1", "RO-500"), ["Running hours", "Feed pressure"])
+
+    def test_procedure_step_records_the_meter(self):
+        self.frappe.get_all.return_value = [Dict(name="MTR-9", meter_name="Permeate TDS")]
+        doc = meter("Gauge", meter_name="Permeate TDS", unit="ppm")
+        self.frappe.get_doc.return_value = doc
+        self.frappe.db.exists.return_value = True
+        self.meters._remove = MagicMock()
+        self.meters._record = MagicMock(return_value=(Dict(name="RD-2"), []))
+        task = Dict(name="TASK-1", custom_equipment="EQ-1", custom_asset=None)
+        self.assertEqual(self.meters.record_from_step(task, " permeate tds", "22", "Permeate TDS", previous="RD-1"), "RD-2")
+        self.meters._remove.assert_called_once_with(doc, "RD-1")  # a corrected answer replaces its reading
+        self.assertEqual(self.meters._record.call_args[0][1:3], ("22", "TASK-1"))
+        self.meters._record.reset_mock()
+        self.assertIsNone(self.meters.record_from_step(task, "Permeate TDS", "", "Permeate TDS", previous="RD-2"))
+        self.meters._record.assert_not_called()  # a cleared answer removes the reading
+        self.frappe.get_all.return_value = []
+        self.assertIsNone(self.meters.record_from_step(task, "Chlorine", "1", "Chlorine"))  # no such meter: answer only
+
     def test_only_managers_set_up_meters(self):
         with self.assertRaises(PermissionError):
             self.meters.save_meter({"meter_name": "Hours", "unit": "h", "equipment": "EQ-1"})

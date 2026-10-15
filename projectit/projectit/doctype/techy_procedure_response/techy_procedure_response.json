@@ -12,13 +12,15 @@
   "min_value",
   "max_value",
   "unit",
+  "meter",
   "create_follow_up",
   "answer_section",
   "value",
   "failed",
   "answered_by",
   "answered_on",
-  "follow_up_work_order"
+  "follow_up_work_order",
+  "meter_reading"
  ],
  "fields": [
   {
@@ -88,6 +90,13 @@
    "read_only": 1
   },
   {
+   "fieldname": "meter",
+   "fieldtype": "Data",
+   "label": "Save to Meter",
+   "depends_on": "eval:doc.field_type=='Number'",
+   "description": "Name of a meter on the job's machine, such as Permeate TDS. The answer is recorded as a reading."
+  },
+  {
    "fieldname": "create_follow_up",
    "fieldtype": "Check",
    "label": "Create a follow-up work order when this fails",
@@ -135,11 +144,19 @@
    "label": "Follow-up Work Order",
    "options": "Task",
    "read_only": 1
+  },
+  {
+   "fieldname": "meter_reading",
+   "fieldtype": "Link",
+   "label": "Meter Reading",
+   "options": "Techy Meter Reading",
+   "read_only": 1,
+   "no_copy": 1
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-12 09:00:00.000000",
+ "modified": "2026-10-14 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Techy Procedure Response",

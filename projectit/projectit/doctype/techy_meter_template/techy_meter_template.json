@@ -1,0 +1,85 @@
+{
+ "actions": [],
+ "creation": "2026-10-14 18:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "meter_name",
+  "unit",
+  "meter_type",
+  "service_every",
+  "service_procedure",
+  "column_break_limits",
+  "alert_above",
+  "alert_below"
+ ],
+ "fields": [
+  {
+   "fieldname": "meter_name",
+   "fieldtype": "Data",
+   "label": "Meter",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "unit",
+   "fieldtype": "Data",
+   "label": "Unit",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "meter_type",
+   "fieldtype": "Select",
+   "label": "Type",
+   "options": "Counter\nGauge",
+   "default": "Counter",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "service_every",
+   "fieldtype": "Float",
+   "label": "Service Every",
+   "in_list_view": 1,
+   "description": "Counters: raise a service job each time the reading goes up by this much."
+  },
+  {
+   "fieldname": "service_procedure",
+   "fieldtype": "Link",
+   "label": "Service Procedure",
+   "options": "Techy Procedure"
+  },
+  {
+   "fieldname": "column_break_limits",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "alert_above",
+   "fieldtype": "Float",
+   "label": "Alert Above",
+   "in_list_view": 1,
+   "description": "Raise a repair job when a reading goes above this. Leave 0 for none."
+  },
+  {
+   "fieldname": "alert_below",
+   "fieldtype": "Float",
+   "label": "Alert Below",
+   "in_list_view": 1,
+   "description": "Raise a repair job when a reading goes below this. Leave 0 for none."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-14 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Projectit",
+ "name": "Techy Meter Template",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -3,6 +3,7 @@ export const COVERAGE = {
   Warranty: { label: 'Under warranty', short: 'Warranty', icon: 'shield', tone: 'bg-green-50 text-green-700 ring-green-200' },
   Contract: { label: 'Service contract', short: 'Contract', icon: 'file-text', tone: 'bg-brand-50 text-brand-700 ring-brand-200' },
   Chargeable: { label: 'Chargeable', short: 'Chargeable', icon: 'credit-card', tone: 'bg-amber-50 text-amber-800 ring-amber-200' },
+  Pending: { label: 'Warranty from commissioning', short: 'Not commissioned', icon: 'clock', tone: 'bg-violet-50 text-violet-700 ring-violet-200' },
 }
 
 export const EQUIPMENT_STATUS = {

@@ -9,6 +9,9 @@ machine or job page. Each meter's triggers raise jobs by themselves:
 
 A trigger raises one job at a time: while its job is open, later readings past the limit are added to
 that job as comments instead of raising another. Managers are notified of each job raised.
+
+Items can list standard meters (Item > Techy Ops Meters); every new machine of the item gets them, so the
+commissioning procedure's Number steps that name a meter record its first readings.
 """
 from html import escape
 
@@ -122,7 +125,7 @@ def for_machine(equipment=None, asset=None, include_inactive=False):
     if not include_inactive:
         filters["active"] = 1
     return [summary(frappe.get_doc("Techy Meter", name)) for name in
-        frappe.get_all("Techy Meter", filters=filters, pluck="name", order_by="creation asc", limit_page_length=50)]
+        frappe.get_all("Techy Meter", filters=filters, pluck="name", order_by="creation asc, name asc", limit_page_length=50)]
 
 
 @frappe.whitelist()
@@ -168,19 +171,27 @@ def _job_for_reading(work_order, meter):
 @frappe.whitelist(methods=["POST"])
 def record_reading(meter, value, work_order=None, note=None, reset=0):
     doc = _meter(meter, for_update=True)
-    if not cint(doc.active):
-        frappe.throw(_("This meter is no longer in use."))
-    value = _value(value)
     reset = bool(cint(reset))
-    note = ops.text(note, "a note", 280, required=False)
     if reset and not ops.manager():
         frappe.throw(_("Only managers can record a replaced or reset meter."), frappe.PermissionError)
+    job = _job_for_reading(work_order, doc)
+    reading, raised = _record(doc, value, job, ops.text(note, "a note", 280, required=False), reset)
+    if job:
+        frappe.get_doc("Task", job).add_comment("Info", escape(_("{0} recorded {1}: {2} {3}.").format(
+            frappe.utils.get_fullname(), doc.meter_name, fmt(reading.value), doc.unit)))
+    return {"meter": summary(doc), "raised": [{"name": t.name, "subject": t.subject} for t in raised]}
+
+
+def _record(doc, value, job=None, note=None, reset=False):
+    """Save a reading on a locked meter and run its triggers; returns (reading, jobs raised)."""
+    if not cint(doc.active):
+        frappe.throw(_("{0} is no longer in use.").format(doc.meter_name))
+    value = _value(value)
     if doc.meter_type == "Counter" and doc.last_reading_on and value < flt(doc.last_reading) and not reset:
         frappe.throw(_("{0} only goes up: the last reading was {1} {2}. If the meter was replaced or reset, ask a manager "
             "to record it.").format(doc.meter_name, fmt(doc.last_reading), doc.unit))
     if doc.meter_type == "Counter" and value < 0:
         frappe.throw(_("A counter reading cannot be negative."))
-    job = _job_for_reading(work_order, doc)
     reading = frappe.get_doc({"doctype": "Techy Meter Reading", "meter": doc.name, "value": value,
         "reading_on": now_datetime(), "recorded_by": frappe.session.user, "equipment": doc.equipment, "asset": doc.asset,
         "work_order": job, "reset": int(reset), "note": note})
@@ -195,10 +206,91 @@ def record_reading(meter, value, work_order=None, note=None, reset=0):
     doc.save()
     if raised:
         reading.db_set("triggered_job", raised[0].name)
-    if job:
-        frappe.get_doc("Task", job).add_comment("Info", escape(_("{0} recorded {1}: {2} {3}.").format(
-            frappe.utils.get_fullname(), doc.meter_name, fmt(value), doc.unit)))
-    return {"meter": summary(doc), "raised": [{"name": t.name, "subject": t.subject} for t in raised]}
+    return reading, raised
+
+
+def find_meter(meter_name, equipment=None, asset=None):
+    """The active meter of that name on the machine (names compare without case), if any."""
+    if not meter_name or not (equipment or asset):
+        return None
+    filters = {"equipment": equipment} if equipment else {"asset": asset}
+    for row in frappe.get_all("Techy Meter", filters={**filters, "active": 1}, fields=["name", "meter_name"]):
+        if row.meter_name.strip().lower() == str(meter_name).strip().lower():
+            return row.name
+    return None
+
+
+def record_from_step(task, meter_name, value, label, previous=None):
+    """A procedure Number step saved to a meter: replace the step's earlier reading, record the new one.
+
+    The caller has checked the technician may answer the job. Returns the reading name, or None when the
+    job's machine has no such meter or the answer was cleared."""
+    name = find_meter(meter_name, task.get("custom_equipment"), None if task.get("custom_equipment") else task.get("custom_asset"))
+    if not name:
+        return None
+    doc = frappe.get_doc("Techy Meter", name, for_update=True)
+    if previous and frappe.db.exists("Techy Meter Reading", {"name": previous, "meter": doc.name}):
+        _remove(doc, previous)
+        doc = frappe.get_doc("Techy Meter", name, for_update=True)
+    if value in (None, ""):
+        return None
+    reading, _raised = _record(doc, value, task.name, _("Procedure step: {0}").format(label)[:280])
+    return reading.name
+
+
+# Standard meters from the item ---------------------------------------------------------------------------------
+
+def _templates(item_code):
+    if not item_code:
+        return []
+    return frappe.get_all("Techy Meter Template", filters={"parent": item_code, "parenttype": "Item",
+        "parentfield": "custom_meter_templates"}, fields=["meter_name", "unit", "meter_type", "service_every",
+        "service_procedure", "alert_above", "alert_below"], order_by="idx asc")
+
+
+def _existing(equipment):
+    return {n.strip().lower() for n in frappe.get_all("Techy Meter", filters={"equipment": equipment}, pluck="meter_name")}
+
+
+def missing_templates(equipment, item_code):
+    """Standard meters of the item that the machine does not have yet."""
+    have = _existing(equipment) if equipment else set()
+    return [t.meter_name for t in _templates(item_code) if t.meter_name.strip().lower() not in have]
+
+
+def apply_templates(eq):
+    """Create the item's standard meters on a machine (skipping names it already has)."""
+    have, created = _existing(eq.name), []
+    for t in _templates(eq.item_code):
+        if t.meter_name.strip().lower() in have:
+            continue
+        triggers = []
+        if t.meter_type == "Counter" and flt(t.service_every) > 0:
+            procedure = t.service_procedure if t.service_procedure and not frappe.db.get_value("Techy Procedure",
+                t.service_procedure, "disabled") else None
+            triggers.append({"trigger_type": "Every", "value": flt(t.service_every), "next_due": flt(t.service_every),
+                "priority": "Medium", "procedure": procedure})
+        for kind, limit in (("Above", t.alert_above), ("Below", t.alert_below)):
+            if flt(limit):
+                triggers.append({"trigger_type": kind, "value": flt(limit), "priority": "High"})
+        doc = frappe.get_doc({"doctype": "Techy Meter", "meter_name": t.meter_name, "unit": t.unit,
+            "meter_type": t.meter_type if t.meter_type in TYPES else "Counter", "equipment": eq.name, "active": 1,
+            "triggers": triggers})
+        doc.insert(ignore_permissions=True)
+        have.add(t.meter_name.strip().lower())
+        created.append(doc.name)
+    return created
+
+
+@frappe.whitelist(methods=["POST"])
+def add_standard_meters(equipment):
+    """Managers: give an existing machine its item's standard meters."""
+    ops.require_manager()
+    _check_machine(equipment, None)
+    eq = frappe.get_doc("Techy Equipment", equipment)
+    if not apply_templates(eq):
+        frappe.throw(_("This machine already has all the standard meters of {0}.").format(eq.item_code or _("its item")))
+    return {"meters": for_machine(equipment=eq.name, include_inactive=True)}
 
 
 def _machine_label(doc):
@@ -274,7 +366,14 @@ def delete_reading(name):
     ops.require_manager()
     reading = frappe.get_doc("Techy Meter Reading", name)
     doc = _meter(reading.meter, for_update=True)
-    frappe.delete_doc("Techy Meter Reading", reading.name, ignore_permissions=True)
+    _remove(doc, reading.name)
+    return get_meter(doc.name)
+
+
+def _remove(doc, reading):
+    # A procedure answer may point at the reading; unlink it so the delete is allowed.
+    frappe.db.sql("UPDATE `tabTechy Procedure Response` SET meter_reading = NULL WHERE meter_reading = %s", (reading,))
+    frappe.delete_doc("Techy Meter Reading", reading, ignore_permissions=True)
     latest = frappe.get_all("Techy Meter Reading", filters={"meter": doc.name}, fields=["value", "reading_on",
         "recorded_by"], order_by="reading_on desc, creation desc", limit_page_length=1)
     latest = latest[0] if latest else frappe._dict()
@@ -282,7 +381,6 @@ def delete_reading(name):
         latest.get("recorded_by")
     doc.flags.ignore_permissions = True
     doc.save()
-    return get_meter(doc.name)
 
 
 # Set-up --------------------------------------------------------------------------------------------------------

@@ -5,18 +5,23 @@ ERPNext Assets are company-owned; equipment sold to customers is tracked here in
 with an Installation job. Completing that job marks the machine Active and records an ERPNext
 Installation Note. Older machines are registered by hand. Coverage (warranty, contract or chargeable)
 comes from the equipment's warranty and contract end dates.
+
+Warranty: when we supply and install, it starts at commissioning (the installation job's completion);
+when the Delivery Note is ticked "Supply only", the machine is Active at once and the warranty starts on
+the delivery date. Each machine also keeps what it was built from (its manufacturing Work Order's
+materials, or the item's BOM) and gets the item's standard meters.
 """
 from html import escape
 
 import frappe
 from frappe import _
-from frappe.utils import add_days, cint, getdate, nowdate
+from frappe.utils import add_days, cint, flt, getdate, nowdate
 
 from projectit import contracts, meters, ops, parts
 
 FIELDS = ["name", "equipment_name", "item_code", "serial_no", "tag", "status", "customer", "customer_name",
     "site_address", "site", "project", "delivery_note", "delivered_on", "installed_on", "installation_note",
-    "warranty_until", "contract_until", "service_contract", "notes", "modified"]
+    "warranty_until", "contract_until", "service_contract", "notes", "built_from_work_order", "built_from_bom", "modified"]
 STATUSES = ("Awaiting installation", "Active", "Out of service", "Decommissioned", "Cancelled")
 RETIRED = ("Decommissioned", "Cancelled")
 EDITABLE = ("equipment_name", "item_code", "serial_no", "tag", "status", "customer", "site_address", "project",
@@ -24,9 +29,13 @@ EDITABLE = ("equipment_name", "item_code", "serial_no", "tag", "status", "custom
 
 
 def coverage(row):
-    """{'kind': 'Warranty' | 'Contract' | 'Chargeable' | None, 'until': date} for an equipment row."""
+    """{'kind': 'Warranty' | 'Contract' | 'Chargeable' | 'Pending' | None, 'until': date} for an equipment row.
+
+    Pending: awaiting installation, with the warranty starting at commissioning."""
     if not row or row.get("status") in RETIRED:
         return {"kind": None, "until": None}
+    if row.get("status") == "Awaiting installation" and not row.get("warranty_until"):
+        return {"kind": "Pending", "until": None}
     today = getdate(nowdate())
     warranty = row.get("warranty_until") and getdate(row.get("warranty_until")) >= today
     contract = row.get("contract_until") and getdate(row.get("contract_until")) >= today
@@ -147,6 +156,7 @@ def get_equipment(name):
     return {"equipment": row, "coverage": coverage(row), "address": _address(row.site_address),
         "contract": contracts.terms(row.service_contract), "next_visit": next_visit, "parts": parts.history(row.name),
         "meters": meters.for_machine(equipment=row.name, include_inactive=ops.manager()),
+        "components": component_rows(row.name), "missing_meters": meters.missing_templates(row.name, row.item_code),
         "contact": _contact(row.customer), "project_name": project_name, "work_orders": jobs, "requests": requests,
         "can_create": bool(frappe.has_permission("Task", "create")), "manager": ops.manager()}
 
@@ -216,7 +226,66 @@ def save_equipment(data, name=None):
     if not doc.status:
         doc.status = "Active"
     doc.site = site_label(doc.site_address)
+    new = doc.is_new()
+    if new and doc.item_code:
+        set_components(doc)
     # Managers are authorised above; Desk keeps the role grid for direct editing.
+    doc.save(ignore_permissions=True)
+    if new:
+        meters.apply_templates(doc)
+    return get_equipment(doc.name)
+
+
+# Built with --------------------------------------------------------------------------------------------------
+
+def build_source(item_code, project=None):
+    """(work order, bom, rows) the unit was built from: the project's manufacturing Work Order for the item,
+    with what it actually used, or else the item's default BOM. Rows are per unit."""
+    if not item_code:
+        return None, None, []
+    if project:
+        orders = frappe.get_all("Work Order", filters={"production_item": item_code, "project": project,
+            "docstatus": 1}, fields=["name", "qty", "bom_no", "status"], order_by="modified desc")
+        orders.sort(key=lambda o: o.status != "Completed")
+        if orders:
+            order = orders[0]
+            per = max(flt(order.qty), 1)
+            rows = frappe.get_all("Work Order Item", filters={"parent": order.name, "parenttype": "Work Order"},
+                fields=["item_code", "item_name", "required_qty", "consumed_qty", "stock_uom"], order_by="idx asc")
+            return order.name, order.bom_no, [{"item_code": r.item_code, "item_name": r.item_name,
+                "qty": round((flt(r.consumed_qty) or flt(r.required_qty)) / per, 6), "uom": r.stock_uom} for r in rows]
+    bom = frappe.db.get_value("BOM", {"item": item_code, "is_default": 1, "is_active": 1, "docstatus": 1},
+        ["name", "quantity"], as_dict=True)
+    if not bom:
+        return None, None, []
+    per = max(flt(bom.quantity), 1)
+    rows = frappe.get_all("BOM Item", filters={"parent": bom.name, "parenttype": "BOM"},
+        fields=["item_code", "item_name", "stock_qty", "stock_uom"], order_by="idx asc")
+    return None, bom.name, [{"item_code": r.item_code, "item_name": r.item_name,
+        "qty": round(flt(r.stock_qty) / per, 6), "uom": r.stock_uom} for r in rows]
+
+
+def set_components(doc):
+    """Snapshot what the unit was built from, so later BOM changes do not rewrite it."""
+    order, bom, rows = build_source(doc.item_code, doc.project)
+    doc.built_from_work_order, doc.built_from_bom = order, bom
+    doc.set("components", rows)
+    return bool(rows)
+
+
+def component_rows(name):
+    return frappe.get_all("Techy Equipment Component", filters={"parent": name, "parenttype": "Techy Equipment"},
+        fields=["item_code", "item_name", "qty", "uom"], order_by="idx asc") if name else []
+
+
+@frappe.whitelist(methods=["POST"])
+def refresh_components(name):
+    """Managers: copy the build list again, e.g. for machines delivered before it was recorded."""
+    ops.system_user()
+    ops.require_manager()
+    doc = frappe.get_doc("Techy Equipment", name, for_update=True)
+    if not set_components(doc):
+        frappe.throw(_("No manufacturing Work Order or default BOM was found for {0}.").format(doc.item_code or doc.name))
     doc.save(ignore_permissions=True)
     return get_equipment(doc.name)
 
@@ -244,6 +313,7 @@ def on_delivery_note_submit(doc, method=None):
         return
     site = doc.get("shipping_address_name") or doc.get("customer_address")
     label = site_label(site)
+    supply_only = bool(cint(doc.get("custom_supply_only")))
     for row in doc.items:
         item = tracked.get(row.item_code)
         if not item:
@@ -254,12 +324,17 @@ def on_delivery_note_submit(doc, method=None):
             try:
                 eq = frappe.get_doc({"doctype": "Techy Equipment", "equipment_name": row.item_name or item.item_name,
                     "item_code": row.item_code, "serial_no": serials[i] if i < len(serials) else None,
-                    "status": "Awaiting installation", "customer": doc.customer, "site_address": site, "site": label,
-                    "project": doc.get("project"), "delivery_note": doc.name, "delivery_note_item": row.name,
-                    "delivered_on": doc.posting_date,
-                    "warranty_until": add_days(doc.posting_date, cint(item.warranty_period)) if cint(item.warranty_period) else None})
+                    "status": "Active" if supply_only else "Awaiting installation", "customer": doc.customer,
+                    "site_address": site, "site": label, "project": doc.get("project"), "delivery_note": doc.name,
+                    "delivery_note_item": row.name, "delivered_on": doc.posting_date,
+                    # Supply only: warranty from delivery. Supply and install: from commissioning.
+                    "warranty_until": add_days(doc.posting_date, cint(item.warranty_period))
+                        if supply_only and cint(item.warranty_period) else None})
+                set_components(eq)
                 eq.insert(ignore_permissions=True)
-                _installation_job(eq)
+                meters.apply_templates(eq)
+                if not supply_only:
+                    _installation_job(eq)
             except Exception:
                 frappe.db.rollback(save_point="techy_equipment")
                 frappe.log_error(title=f"Techy Ops: equipment for {doc.name} / {row.item_code} failed")
@@ -285,8 +360,9 @@ def _installation_job(eq):
 
 
 def on_delivery_note_cancel(doc, method=None):
+    supply_only = bool(cint(doc.get("custom_supply_only")))
     for eq in frappe.get_all("Techy Equipment", filters={"delivery_note": doc.name}, fields=["name", "status"]):
-        if eq.status != "Awaiting installation":
+        if eq.status != "Awaiting installation" and not (supply_only and eq.status == "Active"):
             frappe.get_doc("Techy Equipment", eq.name).add_comment("Info", escape(
                 _("Delivery Note {0} was cancelled after installation.").format(doc.name)))
             continue
@@ -306,6 +382,11 @@ def complete_installation(task):
         return
     eq.status = "Active"
     eq.installed_on = eq.installed_on or nowdate()
+    if not eq.warranty_until and eq.item_code:
+        days = cint(frappe.db.get_value("Item", eq.item_code, "warranty_period"))
+        if days:
+            # Supplied and installed by us: the warranty runs from commissioning.
+            eq.warranty_until = add_days(eq.installed_on, days)
     if eq.delivery_note and eq.delivery_note_item:
         frappe.db.savepoint("techy_installation_note")
         try:

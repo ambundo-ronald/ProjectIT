@@ -4,6 +4,7 @@ A Techy Procedure is a template. Attaching it to a work order copies its steps i
 (one per work order), so later template edits never rewrite completed work. Answers are saved one at a time;
 a failed Pass/Fail or out-of-range Number can raise a follow-up work order, and a work order cannot be
 completed while required steps are unanswered (enforced in work_orders.validate_task, so Desk too).
+A Number step can name a meter: its answer is then recorded as that meter's reading on the job's machine.
 """
 from html import escape
 
@@ -16,7 +17,7 @@ from projectit import ops
 TYPES = ("Heading", "Checkbox", "Pass/Fail", "Yes/No/N/A", "Number", "Text", "Multiple Choice", "Photo", "Signature")
 CATEGORIES = ("Corrective", "Preventive", "Inspection", "Safety", "Other")
 STEP_FIELDS = ("field_type", "label", "help", "required", "options", "min_value", "max_value", "unit",
-    "create_follow_up")
+    "create_follow_up", "meter")
 CHOICES = {"Pass/Fail": ("Pass", "Fail"), "Yes/No/N/A": ("Yes", "No", "N/A")}
 FAILABLE = ("Pass/Fail", "Number")
 MAX_STEPS = 100
@@ -47,7 +48,7 @@ def _clean_steps(steps):
         row = {"field_type": kind, "label": ops.text(step.get("label"), f"step {i}", 140),
             "help": ops.text(step.get("help"), f"instructions for step {i}", 500, required=False),
             "required": int(bool(cint(step.get("required"))) and kind != "Heading"),
-            "options": "", "min_value": "", "max_value": "", "unit": "",
+            "options": "", "min_value": "", "max_value": "", "unit": "", "meter": "",
             "create_follow_up": int(bool(cint(step.get("create_follow_up"))) and kind in FAILABLE)}
         if kind == "Multiple Choice":
             options = step.get("options") or []
@@ -62,6 +63,7 @@ def _clean_steps(steps):
             if row["min_value"] and row["max_value"] and flt(row["min_value"]) > flt(row["max_value"]):
                 frappe.throw(_("Step {0}: the minimum is above the maximum.").format(i))
             row["unit"] = ops.text(step.get("unit"), f"the unit for step {i}", 20, required=False)
+            row["meter"] = ops.text(step.get("meter"), f"the meter for step {i}", 80, required=False)
             if row["create_follow_up"] and not (row["min_value"] or row["max_value"]):
                 frappe.throw(_("Step {0}: set a minimum or maximum so a reading can fail.").format(i))
         clean.append(row)
@@ -169,7 +171,7 @@ def run_data(work_order):
         step = _step(row)
         step.update(name=row.name, value=row.value or "", failed=row.failed, answered_on=row.answered_on,
             answered_by=frappe.utils.get_fullname(row.answered_by) if row.answered_by else "",
-            follow_up_work_order=row.follow_up_work_order)
+            follow_up_work_order=row.follow_up_work_order, meter_reading=row.get("meter_reading"))
         steps.append(step)
     answerable = [s for s in steps if s["field_type"] != "Heading"]
     return {"name": run.name, "procedure": run.procedure, "title": run.title, "steps": steps,
@@ -304,6 +306,10 @@ def answer(work_order, step, value=None, photo=None):
     row.answered_on = now_datetime() if stored else None
     if failed and row.create_follow_up and not row.follow_up_work_order:
         row.follow_up_work_order = _follow_up(doc, row)
+    if row.field_type == "Number" and row.get("meter"):
+        from projectit import meters
+        # The answer is also the machine's meter reading (e.g. commissioning TDS), replacing an earlier answer.
+        row.meter_reading = meters.record_from_step(doc, row.meter, stored, row.label, row.get("meter_reading"))
     run.save(ignore_permissions=True)
     if stored and doc.status in ("Open", "Overdue"):
         doc.reload()

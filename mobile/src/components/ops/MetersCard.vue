@@ -5,7 +5,10 @@
         <h2 class="card-title">Meters</h2>
         <p v-if="alerts" class="mt-0.5 text-xs font-semibold text-red-600">{{ alerts }} past {{ alerts === 1 ? 'its' : 'their' }} limit</p>
       </div>
-      <button v-if="manager" class="btn btn-secondary btn-sm" @click="edit(null)"><FeatherIcon name="plus" class="h-4 w-4" />Add meter</button>
+      <span v-if="manager" class="flex gap-2">
+        <button v-if="missing.length && equipment" class="btn btn-secondary btn-sm" :disabled="busy === 'standard'" :title="missing.join(', ')" @click="addStandard"><FeatherIcon name="download" class="h-4 w-4" />Add standard meters ({{ missing.length }})</button>
+        <button class="btn btn-secondary btn-sm" @click="edit(null)"><FeatherIcon name="plus" class="h-4 w-4" />Add meter</button>
+      </span>
     </div>
     <p v-if="problem" role="alert" class="mx-5 mt-3 flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700"><span class="flex-1">{{ problem }}</span><button class="text-red-500" aria-label="Dismiss" @click="problem = ''"><FeatherIcon name="x" class="h-4 w-4" /></button></p>
     <ul v-if="meters.length" class="divide-y divide-gray-100">
@@ -89,6 +92,7 @@ const props = defineProps({
   workOrder: String,
   manager: Boolean,
   canRecord: { type: Boolean, default: true },
+  missing: { type: Array, default: () => [] },
 })
 const emit = defineEmits(['reload'])
 const problem = ref('')
@@ -163,6 +167,18 @@ async function removeReading(r) {
   try {
     history.value = await api('projectit.meters.delete_reading', { name: r.name })
     meters.value = meters.value.map((x) => (x.name === history.value.meter.name ? history.value.meter : x))
+  } catch (e) {
+    fail(e.message)
+  } finally {
+    busy.value = ''
+  }
+}
+async function addStandard() {
+  busy.value = 'standard'
+  problem.value = ''
+  try {
+    meters.value = (await api('projectit.meters.add_standard_meters', { equipment: props.equipment })).meters
+    emit('reload')
   } catch (e) {
     fail(e.message)
   } finally {

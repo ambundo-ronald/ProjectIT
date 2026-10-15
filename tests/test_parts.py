@@ -19,6 +19,7 @@ class PartsTests(OpsTestCase):
     def test_billing_follows_cover(self):
         billing = self.parts.default_billing
         self.assertEqual(billing(Dict(custom_equipment=None), "PF-5"), "Internal")
+        self.assertEqual(billing(Dict(custom_equipment="EQ-1", custom_work_category="Installation"), "PIPE"), "Internal")
         self.frappe.db.get_value.return_value = Dict(status="Active", warranty_until="2027-01-01", contract_until=None,
             service_contract=None)
         self.assertEqual(billing(Dict(custom_equipment="EQ-1"), "PF-5"), "Warranty")
@@ -96,6 +97,7 @@ class BillingTests(OpsTestCase):
     def test_labour_default_follows_cover(self):
         default = self.billing.default_labour
         self.assertEqual(default(Dict(custom_equipment=None)), "No charge")
+        self.assertEqual(default(Dict(custom_equipment="EQ-1", custom_work_category="Installation")), "Included")
         eq = Dict(status="Active", warranty_until="2027-01-01", contract_until=None, service_contract=None)
         self.frappe.db.get_value.return_value = eq
         self.assertEqual(default(Dict(custom_equipment="EQ-1")), "Included")

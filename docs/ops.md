@@ -63,13 +63,27 @@ Machines you sell and install for customers, such as RO systems, belong to the c
   - When a Delivery Note for that item is submitted, each unit becomes an equipment record. The record holds:
     - the customer, project and Delivery Note;
     - the **site**, from the delivery (shipping) address;
-    - the **warranty end**, set from the item's *Warranty Period* and counted from the delivery date.
-  - Its status starts as *Awaiting installation*, and an **Installation job** is created. That job carries the procedure set in *Techy Ops Settings › Installation Procedure* (for example *RO commissioning*), and managers are notified to schedule it.
-  - Completing the installation job sets the machine to **Active**, records the install date, and submits an ERPNext **Installation Note** against the Delivery Note.
-  - If ERPNext refuses the Installation Note, the job still completes and the reason is posted in its activity.
-  - Cancelling the Delivery Note before installation cancels the machine and its open installation job.
+    - what the unit was **built with** (see below);
+    - the item's **standard meters** (see *Meter readings*).
+  - **Supply and install** (the default):
+    - The machine starts as *Awaiting installation*, shown as *Warranty from commissioning*.
+    - An **Installation job** is created on the delivery's project. It carries the procedure set in *Techy Ops Settings › Installation Procedure* (for example *RO commissioning*), and managers are notified to schedule it.
+    - Its labour defaults to *Included* and its parts to *Internal*, because installation is priced into the sale. Parts approved for it raise Material Requests on the project, so they appear in project costing.
+    - Completing the installation job sets the machine to **Active**, records the install date and **starts the warranty**, using the item's *Warranty Period* counted from commissioning. It also submits an ERPNext **Installation Note** against the Delivery Note.
+    - If ERPNext refuses the Installation Note, the job still completes and the reason is posted in its activity.
+  - **Supply only:** tick **Supply Only (Customer Installs)** on the Delivery Note. The machine is **Active** at once, its **warranty starts on the delivery date**, and no installation job is raised.
+  - Cancelling the Delivery Note before installation cancels the machine and its open installation job. This also applies to a supply-only machine.
+- **Built with:**
+  - Each unit records the materials it was assembled from.
+  - The list comes from the delivery project's **manufacturing Work Order** for the item: what was actually consumed, per unit, preferring a completed order.
+  - When there is no such Work Order, the list comes from the item's **default BOM**.
+  - It is copied at delivery, so later BOM changes do not rewrite it.
+  - The machine page lists the components with a link to the Work Order or BOM.
+  - When a technician adds parts to a job on that machine, its own parts are listed first, marked *In this machine*.
+  - Managers can **Refresh** the list, or **Copy from BOM** for machines delivered before this was recorded.
 - **Machines installed earlier:** managers enter them with **Register equipment**. This works whether or not the item uses serial numbers. Serial numbers can be linked when an item has them.
 - **Coverage** is shown on the machine, its jobs and its requests:
+  - **Warranty from commissioning** while a supplied-and-installed machine waits for installation;
   - **Under warranty** until the warranty end date;
   - otherwise **Service contract** until the contract end date;
   - otherwise **Chargeable**.
@@ -164,7 +178,18 @@ Customer equipment and our own Assets can have **meters**. Managers add them on 
   - The card shows the last reading, a trend line and any meter past its limit.
 - **History:** select a meter's name to see the chart, with limit lines, and every reading with who took it, the job it was taken on and any job it raised. Managers can delete a mistaken reading; the meter then falls back to the previous one.
 
-The records are *Techy Meter* (with its *Techy Meter Trigger* rows) and *Techy Meter Reading*, all visible in ERPNext Desk.
+- **Standard meters per item:**
+  - In ERPNext, open the Item and list its meters under **Techy Ops Meters › Standard Meters**: name, unit, type, *Service Every*, *Alert Above* and *Alert Below*.
+  - Every new machine of that item gets those meters at delivery, or when it is registered by hand.
+  - On older machines, managers press **Add standard meters**. Meters the machine already has, matched by name, are skipped.
+- **Readings from procedures:**
+  - A *Number* step in a procedure can name a meter under **Save to meter**, for example *Permeate TDS*.
+  - When a technician answers that step on a job, the answer is also recorded as that meter's reading on the job's machine.
+  - Correcting the answer replaces the reading; clearing it removes the reading.
+  - This is how the commissioning checklist records each machine's first TDS, pressure and running-hours readings.
+  - If the machine has no meter with that name, the answer is saved as a normal answer.
+
+The records are *Techy Meter* (with its *Techy Meter Trigger* rows), *Techy Meter Reading* and, on Items, *Techy Meter Template*. All are visible in ERPNext Desk.
 
 ## Reports
 

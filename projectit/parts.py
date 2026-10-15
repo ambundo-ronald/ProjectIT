@@ -53,8 +53,8 @@ def selling_rate(item_code):
 
 def default_billing(task, item_code):
     """Who pays for this part on this job, from the machine's warranty and contract."""
-    if not task.get("custom_equipment"):
-        return "Internal"
+    if not task.get("custom_equipment") or task.get("custom_work_category") == "Installation":
+        return "Internal"  # our own equipment, or installation materials costed on the project
     from projectit.equipment import coverage
     eq = frappe.db.get_value("Techy Equipment", task.custom_equipment, ["status", "warranty_until", "contract_until",
         "service_contract"], as_dict=True)
@@ -101,12 +101,23 @@ def history(equipment):
 # Building the list -------------------------------------------------------------------------------------------
 
 @frappe.whitelist()
-def search_parts(txt=None, warehouse=None):
+def search_parts(txt=None, warehouse=None, work_order=None):
+    """Stock items to add to a job; parts the job's machine was built with come first."""
     ops.system_user()
     like = f"%{str(txt or '').strip()[:80]}%"
-    items = frappe.get_all("Item", filters={"disabled": 0, "is_stock_item": 1, "has_variants": 0},
-        or_filters={"name": ["like", like], "item_name": ["like", like]}, fields=["name", "item_name", "stock_uom"],
-        order_by="item_name asc", limit_page_length=40)
+    base = {"disabled": 0, "is_stock_item": 1, "has_variants": 0}
+    fields = ["name", "item_name", "stock_uom"]
+    items = frappe.get_all("Item", filters=base, or_filters={"name": ["like", like], "item_name": ["like", like]},
+        fields=fields, order_by="item_name asc", limit_page_length=40)
+    fitted = set()
+    if work_order:
+        from projectit import work_orders
+        from projectit.equipment import component_rows
+        fitted = {r.item_code for r in component_rows(work_orders._work_order(work_order).get("custom_equipment"))}
+        missing = fitted - {i.name for i in items}
+        if missing:
+            items += frappe.get_all("Item", filters={**base, "name": ["in", list(missing)]},
+                or_filters={"name": ["like", like], "item_name": ["like", like]}, fields=fields)
     stock = {}
     if items:
         for b in frappe.get_all("Bin", filters={"item_code": ["in", [i.name for i in items]], "actual_qty": [">", 0]},
@@ -118,7 +129,8 @@ def search_parts(txt=None, warehouse=None):
     for item in items:
         item.in_stock = stock.get(item.name, {}).get("total", 0)
         item.here = stock.get(item.name, {}).get("here", 0)
-    items.sort(key=lambda i: (-(i.here > 0), -(i.in_stock > 0), i.item_name or ""))
+        item.fitted = item.name in fitted
+    items.sort(key=lambda i: (-i.fitted, -(i.here > 0), -(i.in_stock > 0), i.item_name or ""))
     return items[:20]
 
 
