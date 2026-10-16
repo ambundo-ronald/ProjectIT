@@ -10,14 +10,14 @@ from html import escape
 
 import frappe
 from frappe import _
-from frappe.utils import add_days, add_months, cint, getdate, nowdate
+from frappe.utils import add_days, add_months, cint, flt, getdate, nowdate
 
 from projectit import ops
 
 MONTHS = {"Monthly": 1, "Every 2 months": 2, "Quarterly": 3, "Every 4 months": 4, "Half-yearly": 6, "Yearly": 12}
 PAYMENT_WARNING = ("Grace Period", "Unpaid", "Cancelled")
 LIST_FIELDS = ["name", "title", "customer", "customer_name", "status", "subscription", "start_date", "end_date",
-    "visit_frequency", "labour_included", "callouts_included", "modified"]
+    "visit_frequency", "labour_included", "callouts_included", "response_hours", "fix_hours", "modified"]
 
 
 def state(row):
@@ -50,7 +50,8 @@ def terms(name):
         fields=["item_code", "item_name"], order_by="idx asc")
     return {"name": doc.name, "title": doc.title, "state": state(doc), "end_date": doc.end_date,
         "visit_frequency": doc.visit_frequency, "labour_included": doc.labour_included,
-        "callouts_included": doc.callouts_included, "items": items,
+        "callouts_included": doc.callouts_included, "response_hours": doc.response_hours or None,
+        "fix_hours": doc.fix_hours or None, "items": items,
         "subscription": sub.name if sub else None, "subscription_status": sub.status if sub else None,
         "payment_warning": bool(sub and sub.status in PAYMENT_WARNING)}
 
@@ -223,6 +224,13 @@ def save_contract(data, name=None):
     doc.visit_procedure = procedure or None
     doc.labour_included = int(bool(cint(data.get("labour_included"))))
     doc.callouts_included = int(bool(cint(data.get("callouts_included"))))
+    for field, label in (("response_hours", _("On site within")), ("fix_hours", _("Fixed within"))):
+        hours = flt(data.get(field)) if data.get(field) not in (None, "") else 0
+        if hours < 0 or hours > 720:
+            frappe.throw(_("{0} must be between 0 and 720 hours.").format(label))
+        doc.set(field, hours)
+    if doc.response_hours and doc.fix_hours and doc.fix_hours < doc.response_hours:
+        frappe.throw(_("The fix time cannot be shorter than the response time."))
     doc.notes = ops.text(data.get("notes"), "notes", 2000, required=False)
     items = list(dict.fromkeys(i for i in (data.get("items") or []) if i))
     for item in items:

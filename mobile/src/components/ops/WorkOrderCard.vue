@@ -23,6 +23,7 @@
     </div>
     <div class="mt-3 flex items-center justify-between gap-2">
       <AvatarStack :people="wo.assignees || []" />
+      <PromiseBadge :wo="wo" class="ml-auto" />
       <span v-if="wo.exp_end_date && !done" class="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold" :class="overdue ? 'bg-red-50 text-red-700' : dueSoon ? 'bg-amber-50 text-amber-800' : 'bg-gray-100 text-gray-600'">
         <FeatherIcon name="clock" class="h-3 w-3" />{{ dueLabel }}
       </span>
@@ -35,6 +36,7 @@ import { computed } from 'vue'
 import { FeatherIcon } from 'frappe-ui'
 import StatusPill from './StatusPill.vue'
 import PriorityFlag from './PriorityFlag.vue'
+import PromiseBadge from './PromiseBadge.vue'
 import AvatarStack from './AvatarStack.vue'
 import CoverageBadge from './CoverageBadge.vue'
 import { dueIn, fromNow, isOverdue } from '@/data/ops'

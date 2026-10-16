@@ -24,14 +24,15 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, add_months, cint, flt, get_datetime, getdate, now_datetime, nowdate
 
-from projectit import billing, contracts, ops, timer
+from projectit import billing, contracts, ops, sla, timer
 
 PERIODS = (7, 30, 90, 365)
 JOB_FIELDS = ["name", "subject", "status", "creation", "modified", "exp_end_date", "custom_work_category",
     "custom_equipment", "custom_asset", "custom_customer", "custom_service_contract", "custom_started_at",
     "custom_completed_at", "custom_labour_hours", "custom_labour_billing", "custom_labour_mode", "custom_labour_rate",
     "custom_flat_fee", "custom_sales_invoice", "custom_problem_code", "custom_cause_code", "custom_machine_down",
-    "custom_down_from", "custom_down_to", "custom_sent_back", "custom_rating"]
+    "custom_down_from", "custom_down_to", "custom_sent_back", "custom_rating", "custom_sla_contract", "custom_respond_by",
+    "custom_fix_by"]
 OPEN = ("Completed", "Cancelled")
 REPEAT_DAYS = 30
 MIN_SCORED = 3
@@ -617,6 +618,10 @@ def export(days=30):
         (_("Cover ending"), [_("Cover"), _("Machine"), _("Customer"), _("Ends"), _("Days left")],
             [[x["kind"], x["label"], x["customer_name"], x["ends"], x["days_left"]] for x in m["cover"]["machines"]]
             + [[_("Contract"), c["title"], c["customer_name"], c["ends"], c["days_left"]] for c in m["cover"]["contracts"]]),
+        (_("Response promises"), [_("Contract"), _("Customer"), _("Repairs"), _("Responded in time"), _("Response missed"),
+            _("Response kept %"), _("Fixed in time"), _("Fix missed"), _("Fix kept %")],
+            [[c["title"], c["customer_name"], c["jobs"], c["respond_met"], c["respond_missed"], c["respond_kept"], c["fix_met"],
+                c["fix_missed"], c["fix_kept"]] for c in r["promises"]["contracts"]]),
         (_("Contract profit"), [_("Contract"), _("Customer"), _("Jobs"), _("Subscription"), _("Extra billed"), _("Parts cost"),
             _("Labour cost"), _("Profit"), _("Margin %")],
             [[c["title"], c["customer_name"], c["jobs"], c["subscription"], c["extra"], c["parts_cost"], c["labour_cost"],
@@ -675,4 +680,5 @@ def dashboard(days=30):
         "contracts": contract_profit(start, end, jobs, logged),
         "failures": failure_counts(jobs, start, end),
         "downtime": downtime(jobs, start, end),
+        "promises": sla.report(jobs, start, end),
     }

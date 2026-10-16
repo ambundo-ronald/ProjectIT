@@ -79,6 +79,17 @@
               <span><span class="block text-sm font-medium">Breakdown call-outs included</span><span class="text-xs text-gray-500">Unscheduled visits when something fails</span></span>
             </label>
           </div>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label class="label" for="sc-response">On site within (hours)</label>
+              <input id="sc-response" v-model="form.response_hours" type="number" min="0" max="720" step="0.5" :disabled="!editable" class="input" placeholder="No promise" />
+            </div>
+            <div>
+              <label class="label" for="sc-fix">Fixed within (hours)</label>
+              <input id="sc-fix" v-model="form.fix_hours" type="number" min="0" max="720" step="0.5" :disabled="!editable" class="input" placeholder="No promise" />
+            </div>
+            <p class="text-xs text-gray-500 sm:col-span-2">For breakdowns on this contract's machines, counted from the customer's request (or when the job is opened). Technicians and managers are warned an hour before a response is due.</p>
+          </div>
           <div>
             <span class="label">Parts included at no charge</span>
             <div class="flex flex-wrap gap-2">
@@ -162,7 +173,7 @@ const route = useRoute()
 const router = useRouter()
 const isNew = computed(() => route.params.name === 'new')
 const editable = computed(() => me.manager)
-const form = reactive({ customer: '', customer_name: '', title: '', status: 'Active', subscription: '', start_date: '', end_date: '', visit_frequency: 'Quarterly', visit_procedure: '', labour_included: true, callouts_included: false, notes: '', modified: null })
+const form = reactive({ customer: '', customer_name: '', title: '', status: 'Active', subscription: '', start_date: '', end_date: '', visit_frequency: 'Quarterly', visit_procedure: '', labour_included: true, callouts_included: false, response_hours: '', fix_hours: '', notes: '', modified: null })
 const items = ref([])
 const machines = ref([])
 const visits = ref([])
@@ -234,7 +245,7 @@ function addItem(it) {
 
 function apply(r) {
   const c = r.contract
-  Object.assign(form, { customer: c.customer, customer_name: c.customer_name, title: c.title || '', status: c.status, subscription: c.subscription || '', start_date: c.start_date, end_date: c.end_date, visit_frequency: c.visit_frequency || 'Quarterly', visit_procedure: c.visit_procedure || '', labour_included: !!c.labour_included, callouts_included: !!c.callouts_included, notes: c.notes || '', modified: c.modified })
+  Object.assign(form, { customer: c.customer, customer_name: c.customer_name, title: c.title || '', status: c.status, subscription: c.subscription || '', start_date: c.start_date, end_date: c.end_date, visit_frequency: c.visit_frequency || 'Quarterly', visit_procedure: c.visit_procedure || '', labour_included: !!c.labour_included, callouts_included: !!c.callouts_included, response_hours: c.response_hours || '', fix_hours: c.fix_hours || '', notes: c.notes || '', modified: c.modified })
   items.value = r.items
   visits.value = r.visits
   state.value = r.state

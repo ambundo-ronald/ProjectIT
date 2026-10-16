@@ -326,6 +326,38 @@
       </div>
 
       <div class="card overflow-hidden">
+        <div class="card-header"><h2 class="card-title">Response promises</h2><span class="text-xs text-gray-500">Repairs opened in the period on contracts with response times</span></div>
+        <template v-if="r.promises.jobs">
+          <div class="grid grid-cols-3 divide-x divide-gray-100 border-b border-gray-100 text-center">
+            <div class="p-3"><p class="text-lg font-semibold tabular-nums" :class="pctTone(r.promises.respond_kept)">{{ r.promises.respond_kept === null ? '–' : `${r.promises.respond_kept}%` }}</p><p class="text-xs text-gray-500">Responded in time</p></div>
+            <div class="p-3"><p class="text-lg font-semibold tabular-nums" :class="pctTone(r.promises.fix_kept)">{{ r.promises.fix_kept === null ? '–' : `${r.promises.fix_kept}%` }}</p><p class="text-xs text-gray-500">Fixed in time</p></div>
+            <div class="p-3"><p class="text-lg font-semibold tabular-nums">{{ r.promises.respond_due + r.promises.fix_due }}</p><p class="text-xs text-gray-500">Still due</p></div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[40rem] text-sm">
+              <thead class="border-b border-gray-100 text-left text-xs text-gray-500"><tr><th class="px-5 py-2 font-medium">Contract</th><th class="px-3 py-2 text-right font-medium">Promise</th><th class="px-3 py-2 text-right font-medium">Repairs</th><th class="px-3 py-2 text-right font-medium">Responded in time</th><th class="px-5 py-2 text-right font-medium">Fixed in time</th></tr></thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr v-for="c in r.promises.contracts" :key="c.name">
+                  <td class="px-5 py-2.5"><router-link :to="{ name: 'OpsContract', params: { name: c.name } }" class="font-medium hover:text-brand-700">{{ c.customer_name }}</router-link><span class="block text-xs text-gray-500">{{ c.title }}</span></td>
+                  <td class="px-3 py-2.5 text-right text-xs text-gray-600">{{ [c.response_hours && `${c.response_hours} h on site`, c.fix_hours && `${c.fix_hours} h fixed`].filter(Boolean).join(' · ') }}</td>
+                  <td class="px-3 py-2.5 text-right tabular-nums">{{ c.jobs }}</td>
+                  <td class="px-3 py-2.5 text-right tabular-nums"><span :class="pctTone(c.respond_kept)">{{ c.respond_kept === null ? '–' : `${c.respond_kept}%` }}</span><span v-if="c.respond_missed" class="block text-[11px] text-red-600">{{ c.respond_missed }} missed</span></td>
+                  <td class="px-5 py-2.5 text-right tabular-nums"><span :class="pctTone(c.fix_kept)">{{ c.fix_kept === null ? '–' : `${c.fix_kept}%` }}</span><span v-if="c.fix_missed" class="block text-[11px] text-red-600">{{ c.fix_missed }} missed</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <ul v-if="r.promises.missed.length" class="divide-y divide-gray-100 border-t border-gray-100">
+            <li v-for="j in r.promises.missed" :key="j.name" class="flex items-center justify-between gap-3 px-5 py-2 text-sm">
+              <router-link :to="{ name: 'OpsWorkOrder', params: { name: j.name } }" class="min-w-0 truncate hover:text-brand-700">{{ j.subject }}</router-link>
+              <span class="shrink-0 text-xs font-semibold text-red-600">{{ j.missed.map((k) => (k === 'respond' ? 'Response' : 'Fix')).join(' and ') }} late by {{ duration(j.late_hours) }}</span>
+            </li>
+          </ul>
+        </template>
+        <p v-else class="px-5 py-4 text-sm text-gray-500">No repairs with a promised response time in this period. Set <b>On site within</b> and <b>Fixed within</b> on a service contract to track them.</p>
+      </div>
+
+      <div class="card overflow-hidden">
         <div class="card-header"><h2 class="card-title">Service contract profit</h2><span class="text-xs text-gray-500">Money in vs money out for the period</span></div>
         <p v-if="!r.contracts.labour_cost_rate" class="mx-5 mt-4 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">Labour isn't costed yet. Set <b>Labour Cost per Hour</b> in <a href="/desk/techy-ops-settings" target="_blank" rel="noopener" class="underline">Techy Ops Settings</a> to include technicians' time.</p>
         <div class="overflow-x-auto">

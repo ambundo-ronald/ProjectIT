@@ -188,7 +188,7 @@ doc_events = {
 
 scheduler_events = {
     "daily": ["projectit.maintenance.generate_pm_work_orders", "projectit.contracts.generate_visits"],
-    "cron": {"* * * * *": ["projectit.reminders.send_due"]},
+    "cron": {"* * * * *": ["projectit.reminders.send_due"], "*/10 * * * *": ["projectit.sla.check_due"]},
 }
 
 # Scheduled Tasks

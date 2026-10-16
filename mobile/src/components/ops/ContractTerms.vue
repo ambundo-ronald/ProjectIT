@@ -17,9 +17,15 @@ import { FeatherIcon } from 'frappe-ui'
 import { formatDate } from '@/data/ops'
 
 const props = defineProps({ terms: { type: Object, required: true }, compact: Boolean })
+// "On site within 4 h, fixed within 24 h"
+const promise = computed(() => {
+  const parts = [props.terms.response_hours && `on site within ${props.terms.response_hours} h`, props.terms.fix_hours && `fixed within ${props.terms.fix_hours} h`].filter(Boolean).join(', ')
+  return parts ? `Breakdowns: ${parts}` : ''
+})
 const lines = computed(() => [
   { ok: !!props.terms.labour_included, text: props.terms.labour_included ? 'Labour included on service visits' : 'Labour chargeable' },
   { ok: !!props.terms.callouts_included, text: props.terms.callouts_included ? 'Breakdown call-outs included' : 'Breakdown call-outs chargeable' },
+  ...(promise.value ? [{ ok: true, text: promise.value }] : []),
   props.terms.items?.length
     ? { ok: true, text: `Parts included: ${props.terms.items.map((i) => i.item_name || i.item_code).join(', ')}` }
     : { ok: false, text: 'All parts chargeable' },

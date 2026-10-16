@@ -160,6 +160,18 @@ What each contract covers varies per customer, so contracts are kept as **Techy 
 - **Lists:** the contract list filters Active, Expiring in 60 days (renewals), Expired and Cancelled.
 - **Permissions:** only managers can create or change contracts. Cancel the ERPNext Subscription separately when a contract ends.
 
+### Response times
+
+A contract can promise response times for breakdowns: **On site within** and **Fixed within**, in hours. Leave them empty for no promise.
+
+- **Deadlines:**
+  - A repair (Corrective) job on a machine under an active contract with a promise gets *Respond by* and *Fix by* times when it is created.
+  - The clock starts when the customer's request came in, or when the job was opened if there was no request.
+- **When each promise is met:** the response when work starts on the job (first set to *In progress*); the fix when the job is completed by its deadline.
+- **On jobs:** cards show what is due next (*Respond by 14:30*, *Respond within 40 min*, *Respond late by 1 h*). The job page also shows how each promise went.
+- **Warnings:** every 10 minutes the scheduler warns the job's technicians and the managers an hour before a response is due, and again once it is missed. Each warning is sent once.
+- **Reports › Response promises:** per contract, the share of responses and fixes in time, what is still due, and the jobs that missed, for repairs opened in the period. It is also a sheet in the Excel export.
+
 ## Parts on jobs (approval and Material Requests)
 
 1. **The technician lists parts.**
