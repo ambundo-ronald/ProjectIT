@@ -141,9 +141,10 @@ const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 const KEYWORD = new RegExp(`(?:^|\\s)(${KEYWORDS.map(([w]) => escape(w).replace(/ /g, '\\s')).join('|')})[\\s:#]+([^\\s]*)$`, 'i')
 
 /** The trigger typed just before the caret: @name, /task, $project, or a keyword and a space ("project pump"). */
+let linkOnly = false // the "/" at the start came from the link button, so it links rather than offers commands
 function find(before) {
   let m = before.match(/^\/([a-z]*)$/i)
-  if (m && COMMANDS.some((c) => c.name.startsWith(m[1].toLowerCase()))) return { type: 'command', query: m[1], start: 0 }
+  if (m && !linkOnly && COMMANDS.some((c) => c.name.startsWith(m[1].toLowerCase()))) return { type: 'command', query: m[1], start: 0 }
   m = before.match(/(?:^|\s)@([\w.+-]*)$/)
   if (m) return { type: 'mention', query: m[1], start: before.length - m[1].length - 1 }
   m = before.match(/(?:^|\s)([/$])([^\s/$]*)$/)
@@ -175,7 +176,10 @@ function detect() {
 
 function onInput() {
   if (text.value.trim()) emit('typing')
-  else dismissed.value = null // a cleared box starts afresh
+  else {
+    dismissed.value = null // a cleared box starts afresh
+    linkOnly = false
+  }
   const el = input.value
   el.style.height = 'auto'
   el.style.height = `${el.scrollHeight}px`
@@ -241,6 +245,11 @@ function startLink() {
     el.focus()
     el.setSelectionRange(caret + slash.length, caret + slash.length)
     onInput()
+    // The link button always links, even where a typed "/" would offer the slash commands.
+    if (trigger.value?.type === 'command') {
+      linkOnly = true
+      detect()
+    }
   })
 }
 
@@ -299,6 +308,7 @@ async function send() {
     pending.value = []
     trigger.value = null
     dismissed.value = null
+    linkOnly = false
     nextTick(() => {
       if (input.value) input.value.style.height = 'auto'
     })

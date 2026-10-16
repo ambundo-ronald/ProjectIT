@@ -450,6 +450,25 @@ Type a command at the start of a chat message. Typing `/` lists them; keep typin
 
 Commands are not posted as messages. Their answer shows only to the person who typed it, and can be dismissed.
 
+## Phone notifications
+
+Turn on **Notifications** in the name menu. Techy Ops then alerts that phone or computer even when the app is closed, for everything that shows up as a notification:
+- jobs assigned to you, and mentions and direct messages;
+- reminders and response-time warnings;
+- low customer ratings, parts approvals, and so on.
+
+Tapping a notification opens the job, chat or page it is about. **Send a test notification**, in the same menu, checks that it works. Turn notifications on separately on each device.
+
+- **Requirements:**
+  - The site must be served over **HTTPS**.
+  - On iPhone and iPad, notifications work only for the app added to the home screen (Share › Add to Home Screen, iOS 16.4 or later).
+  - On Android and computers they work in Chrome, Edge and Firefox.
+- **How it works:**
+  - The site sends each device an empty push signed with its own key (Web Push with VAPID); no Firebase or relay service is needed.
+  - The app then fetches what is new from the site, so notification text never passes through the push service.
+  - The key pair is made the first time someone turns notifications on, and is kept in *Techy Ops Settings › Phone Notifications*.
+- **Devices:** subscribed devices are listed in Desk as *Techy Push Subscription*. Ones the push service no longer knows are removed automatically.
+
 ## Verification on staging
 
 Local tests: `python -m unittest discover -s tests -v` and `yarn build`. They mock Frappe, so test the following on a v16 staging site with technician and manager accounts:

@@ -1,4 +1,5 @@
 import { ref, computed, reactive, watch } from 'vue'
+import { enablePush, disablePush } from './push'
 import { api, me, onRealtime, tokens } from './ops'
 import { KIND } from './links'
 
@@ -35,6 +36,9 @@ export async function setNotifications(on) {
   } catch (e) {
     /* storage unavailable */
   }
+  // Also alert this phone or computer while the app is closed.
+  if (notify.enabled) await enablePush()
+  else await disablePush()
 }
 
 export async function loadChannels() {
@@ -84,6 +88,8 @@ let listening = false
 export function listenForChat() {
   if (listening) return
   listening = true
+  // Keep this browser's push subscription current (it can change, or the site key can be replaced).
+  if (notify.enabled) enablePush()
   onRealtime('techy_reminder', ({ name, channel, message, note }) => {
     popups.value = [{ id: `reminder-${name}`, channel, message, where: 'Now', name: 'Reminder', body: note, sticky: true }, ...popups.value].slice(0, 3)
     if (notify.enabled && document.visibilityState === 'hidden') {

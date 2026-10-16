@@ -179,6 +179,9 @@ doc_events = {
         "on_cancel": "projectit.billing.release_jobs",
         "on_trash": "projectit.billing.release_jobs",
     },
+    "Notification Log": {
+        "after_insert": "projectit.push.on_notification",
+    },
     "Techy Service Contract": {
         "validate": "projectit.contracts.validate",
         "on_update": "projectit.contracts.on_update",

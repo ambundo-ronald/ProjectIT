@@ -20,7 +20,10 @@
   "service_report_auto_email",
   "service_report_footer",
   "failure_section",
-  "require_failure_codes"
+  "require_failure_codes",
+  "push_section",
+  "vapid_public_key",
+  "vapid_private_key"
  ],
  "fields": [
   {
@@ -127,12 +130,32 @@
    "default": "0",
    "label": "Require Problem and Cause Codes to Complete a Repair",
    "description": "Corrective jobs on a machine (customer equipment or our assets) cannot be completed until the technician chooses a problem and a cause code. Keeps the failure reports complete."
+  },
+  {
+   "fieldname": "push_section",
+   "fieldtype": "Section Break",
+   "label": "Phone Notifications",
+   "description": "Made automatically the first time someone turns on notifications. Changing them stops notifications until people turn them on again."
+  },
+  {
+   "fieldname": "vapid_public_key",
+   "fieldtype": "Data",
+   "label": "Push Public Key",
+   "read_only": 1,
+   "length": 200
+  },
+  {
+   "fieldname": "vapid_private_key",
+   "fieldtype": "Password",
+   "label": "Push Private Key",
+   "hidden": 1,
+   "length": 1000
   }
  ],
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-15 16:00:00.000000",
+ "modified": "2026-10-16 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Techy Ops Settings",
