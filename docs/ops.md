@@ -18,7 +18,7 @@ Techy Ops is a maintenance and team-collaboration workspace (similar to Maintain
 ## Setup
 
 1. Run `bench --site your-site migrate`. This adds the Task and Issue custom fields, the Techy Channel and Techy Ops Settings DocTypes, and the **Ops** mobile module.
-2. On each Employee, add **Ops** to *Techy App Access*. Signing in to the app then shows a **Techy Ops** button.
+2. Give people Techy Ops: users with Maintenance User, Maintenance Manager, Projects Manager or System Manager get it automatically. For anyone else, add **Ops** to *Techy App Access* on their Employee. Signing in then shows a **Techy Ops** button (see [docs/employee-access.md](employee-access.md)).
 3. Give technicians a role with Task read/write and File create (for example *Projects User*), plus **Maintenance User** for the Assets and PM screens. ERPNext gives the maintenance roles no Asset access, so Ops shows Maintenance Users, managers and anyone with Asset read a read-only, non-financial view of assets and PM plans. Completing a PM work order submits its Asset Maintenance Log on the technician's behalf.
 4. Managers need **Maintenance Manager**, **Projects Manager** or **System Manager**. In Techy Ops, these roles let them see every work order, assign and reprioritise work, approve or decline requests, and run PM generation.
 5. Optional: in **Techy Ops Settings**, enable public requests from asset QR codes and set how many days before the due date PM work orders are created (the default is 3).

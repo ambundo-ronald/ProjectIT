@@ -15,30 +15,32 @@
     <p v-if="error" role="alert" class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>
     <div v-if="!b" class="h-96 animate-pulse rounded-xl bg-gray-200/70" aria-label="Loading" />
 
-    <div v-else class="flex flex-col gap-4 lg:flex-row lg:items-start">
-      <!-- Jobs to plan -->
-      <aside class="card shrink-0 overflow-hidden lg:sticky lg:top-4 lg:w-72" :class="over === 'backlog' ? 'ring-2 ring-brand-300' : ''" aria-label="Jobs to plan" @dragover.prevent="over = 'backlog'" @dragleave="over === 'backlog' && (over = '')" @drop.prevent="drop(null, null)">
-        <div class="card-header"><h2 class="card-title">To plan</h2><span class="text-xs text-gray-500">{{ b.backlog.length + b.late.length }}</span></div>
-        <div class="p-3">
-          <input v-model="filter" type="search" class="input h-9 text-sm" placeholder="Filter jobs" aria-label="Filter jobs to plan" />
+    <div v-else class="flex flex-col gap-4 2xl:flex-row 2xl:items-start">
+      <!-- Jobs to plan: one row of jobs above the calendar, a column beside it on very wide screens, so the
+           calendar stays near the top and a whole week fits while dragging. -->
+      <aside class="card shrink-0 overflow-hidden 2xl:sticky 2xl:top-4 2xl:w-72" :class="over === 'backlog' ? 'ring-2 ring-brand-300' : ''" aria-label="Jobs to plan" @dragover.prevent="over = 'backlog'" @dragleave="over === 'backlog' && (over = '')" @drop.prevent="drop(null, null)">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-gray-100 px-4 py-2.5 2xl:block 2xl:space-y-2 2xl:px-3 2xl:py-3">
+          <h2 class="card-title">To plan <span class="ml-1 text-xs font-normal text-gray-500">{{ b.backlog.length + b.late.length }}</span></h2>
+          <input v-model="filter" type="search" class="input h-8 w-full text-sm sm:w-56 2xl:w-full" placeholder="Filter jobs" aria-label="Filter jobs to plan" />
+          <p class="text-[11px] text-gray-400 2xl:hidden">Drag a job onto a day. Drop one here to take it off the plan.</p>
         </div>
-        <div class="max-h-[60vh] space-y-3 overflow-y-auto px-3 pb-3">
-          <div v-if="late.length">
+        <div class="flex gap-3 overflow-x-auto p-3 2xl:block 2xl:max-h-[60vh] 2xl:space-y-3 2xl:overflow-y-auto">
+          <div v-if="late.length" class="shrink-0">
             <p class="section-label mb-1.5 text-red-600">Planned earlier, not done</p>
-            <ul class="space-y-1.5"><li v-for="j in late" :key="j.name"><JobChip :job="j" :from="j.assignees[0] || null" show-day /></li></ul>
+            <ul class="flex gap-1.5 2xl:block 2xl:space-y-1.5"><li v-for="j in late" :key="j.name" class="w-52 shrink-0 2xl:w-auto"><JobChip :job="j" :from="j.assignees[0] || null" show-day /></li></ul>
           </div>
-          <div>
+          <div class="shrink-0">
             <p v-if="late.length" class="section-label mb-1.5">Not planned</p>
-            <ul class="space-y-1.5"><li v-for="j in backlog" :key="j.name"><JobChip :job="j" :from="j.assignees[0] || null" /></li></ul>
-            <p v-if="!backlog.length && !late.length" class="py-6 text-center text-sm text-gray-500">Every open job is planned.</p>
+            <ul class="flex gap-1.5 2xl:block 2xl:space-y-1.5"><li v-for="j in backlog" :key="j.name" class="w-52 shrink-0 2xl:w-auto"><JobChip :job="j" :from="j.assignees[0] || null" /></li></ul>
+            <p v-if="!backlog.length && !late.length" class="py-3 text-sm text-gray-500">Every open job is planned.</p>
           </div>
         </div>
-        <p class="border-t border-gray-100 px-4 py-2 text-[11px] text-gray-400">Drop a job here to take it off the plan.</p>
+        <p class="hidden border-t border-gray-100 px-4 py-2 text-[11px] text-gray-400 2xl:block">Drop a job here to take it off the plan.</p>
       </aside>
 
       <!-- Technicians × days -->
       <div class="card min-w-0 flex-1 overflow-x-auto">
-        <table class="w-full table-fixed border-collapse text-left" :style="{ minWidth: `${11 + b.days.length * (span === 1 ? 24 : 9.5)}rem` }">
+        <table class="w-full table-fixed border-collapse text-left" :style="{ minWidth: `${11 + b.days.length * (span === 1 ? 24 : 8)}rem` }">
           <caption class="sr-only">Jobs planned for each technician and day</caption>
           <thead>
             <tr class="border-b border-gray-200">

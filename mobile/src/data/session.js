@@ -24,6 +24,11 @@ export const session = reactive({
       }
     },
     onSuccess(data) {
+      try {
+        sessionStorage.setItem('techy_signed_in', '1')
+      } catch (e) {
+        /* storage blocked: Home simply shows the apps */
+      }
       userResource.reload()
       session.user = sessionUser()
       session.login.reset()

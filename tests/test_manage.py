@@ -12,6 +12,7 @@ class ManageTests(OpsTestCase):
         super().setUp()
         self.frappe.DoesNotExistError = LookupError
         self.manage = importlib.import_module("projectit.manage")
+        self.has_app = importlib.import_module("projectit.api").has_app = MagicMock(return_value=True)
         self.frappe.db.get_value.return_value = "HR-EMP-9"
         self.frappe.db.exists.return_value = True
         self.alloc = MagicMock(work_instruction="", allocation=[SimpleNamespace(employee="HR-EMP-1", instructions="")])
@@ -20,7 +21,7 @@ class ManageTests(OpsTestCase):
         self.frappe.get_doc.side_effect = lambda doctype, *a, **k: self.project if doctype == "Project" else self.alloc
 
     def test_requires_manageit_module(self):
-        self.frappe.db.exists.return_value = False
+        self.has_app.return_value = False
         with self.assertRaises(PermissionError):
             self.manage.overview()
 

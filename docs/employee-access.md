@@ -1,3 +1,20 @@
+# Who can open which Techy app
+
+| App | Opens for |
+|---|---|
+| **Techy Ops** | *Ops* ticked under Techy App Access on the person's Employee, **or** the user has Maintenance User, Maintenance Manager, Projects Manager or System Manager |
+| **Techy Work** | *WorkIT* ticked on the Employee, or a System Manager who has an active Employee (checking in needs one) |
+| **Techy Manage** | *ManageIT* ticked on the Employee, or a System Manager |
+
+- **Home** (the app list) is always open. Someone with a single app goes straight into it right after signing in, or when they open the app from its start address. **All apps** in the name menu always brings them back to Home.
+- **Ops pages that need more than Techy Ops** open only for the people allowed to use them:
+  - **Billing:** managers and accounts staff.
+  - **Parts requests:** parts approvers, including stock keepers without Techy Ops.
+  - **Reports** and **Dispatch:** managers.
+  - Their data is checked on the server as well.
+- The rule lives in `projectit/api.py` (`apps_for`). The home page, the app's routes and the server's Techy Work and Techy Manage endpoints all use it.
+- **What the apps can do** still follows ERPNext permissions on the linked User. For example, technicians need Projects User for their jobs, and managers need Projects Manager to change project crews.
+
 # Restore missing Techy App access fields
 
 Run from the server's Bench directory, replacing `your-site` with the actual site name:

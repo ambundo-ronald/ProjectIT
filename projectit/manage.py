@@ -1,6 +1,6 @@
 """Techy Manage: project crews, site instructions and per-person instructions.
 
-Access requires the signed-in user's Employee to have the ManageIT module; reads use the user's
+Access requires Techy Manage (ticked on the user's Employee, or a System Manager; see api.apps_for); reads use the user's
 Project permissions. Writes need Project read on that project plus role permission to write
 allocations. HRMS gives every employee a User Permission limited to their own Employee record,
 which would otherwise block a manager from saving crew rows that link to other employees.
@@ -15,9 +15,8 @@ ALLOCATION = "Project Allocation and Instrucions"
 def _require_manager():
     if frappe.session.user == "Guest":
         frappe.throw(_("Please sign in."), frappe.PermissionError)
-    employee = frappe.db.get_value("Employee", {"user_id": frappe.session.user, "status": "Active"}, "name")
-    if not employee or not frappe.db.exists("Mobile Module", {"parent": employee, "parenttype": "Employee",
-            "parentfield": "custom_mobile_module", "module_name": "ManageIT"}):
+    from projectit.api import has_app
+    if not has_app("ManageIT"):
         frappe.throw(_("Techy Manage access is required."), frappe.PermissionError)
 
 

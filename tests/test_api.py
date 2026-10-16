@@ -14,7 +14,11 @@ class ApiTests(OpsTestCase):
 
         def get_value(doctype, filters=None, *args, **kwargs):
             self.lookups.append((doctype, filters))
-            return "EMP-OWN" if doctype == "Employee" and filters == {"user_id": "tech@example.com"} else None
+            mine = isinstance(filters, dict) and filters.get("user_id") == "tech@example.com"
+            return "EMP-OWN" if doctype == "Employee" and mine and self.has_employee else None
+        self.has_employee = True
+        self.ticked = {"EMP-OWN": ["WorkIT"]}
+        self.frappe.get_all.side_effect = lambda doctype, **kw: list(self.ticked.get(kw["filters"]["parent"], []))
         self.frappe.db.get_value.side_effect = get_value
 
     def test_employee_id_is_always_the_callers(self):
@@ -22,11 +26,37 @@ class ApiTests(OpsTestCase):
         self.assertEqual(self.lookups, [("Employee", {"user_id": "tech@example.com"})])
 
     def test_router_modules_are_the_callers(self):
-        self.frappe.get_all.side_effect = lambda doctype, **kw: ["WorkIT", "Ops"] if kw["filters"]["parent"] == "EMP-OWN" else ["ManageIT"]
+        self.ticked = {"EMP-OWN": ["WorkIT", "Ops"], "EMP-BOSS": ["ManageIT"]}
         self.frappe.get_roles.return_value = ["Employee"]
         modules = self.api.get_modules_for_router("boss@example.com")
-        self.assertEqual(modules[:3], ["workit", "ops", "home"])
+        self.assertEqual(modules[:3], ["home", "ops", "workit"])
         self.assertNotIn("manageit", modules)
+
+    def test_home_is_always_open(self):
+        self.has_employee = False
+        self.frappe.get_roles.return_value = ["Employee"]
+        self.assertEqual(self.api.get_modules_for_router(), ["home"])
+
+    def test_workit_only_people_keep_their_app(self):
+        self.frappe.get_roles.return_value = ["Employee", "Projects User"]
+        self.assertEqual(self.api.my_apps(), ["WorkIT"])
+
+    def test_maintenance_roles_open_ops_without_the_tick(self):
+        for role in ("Maintenance User", "Maintenance Manager", "Projects Manager"):
+            self.frappe.get_roles.return_value = ["Employee", role]
+            self.assertEqual(self.api.my_apps(), ["Ops", "WorkIT"], role)
+
+    def test_system_managers_get_every_app_they_can_use(self):
+        self.frappe.get_roles.return_value = ["System Manager"]
+        self.assertEqual(self.api.my_apps(), ["Ops", "WorkIT", "ManageIT"])
+        self.has_employee = False  # checking in needs an Employee, so no Techy Work
+        self.assertEqual(self.api.my_apps(), ["Ops", "ManageIT"])
+
+    def test_manager_only_ops_pages(self):
+        self.frappe.get_roles.return_value = ["Employee", "Maintenance User"]
+        self.assertNotIn("ops/dispatch", self.api.get_modules_for_router())
+        self.frappe.get_roles.return_value = ["Employee", "Maintenance Manager"]
+        self.assertIn("ops/dispatch", self.api.get_modules_for_router())
 
     def test_guests_get_nothing(self):
         self.frappe.session.user = "Guest"

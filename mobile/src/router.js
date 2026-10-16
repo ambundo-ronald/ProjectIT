@@ -42,15 +42,15 @@ const routes = [
       { path: 'requests', name: 'OpsRequests', component: () => import('@/pages/ops/Requests.vue') },
       { path: 'equipment', name: 'OpsEquipment', component: () => import('@/pages/ops/Equipment.vue') },
       { path: 'equipment/:name', name: 'OpsEquipmentDetail', component: () => import('@/pages/ops/EquipmentDetail.vue'), meta: { back: true, title: 'Equipment' } },
-      { path: 'parts-requests', name: 'OpsPartsRequests', component: () => import('@/pages/ops/PartsRequests.vue') },
-      { path: 'reports', name: 'OpsReports', component: () => import('@/pages/ops/Reports.vue') },
-      { path: 'billing', name: 'OpsBilling', component: () => import('@/pages/ops/Billing.vue') },
+      { path: 'parts-requests', name: 'OpsPartsRequests', component: () => import('@/pages/ops/PartsRequests.vue'), meta: { only: 'ops/parts-requests' } },
+      { path: 'reports', name: 'OpsReports', component: () => import('@/pages/ops/Reports.vue'), meta: { only: 'ops/reports' } },
+      { path: 'billing', name: 'OpsBilling', component: () => import('@/pages/ops/Billing.vue'), meta: { only: 'ops/billing' } },
       { path: 'contracts', name: 'OpsContracts', component: () => import('@/pages/ops/Contracts.vue') },
       { path: 'contracts/:name', name: 'OpsContract', component: () => import('@/pages/ops/ContractDetail.vue'), meta: { back: true, title: 'Service contract' } },
       { path: 'assets', name: 'OpsAssets', component: () => import('@/pages/ops/Assets.vue') },
       { path: 'assets/:name', name: 'OpsAsset', component: () => import('@/pages/ops/AssetDetail.vue'), meta: { back: true, title: 'Asset' } },
       { path: 'pm', name: 'OpsPM', component: () => import('@/pages/ops/PMSchedule.vue') },
-      { path: 'dispatch', name: 'OpsDispatch', component: () => import('@/pages/ops/Dispatch.vue'), meta: { title: 'Dispatch' } },
+      { path: 'dispatch', name: 'OpsDispatch', component: () => import('@/pages/ops/Dispatch.vue'), meta: { title: 'Dispatch', only: 'ops/dispatch' } },
       { path: 'chat', name: 'OpsChat', component: () => import('@/pages/ops/Chat.vue') },
       { path: 'procedures', name: 'OpsProcedures', component: () => import('@/pages/ops/Procedures.vue') },
       { path: 'procedures/:name', name: 'OpsProcedure', component: () => import('@/pages/ops/ProcedureEditor.vue'), meta: { back: true, title: 'Procedure' } },
@@ -101,7 +101,9 @@ router.beforeEach(async (to, from, next) => {
     // Offline before the list was ever saved: let them in; every screen checks access on the server.
     return next()
   }
-  next(modules.some((d) => to.path.match(d)) ? undefined : { name: 'Home' })
+  // An app opens everything under its address (/ops, /workit, /manageit); pages marked `only` must be listed.
+  const allowed = to.meta.only ? modules.includes(to.meta.only) : modules.some((m) => to.path === `/${m}` || to.path.startsWith(`/${m}/`))
+  next(allowed ? undefined : { name: 'Home' })
 })
 
 export default router

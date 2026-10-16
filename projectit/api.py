@@ -1,4 +1,14 @@
+"""Who may open which Techy app.
+
+Techy Ops, Techy Work and Techy Manage are ticked per person on their Employee (Techy App Access). ERPNext roles
+add to that: maintenance staff and project managers always get Techy Ops, and System Managers get Techy Manage, and
+Techy Work when they have an Employee (checking in needs one). apps_for() is the one place this is decided; the app's
+pages, its routes and the server's Work and Manage endpoints all ask it.
+"""
 import frappe
+
+APPS = ("Ops", "WorkIT", "ManageIT")
+OPS_ROLES = {"Maintenance User", "Maintenance Manager", "Projects Manager", "System Manager"}
 
 
 def _own_employee():
@@ -21,30 +31,47 @@ def get_header_info():
     return app_logo, company
 
 
+def apps_for(user=None):
+    """The Techy apps a user may open, in menu order (see the top of this file)."""
+    user = user or frappe.session.user
+    if user == "Guest":
+        return []
+    employee = frappe.db.get_value("Employee", {"user_id": user, "status": "Active"}, "name")
+    apps = set(frappe.get_all("Mobile Module", filters={"parent": employee, "parenttype": "Employee",
+        "parentfield": "custom_mobile_module"}, pluck="module_name")) if employee else set()
+    roles = set(frappe.get_roles(user))
+    if roles & OPS_ROLES:
+        apps.add("Ops")
+    if "System Manager" in roles:
+        apps.add("ManageIT")
+        if employee:
+            apps.add("WorkIT")
+    return [app for app in APPS if app in apps]
+
+
+def has_app(app, user=None):
+    return app in apps_for(user)
+
+
 @frappe.whitelist()
 def get_modules_for_router(user_id=None):
-    """Route prefixes the signed-in user may open. `user_id` is ignored and kept only for older clients."""
-    employee_id = _own_employee()
-    modules = frappe.get_all("Mobile Module", filters={"parent": employee_id, "parenttype": "Employee"},
-        pluck="module_name") if employee_id else []
-    modules.append('home')
-    modules = [m.lower() for m in modules]
-    # Approvers and accounts staff reach their Ops queues without the Ops module (e.g. stock keepers).
+    """Route prefixes the signed-in user may open. `user_id` is ignored and kept only for older clients.
+
+    Home is always open. Some Ops pages need more than the Ops app; the app marks those routes and they open only
+    when listed here, so approvers and accounts staff reach their queues even without Ops (e.g. stock keepers).
+    """
     from projectit import billing, ops, parts
+    modules = ["home"] + [app.lower() for app in apps_for()]
     if parts.can_approve():
-        modules.append('ops/parts-requests')
+        modules.append("ops/parts-requests")
     if billing.can_invoice():
-        modules.append('ops/billing')
+        modules.append("ops/billing")
     if ops.manager():
-        modules.append('ops/reports')
+        modules += ["ops/reports", "ops/dispatch"]
     return modules
 
 
 @frappe.whitelist()
 def my_apps():
-    """Techy App modules enabled for the signed-in user's own Employee (never another user's)."""
-    employee = frappe.db.get_value("Employee", {"user_id": frappe.session.user, "status": "Active"}, "name")
-    if not employee:
-        return []
-    return frappe.get_all("Mobile Module", filters={"parent": employee, "parenttype": "Employee",
-        "parentfield": "custom_mobile_module"}, pluck="module_name", order_by="idx asc")
+    """The Techy apps the signed-in user may open (never another user's)."""
+    return apps_for()
