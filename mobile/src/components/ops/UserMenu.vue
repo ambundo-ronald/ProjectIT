@@ -31,9 +31,16 @@
             <span v-else-if="notify.enabled && push.subscribed" class="block text-xs text-gray-400">Also when the app is closed</span>
           </span>
           <span class="relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors" :class="notify.enabled ? 'bg-brand-600' : 'bg-gray-300'" aria-hidden="true">
-            <span class="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all" :class="notify.enabled ? 'left-[18px]' : 'left-0.5'" />
+            <span class="absolute top-0.5 h-4 w-4 rounded-full bg-panel shadow transition-all" :class="notify.enabled ? 'left-[18px]' : 'left-0.5'" />
           </span>
         </button>
+        <div class="flex items-center gap-3 px-2.5 py-2 text-sm" role="group" aria-label="Appearance">
+          <FeatherIcon :name="theme.dark ? 'moon' : 'sun'" class="h-4 w-4 text-gray-500" />
+          <span class="flex-1">Appearance</span>
+          <span class="segmented">
+            <button v-for="o in THEMES" :key="o.key" type="button" class="!h-7 !px-2 !text-xs" role="menuitemradio" :aria-checked="theme.choice === o.key" :aria-pressed="theme.choice === o.key" :title="o.title" @click="setTheme(o.key)">{{ o.label }}</button>
+          </span>
+        </div>
         <button v-if="notify.enabled && push.subscribed" class="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-gray-50" role="menuitem" :disabled="testing" @click="sendTest">
           <FeatherIcon :name="tested ? 'check' : 'send'" class="h-4 w-4 text-gray-500" /><span class="flex-1">{{ tested ? 'Test sent: check your notifications' : 'Send a test notification' }}</span>
         </button>
@@ -61,6 +68,13 @@ import PresenceDot from './PresenceDot.vue'
 import { presence, setStatus, statusDialog, statusLine } from '@/data/presence'
 import { notify, setNotifications } from '@/data/chat'
 import { push, testPush } from '@/data/push'
+import { theme, setTheme } from '@/data/theme'
+
+const THEMES = [
+  { key: 'light', label: 'Light', title: 'Light' },
+  { key: 'dark', label: 'Dark', title: 'Dark navy' },
+  { key: 'system', label: 'Auto', title: "Match the phone's setting" },
+]
 
 defineProps({ align: { type: String, default: 'right' }, placement: { type: String, default: 'bottom' } })
 const cookies = new URLSearchParams(document.cookie.split('; ').join('&'))

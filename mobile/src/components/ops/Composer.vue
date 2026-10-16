@@ -1,7 +1,7 @@
 <template>
   <form class="relative" @submit.prevent="send">
     <!-- slash commands, at the start of a message -->
-    <ul v-if="trigger?.type === 'command'" class="absolute bottom-full left-0 z-10 mb-2 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-pop" role="listbox" aria-label="Commands">
+    <ul v-if="trigger?.type === 'command'" class="absolute bottom-full left-0 z-10 mb-2 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-gray-200 bg-panel py-1 shadow-pop" role="listbox" aria-label="Commands">
       <li v-for="(c, i) in commands" :key="c.name" role="option" :aria-selected="i === active">
         <button type="button" class="flex w-full items-baseline gap-3 px-3 py-2 text-left" :class="i === active ? 'bg-brand-50' : 'hover:bg-gray-50'" @mousedown.prevent="pick(c)">
           <span class="shrink-0 font-mono text-sm font-semibold text-gray-900">/{{ c.name }}</span>
@@ -12,7 +12,7 @@
     </ul>
 
     <!-- @mention suggestions -->
-    <ul v-if="trigger?.type === 'mention' && people.length" class="absolute bottom-full left-0 z-10 mb-2 max-h-56 w-72 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-pop" role="listbox" aria-label="People">
+    <ul v-if="trigger?.type === 'mention' && people.length" class="absolute bottom-full left-0 z-10 mb-2 max-h-56 w-72 overflow-y-auto rounded-lg border border-gray-200 bg-panel py-1 shadow-pop" role="listbox" aria-label="People">
       <li v-for="(person, i) in people" :key="person.user" role="option" :aria-selected="i === active">
         <button type="button" class="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm" :class="i === active ? 'bg-brand-50' : 'hover:bg-gray-50'" @mousedown.prevent="pick(person)">
           <UserAvatar :name="person.full_name" :image="person.image" size="sm" />
@@ -22,7 +22,7 @@
     </ul>
 
     <!-- document link picker: / tasks, $ projects, or a typed keyword -->
-    <div v-if="trigger?.type === 'link'" class="absolute bottom-full left-0 z-10 mb-2 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-pop">
+    <div v-if="trigger?.type === 'link'" class="absolute bottom-full left-0 z-10 mb-2 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-gray-200 bg-panel shadow-pop">
       <div class="flex gap-1 overflow-x-auto border-b border-gray-100 p-1.5" role="tablist" aria-label="Link to">
         <button v-for="k in LINK_KINDS" :key="k.kind" type="button" role="tab" :aria-selected="trigger.kind === k.kind" class="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-colors" :class="trigger.kind === k.kind ? 'bg-brand-600 text-white' : 'text-gray-600 hover:bg-gray-100'" @mousedown.prevent="switchKind(k.kind)">
           <FeatherIcon :name="k.icon" class="h-3.5 w-3.5" />{{ k.label }}
@@ -51,12 +51,12 @@
       </p>
     </div>
 
-    <div class="rounded-xl border border-gray-300 bg-white shadow-sm transition focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20">
+    <div class="rounded-xl border border-gray-300 bg-panel shadow-sm transition focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20">
     <!-- photos waiting to be sent -->
     <ul v-if="pending.length" class="flex gap-2 overflow-x-auto px-3 pt-3" aria-label="Photos to send">
       <li v-for="(p, i) in pending" :key="p.preview" class="relative shrink-0">
         <img :src="p.preview" :alt="`Photo ${i + 1}`" class="h-16 w-16 rounded-lg border border-gray-200 object-cover" />
-        <button type="button" class="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-gray-800 text-white shadow" :aria-label="`Remove photo ${i + 1}`" @click="unpick(i)"><FeatherIcon name="x" class="h-3 w-3" /></button>
+        <button type="button" class="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/75 text-white shadow" :aria-label="`Remove photo ${i + 1}`" @click="unpick(i)"><FeatherIcon name="x" class="h-3 w-3" /></button>
       </li>
     </ul>
     <div class="flex items-end gap-2 p-1.5 pl-3">

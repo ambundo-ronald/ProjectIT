@@ -3,7 +3,7 @@
     <Transition enter-from-class="opacity-0" leave-to-class="opacity-0" enter-active-class="transition duration-150" leave-active-class="transition duration-100">
       <div
         v-if="modelValue"
-        class="ops fixed inset-0 z-50 flex items-end justify-center bg-gray-900/50 backdrop-blur-[2px] sm:items-center sm:p-6"
+        class="ops fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-[2px] sm:items-center sm:p-6"
         @mousedown.self="close"
       >
         <div
@@ -12,7 +12,7 @@
           aria-modal="true"
           :aria-label="title"
           tabindex="-1"
-          class="flex max-h-[94dvh] w-full flex-col rounded-t-2xl bg-white shadow-pop outline-none sm:rounded-2xl"
+          class="flex max-h-[94dvh] w-full flex-col rounded-t-2xl bg-panel shadow-pop outline-none sm:rounded-2xl"
           :class="{ md: 'sm:max-w-lg', lg: 'sm:max-w-2xl', xl: 'sm:max-w-4xl' }[wide ? 'lg' : size]"
         >
           <div class="mx-auto mt-2 h-1 w-10 rounded-full bg-gray-300 sm:hidden" aria-hidden="true" />

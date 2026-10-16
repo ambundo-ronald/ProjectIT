@@ -2,7 +2,7 @@
   <div v-if="visible || (session.isLoggedIn && shownPopups.length)" class="ops contents">
     <!-- Incoming message pop-ups: banners at the top on phones, cards above the bubble on desktop -->
     <TransitionGroup tag="div" class="pointer-events-none fixed inset-x-3 top-3 z-[70] flex flex-col gap-2 md:inset-x-auto md:right-6 md:w-[22rem]" :class="dock.open ? 'md:top-4' : 'md:bottom-28 md:top-auto md:flex-col-reverse'" enter-from-class="opacity-0 -translate-y-2 md:translate-y-2" leave-to-class="opacity-0" enter-active-class="transition duration-200" leave-active-class="transition duration-150" aria-live="polite">
-      <div v-for="p in shownPopups" :key="p.id" class="pointer-events-auto flex w-full items-start gap-3 rounded-2xl border border-gray-200 bg-white/95 p-3 text-left shadow-pop backdrop-blur">
+      <div v-for="p in shownPopups" :key="p.id" class="pointer-events-auto flex w-full items-start gap-3 rounded-2xl border border-gray-200 bg-panel/95 p-3 text-left shadow-pop backdrop-blur">
         <button class="flex min-w-0 flex-1 items-start gap-3 text-left" :aria-label="`Open message from ${p.name}`" @click="openFromPopup(p)">
           <span v-if="p.sticky" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-50 text-amber-700"><FeatherIcon name="clock" class="h-4 w-4" /></span>
           <UserAvatar v-else :name="p.name" :image="p.image" size="lg" />
@@ -25,12 +25,12 @@
       @click="openDock(null)"
     >
       <FeatherIcon name="message-circle" class="h-6 w-6" />
-      <span v-if="unread" class="absolute -right-1 -top-1 flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-bold ring-2 ring-white" :class="pulse ? 'animate-bounce' : ''">{{ unread > 99 ? '99+' : unread }}</span>
+      <span v-if="unread" class="absolute -right-1 -top-1 flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-bold ring-2 ring-panel" :class="pulse ? 'animate-bounce' : ''">{{ unread > 99 ? '99+' : unread }}</span>
     </button>
 
     <!-- Chat panel -->
     <Transition enter-from-class="opacity-0 translate-y-4" leave-to-class="opacity-0 translate-y-4" enter-active-class="transition duration-200" leave-active-class="transition duration-150">
-      <section v-if="dock.open" class="fixed inset-0 z-[65] flex flex-col bg-white md:inset-auto md:bottom-6 md:right-6 md:h-[min(620px,calc(100dvh-3rem))] md:w-[400px] md:rounded-2xl md:border md:border-gray-200 md:shadow-pop" role="dialog" aria-label="Chat" @keydown.esc="close">
+      <section v-if="dock.open" class="fixed inset-0 z-[65] flex flex-col bg-panel md:inset-auto md:bottom-6 md:right-6 md:h-[min(620px,calc(100dvh-3rem))] md:w-[400px] md:rounded-2xl md:border md:border-gray-200 md:shadow-pop" role="dialog" aria-label="Chat" @keydown.esc="close">
         <!-- Header -->
         <header class="flex h-14 shrink-0 items-center gap-2 border-b border-gray-200 px-2 pt-[env(safe-area-inset-top)] md:rounded-t-2xl">
           <button v-if="dock.channel || picking" class="btn btn-ghost btn-icon" aria-label="Back to conversations" @click="back"><FeatherIcon name="arrow-left" class="h-5 w-5" /></button>

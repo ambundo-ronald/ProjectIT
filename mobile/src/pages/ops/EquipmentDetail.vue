@@ -153,7 +153,7 @@
 
         <div class="card p-5 text-center" aria-label="QR label">
           <h2 class="section-label">QR sticker</h2>
-          <div class="mx-auto mt-3 w-fit rounded-xl border border-gray-200 bg-white p-3">
+          <div class="mx-auto mt-3 w-fit rounded-xl border border-gray-200 bg-panel p-3">
             <img v-if="qr" :src="qr" :alt="`QR code for ${eq.equipment_name}`" class="h-40 w-40" />
           </div>
           <p class="mt-3 font-semibold">{{ eq.equipment_name }}</p>

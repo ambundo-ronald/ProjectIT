@@ -68,7 +68,7 @@
       <aside class="lg:sticky lg:top-8 lg:self-start">
         <div class="card p-5 text-center print:border-0 print:shadow-none" aria-label="QR label">
           <h2 class="section-label">QR label</h2>
-          <div class="mx-auto mt-3 w-fit rounded-xl border border-gray-200 bg-white p-3">
+          <div class="mx-auto mt-3 w-fit rounded-xl border border-gray-200 bg-panel p-3">
             <img v-if="qr" :src="qr" :alt="`QR code for ${asset.asset_name}`" class="h-44 w-44" />
           </div>
           <p class="mt-3 font-semibold">{{ asset.asset_name }}</p>

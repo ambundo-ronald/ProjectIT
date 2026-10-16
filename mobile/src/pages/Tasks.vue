@@ -53,7 +53,7 @@
         <div v-else-if="detail.can_write" class="mt-5">
           <span class="label">Status</span>
           <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <button v-for="s in statuses" :key="s" class="flex h-10 items-center justify-center rounded-lg border text-sm font-medium transition-colors disabled:opacity-50" :class="detail.task.status === s ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'" :disabled="busy || detail.task.status === s" @click="saveStatus(s)">
+            <button v-for="s in statuses" :key="s" class="flex h-10 items-center justify-center rounded-lg border text-sm font-medium transition-colors disabled:opacity-50" :class="detail.task.status === s ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-gray-300 bg-panel text-gray-700 hover:bg-gray-50'" :disabled="busy || detail.task.status === s" @click="saveStatus(s)">
               {{ STATUS_LABEL[s] || s }}
             </button>
           </div>

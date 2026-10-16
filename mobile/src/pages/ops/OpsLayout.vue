@@ -1,7 +1,7 @@
 <template>
   <div class="ops flex h-[100dvh]">
     <!-- Desktop sidebar -->
-    <aside class="hidden w-64 shrink-0 flex-col bg-brand-800 text-brand-100 md:flex">
+    <aside class="palette-light hidden w-64 shrink-0 flex-col bg-brand-800 text-brand-100 md:flex">
       <div class="px-3 pb-3 pt-4"><AppSwitcher dark /></div>
       <div class="px-3">
         <button v-if="me.ops_access !== false" class="btn w-full bg-accent-400 text-brand-900 shadow-sm hover:bg-accent-500" @click="openNew()">
@@ -55,7 +55,7 @@
 
     <div class="flex min-w-0 flex-1 flex-col">
       <!-- Mobile app bar -->
-      <header class="flex h-14 shrink-0 items-center gap-2 border-b border-gray-200 bg-white px-2 md:hidden">
+      <header class="flex h-14 shrink-0 items-center gap-2 border-b border-gray-200 bg-panel px-2 md:hidden">
         <button v-if="route.meta.back" class="btn btn-ghost btn-icon" aria-label="Back" @click="back"><FeatherIcon name="arrow-left" class="h-5 w-5" /></button>
         <AppSwitcher v-else compact />
         <h1 class="min-w-0 flex-1 truncate text-[17px] font-semibold">{{ title }}</h1>
@@ -74,7 +74,7 @@
         </div>
       </main>
       <!-- Mobile tab bar -->
-      <nav v-if="me.ops_access !== false" class="fixed inset-x-0 bottom-0 grid grid-cols-5 border-t border-gray-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden" :class="moreOpen ? 'z-[48]' : 'z-40'" aria-label="Ops">
+      <nav v-if="me.ops_access !== false" class="fixed inset-x-0 bottom-0 grid grid-cols-5 border-t border-gray-200 bg-panel/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden" :class="moreOpen ? 'z-[48]' : 'z-40'" aria-label="Ops">
         <router-link v-for="item in nav.filter((i) => i.tab)" :key="item.name" :to="{ name: item.name }" class="relative flex flex-col items-center gap-0.5 pb-1.5 pt-2 text-[11px] font-medium" :class="isActive(item) && !moreOpen ? 'text-brand-700' : 'text-gray-500'">
           <span class="flex h-7 w-12 items-center justify-center rounded-full transition-colors" :class="isActive(item) && !moreOpen ? 'bg-brand-50' : ''">
             <FeatherIcon :name="item.icon" class="h-5 w-5" />
@@ -82,7 +82,7 @@
           {{ item.short }}
           <span v-if="badge(item)" class="absolute left-1/2 top-1 ml-2 min-w-[1.1rem] rounded-full px-1 text-center text-[10px] font-bold text-white" :class="item.name === 'OpsChat' ? 'bg-red-500' : 'bg-brand-600'">{{ badge(item) }}</span>
         </router-link>
-        <button type="button" class="relative flex flex-col items-center gap-0.5 pb-1.5 pt-2 text-[11px] font-medium" :class="moreOpen || moreActive ? 'text-brand-700' : 'text-gray-500'" aria-haspopup="dialog" :aria-expanded="moreOpen" @click="moreOpen = !moreOpen">
+        <button type="button" class="relative flex flex-col items-center gap-0.5 pb-1.5 pt-2 text-[11px] font-medium" :class="moreOpen || moreActive ? 'text-brand-700' : 'text-gray-500'" aria-label="More pages" aria-haspopup="dialog" :aria-expanded="moreOpen" @click="moreOpen = !moreOpen">
           <span class="flex h-7 w-12 items-center justify-center rounded-full transition-colors" :class="moreOpen || moreActive ? 'bg-brand-50' : ''">
             <FeatherIcon name="grid" class="h-5 w-5" />
           </span>
@@ -97,7 +97,7 @@
         <div v-if="moreOpen" class="fixed inset-0 z-[46] bg-black/30 md:hidden" @click="moreOpen = false" />
       </Transition>
       <Transition enter-from-class="translate-y-full" leave-to-class="translate-y-full" enter-active-class="transition-transform duration-200 ease-out" leave-active-class="transition-transform duration-150 ease-in">
-        <div v-if="moreOpen" ref="moreSheet" class="fixed inset-x-0 bottom-0 z-[47] rounded-t-2xl bg-white px-4 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-3 shadow-pop md:hidden" role="dialog" aria-modal="true" aria-label="More" tabindex="-1">
+        <div v-if="moreOpen" ref="moreSheet" class="fixed inset-x-0 bottom-0 z-[47] rounded-t-2xl bg-panel px-4 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-3 shadow-pop md:hidden" role="dialog" aria-modal="true" aria-label="More" tabindex="-1">
           <div class="mx-auto mb-3 h-1 w-10 rounded-full bg-gray-200" aria-hidden="true" />
           <ul class="grid grid-cols-3 gap-2">
             <li v-for="item in moreItems" :key="item.name">

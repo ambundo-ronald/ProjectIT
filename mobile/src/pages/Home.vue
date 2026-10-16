@@ -1,6 +1,6 @@
 <template>
   <div class="ops min-h-[100dvh]">
-    <header class="border-b border-gray-200 bg-white">
+    <header class="border-b border-gray-200 bg-panel">
       <div class="mx-auto flex h-16 max-w-3xl items-center gap-3 px-4">
         <img :src="logo" alt="" class="h-8 w-8 rounded-lg object-contain" @error="logoFailed = true" />
         <span class="min-w-0 flex-1 truncate font-semibold">{{ companyInfo.data?.[1] || 'Techy App' }}</span>

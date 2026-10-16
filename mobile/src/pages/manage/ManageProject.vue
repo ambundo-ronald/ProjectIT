@@ -54,7 +54,7 @@
               <div class="flex items-center gap-3">
                 <span class="relative">
                   <UserAvatar :name="m.name" :image="m.image" size="lg" />
-                  <span class="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white" :class="m.on_site ? 'bg-green-500' : 'bg-gray-300'" />
+                  <span class="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-panel" :class="m.on_site ? 'bg-green-500' : 'bg-gray-300'" />
                 </span>
                 <div class="min-w-0 flex-1">
                   <p class="truncate font-semibold">{{ m.name }}<span v-if="!m.active" class="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-500">Inactive</span></p>

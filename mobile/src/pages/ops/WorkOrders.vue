@@ -42,7 +42,7 @@
       <div v-for="col in columns" :key="col.key" class="flex flex-col rounded-2xl bg-gray-100/80 p-2">
         <h2 class="flex items-center gap-2 px-2 pb-2 pt-1 text-[13px] font-semibold text-gray-700">
           <span class="h-2 w-2 rounded-full" :class="col.dot" />{{ col.label }}
-          <span class="ml-auto rounded-full bg-white px-2 text-xs font-semibold text-gray-600 shadow-sm">{{ col.rows.length }}</span>
+          <span class="ml-auto rounded-full bg-panel px-2 text-xs font-semibold text-gray-600 shadow-sm">{{ col.rows.length }}</span>
         </h2>
         <div class="space-y-2">
           <WorkOrderCard v-for="wo in col.rows" :key="wo.name" :wo="wo" />
@@ -53,7 +53,7 @@
 
     <!-- List -->
     <template v-else>
-      <div v-if="visible.length" class="overflow-hidden md:rounded-xl md:border md:border-gray-200 md:bg-white md:shadow-card">
+      <div v-if="visible.length" class="overflow-hidden md:rounded-xl md:border md:border-gray-200 md:bg-panel md:shadow-card">
         <div class="hidden grid-cols-[minmax(0,1fr)_8rem_7rem_10rem_7rem_6rem] gap-4 border-b border-gray-100 bg-gray-50/80 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-gray-500 md:grid">
           <span>Work order</span><span>Status</span><span>Priority</span><span>Asset / location</span><span>Due</span><span>Assigned</span>
         </div>

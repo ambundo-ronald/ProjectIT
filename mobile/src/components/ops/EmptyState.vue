@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white px-6 py-10 text-center">
+  <div class="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-panel px-6 py-10 text-center">
     <span class="flex h-11 w-11 items-center justify-center rounded-full bg-brand-50 text-brand-600">
       <FeatherIcon :name="icon" class="h-5 w-5" />
     </span>

@@ -31,7 +31,7 @@
           <span class="min-w-0"><span class="block truncate font-semibold">{{ context.equipment.equipment_name }}</span><span class="block truncate text-xs text-gray-500">{{ context.equipment.site || context.equipment.name }}</span></span>
         </div>
         <div v-else-if="context.asset" class="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
-          <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-gray-500 ring-1 ring-gray-200"><FeatherIcon name="box" class="h-5 w-5" /></span>
+          <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-panel text-gray-500 ring-1 ring-gray-200"><FeatherIcon name="box" class="h-5 w-5" /></span>
           <span class="min-w-0"><span class="block truncate font-semibold">{{ context.asset.asset_name }}</span><span class="block font-mono text-xs text-gray-500">{{ context.asset.name }}</span></span>
         </div>
         <div>

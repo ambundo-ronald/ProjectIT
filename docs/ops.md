@@ -33,6 +33,21 @@ The bar at the bottom has **Work**, **Requests**, **Equipment** and **Chat**. **
 
 More shows a count when parts requests are waiting, and is highlighted while you are on one of its pages.
 
+## Light and dark appearance
+
+Choose **Appearance** in the name menu, on each device:
+- **Light**: the default.
+- **Dark**: navy, built on the logo colour rather than black.
+- **Auto**: follows the phone's or computer's own setting.
+
+The choice applies to all three apps and is remembered on that device.
+
+- **What stays the same in dark mode:** the navy sidebar, the Techy Work clock card and the camera keep their usual look. Signature pads stay white so signatures read on the service report.
+- **Printing** (Reports › Print / PDF) always uses the light colours.
+- **For developers:** the colours live in `mobile/theme.cjs`. Every Tailwind colour is a CSS variable with a light and a navy dark value, switched by the `techy-dark` class on `<html>`.
+  - Use `bg-panel` for card and input surfaces (white in light mode), and keep `bg-white/…` for translucent overlays on coloured backgrounds.
+  - Wrap anything that must keep its light colours in `palette-light`.
+
 ## Lists
 
 - **Pages:** long lists show numbered pages under the list, with *Showing 26–50 of 132*, previous and next buttons, and 25, 50 or 100 rows per page. The page size is remembered on each device.

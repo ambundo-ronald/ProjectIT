@@ -11,6 +11,16 @@
     <meta name="apple-mobile-web-app-title" content="Techy App" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="theme-color" content="#163B65" />
+    <script>
+      // Dark (navy) or light, before the app draws, so a dark phone never flashes white (see src/data/theme.js).
+      try {
+        var t = localStorage.getItem('techy_theme')
+        if (t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('techy-dark')
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0E2440')
+        }
+      } catch (e) {}
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Techy App</title>
   </head>

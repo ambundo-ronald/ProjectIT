@@ -212,7 +212,7 @@
     </div>
 
     <!-- Mobile action bar -->
-    <div v-if="actionBar" class="fixed inset-x-0 bottom-16 z-30 flex gap-2 border-t border-gray-200 bg-white/95 p-3 backdrop-blur md:hidden">
+    <div v-if="actionBar" class="fixed inset-x-0 bottom-16 z-30 flex gap-2 border-t border-gray-200 bg-panel/95 p-3 backdrop-blur md:hidden">
       <button v-for="a in actions" :key="a.status" class="btn btn-lg flex-1" :class="a.style" :disabled="busy" @click="setStatus(a.status)"><FeatherIcon :name="a.icon" class="h-5 w-5" />{{ a.short || a.label }}</button>
     </div>
   </section>

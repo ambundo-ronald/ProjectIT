@@ -38,7 +38,7 @@
               role="radio"
               :aria-checked="form.priority === p.value"
               class="flex h-10 items-center justify-center gap-1.5 rounded-lg border text-sm font-medium transition-colors"
-              :class="form.priority === p.value ? p.active : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'"
+              :class="form.priority === p.value ? p.active : 'border-gray-300 bg-panel text-gray-600 hover:bg-gray-50'"
               @click="form.priority = p.value"
             >
               <FeatherIcon :name="p.icon" class="h-3.5 w-3.5" />{{ p.value }}
@@ -77,7 +77,7 @@
         <div>
           <span class="label">Assign to</span>
           <PeoplePicker v-if="me.manager" v-model="form.assignees" placeholder="Search technicians" />
-          <label v-else class="flex h-10 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm">
+          <label v-else class="flex h-10 items-center gap-2 rounded-lg border border-gray-300 bg-panel px-3 text-sm">
             <input v-model="assignSelf" type="checkbox" class="rounded border-gray-300 text-brand-600" /> Assign to me
           </label>
         </div>

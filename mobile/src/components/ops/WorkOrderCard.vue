@@ -1,7 +1,7 @@
 <template>
   <router-link
     :to="{ name: 'OpsWorkOrder', params: { name: wo.name } }"
-    class="group relative block overflow-hidden rounded-xl border border-gray-200 bg-white p-3.5 pl-4 shadow-card transition hover:-translate-y-px hover:border-gray-300 hover:shadow-pop"
+    class="group relative block overflow-hidden rounded-xl border border-gray-200 bg-panel p-3.5 pl-4 shadow-card transition hover:-translate-y-px hover:border-gray-300 hover:shadow-pop"
   >
     <span class="absolute inset-y-0 left-0 w-1" :class="stripe" aria-hidden="true" />
     <div class="flex items-start gap-2">

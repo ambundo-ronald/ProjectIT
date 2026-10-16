@@ -12,7 +12,7 @@
 
     <template v-else>
       <!-- Clock card -->
-      <section class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-800 to-brand-900 p-5 text-white shadow-pop md:p-7" aria-live="polite">
+      <section class="palette-light relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-800 to-brand-900 p-5 text-white shadow-pop md:p-7" aria-live="polite">
         <div class="pointer-events-none absolute -right-10 -top-10 h-44 w-44 rounded-full bg-accent-400/10" aria-hidden="true" />
         <div class="flex items-center justify-between">
           <span class="inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold" :class="session ? 'bg-accent-400/20 text-accent-100' : 'bg-white/10 text-brand-100'">
@@ -36,7 +36,7 @@
 
         <div class="mt-6 flex flex-col gap-2 sm:flex-row">
           <template v-if="session">
-            <button class="btn btn-lg w-full sm:w-auto sm:flex-1 bg-white text-brand-900 hover:bg-brand-50" :disabled="!!working" @click="startCamera('Check-Out')">
+            <button class="btn btn-lg w-full sm:w-auto sm:flex-1 bg-panel text-brand-900 hover:bg-brand-50" :disabled="!!working" @click="startCamera('Check-Out')">
               <FeatherIcon name="log-out" class="h-5 w-5" />Check out
             </button>
             <button class="btn btn-lg w-full sm:w-auto sm:flex-1 bg-white/10 text-white hover:bg-white/20" :disabled="!!working" @click="updating = true">
@@ -69,7 +69,7 @@
             @click="select(p.project)"
           >
             <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2" :class="selectedId === p.project ? 'border-brand-600 bg-brand-600' : 'border-gray-300'">
-              <span v-if="selectedId === p.project" class="h-2 w-2 rounded-full bg-white" />
+              <span v-if="selectedId === p.project" class="h-2 w-2 rounded-full bg-panel" />
             </span>
             <span class="min-w-0 flex-1">
               <span class="block font-semibold text-gray-900">{{ p.project_name }}</span>

@@ -3,13 +3,13 @@
     <form id="equipment-form" class="grid gap-4 sm:grid-cols-2" @submit.prevent="save">
       <div class="relative sm:col-span-2">
         <label class="label" for="eq-customer">Customer <span class="text-red-500">*</span></label>
-        <div v-if="form.customer" class="flex h-10 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm">
+        <div v-if="form.customer" class="flex h-10 items-center gap-2 rounded-lg border border-gray-300 bg-panel px-3 text-sm">
           <FeatherIcon name="briefcase" class="h-4 w-4 text-gray-400" /><span class="min-w-0 flex-1 truncate font-medium">{{ form.customer_name || form.customer }}</span>
           <button type="button" class="rounded p-0.5 text-gray-400 hover:bg-gray-100" aria-label="Change customer" @click="setCustomer(null)"><FeatherIcon name="x" class="h-4 w-4" /></button>
         </div>
         <template v-else>
           <input id="eq-customer" v-model="customerQuery" class="input" placeholder="Search customers" autocomplete="off" @input="findCustomers" @focus="findCustomers" />
-          <ul v-if="customers.length" class="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-pop">
+          <ul v-if="customers.length" class="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-gray-200 bg-panel py-1 shadow-pop">
             <li v-for="c in customers" :key="c.name"><button type="button" class="w-full px-3 py-2 text-left text-sm hover:bg-gray-50" @mousedown.prevent="setCustomer(c)">{{ c.customer_name }}<span v-if="c.customer_name !== c.name" class="text-gray-400"> · {{ c.name }}</span></button></li>
           </ul>
         </template>

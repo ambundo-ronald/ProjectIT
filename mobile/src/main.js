@@ -1,4 +1,5 @@
 import './index.css'
+import './data/theme'
 
 import { createApp, reactive } from 'vue'
 import router from './router'

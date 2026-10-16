@@ -1,6 +1,6 @@
 <template>
   <Modal :model-value="modelValue" title="Sign off" :subtitle="label" size="md" @update:model-value="emit('update:modelValue', $event)">
-    <div class="relative overflow-hidden rounded-xl border-2 border-dashed border-gray-300 bg-white">
+    <div class="palette-light relative overflow-hidden rounded-xl border-2 border-dashed border-gray-300 bg-panel">
       <canvas
         ref="canvas"
         class="block h-48 w-full touch-none"

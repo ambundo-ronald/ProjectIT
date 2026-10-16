@@ -22,7 +22,7 @@
         </div>
         <div v-if="editable && isNew && !form.customer" class="relative">
           <input v-model="customerQuery" class="input" placeholder="Search customers" aria-label="Customer" autocomplete="off" @input="findCustomers" @focus="findCustomers" />
-          <ul v-if="customers.length" class="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-pop">
+          <ul v-if="customers.length" class="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-gray-200 bg-panel py-1 shadow-pop">
             <li v-for="c in customers" :key="c.name"><button type="button" class="w-full px-3 py-2 text-left text-sm hover:bg-gray-50" @mousedown.prevent="setCustomer(c)">{{ c.customer_name }}</button></li>
           </ul>
         </div>
@@ -101,7 +101,7 @@
             </div>
             <div v-if="editable" class="relative mt-2 sm:w-80">
               <input v-model="itemQuery" class="input h-9" placeholder="Add a part, e.g. pre-filter" aria-label="Add an included part" autocomplete="off" @input="findItems" @focus="findItems" @blur="hideItems" />
-              <ul v-if="itemResults.length" class="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-pop">
+              <ul v-if="itemResults.length" class="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-gray-200 bg-panel py-1 shadow-pop">
                 <li v-for="it in itemResults" :key="it.name"><button type="button" class="w-full px-3 py-2 text-left text-sm hover:bg-gray-50" @mousedown.prevent="addItem(it)">{{ it.item_name }} <span class="text-gray-400">· {{ it.name }}</span></button></li>
               </ul>
             </div>
@@ -150,7 +150,7 @@
       </template>
     </div>
 
-    <div v-if="editable && !loading && form.customer" class="fixed inset-x-0 bottom-16 z-30 border-t border-gray-200 bg-white/95 backdrop-blur md:bottom-0 md:left-64">
+    <div v-if="editable && !loading && form.customer" class="fixed inset-x-0 bottom-16 z-30 border-t border-gray-200 bg-panel/95 backdrop-blur md:bottom-0 md:left-64">
       <div class="mx-auto flex max-w-5xl items-center gap-2 p-3 md:pl-8 md:pr-24">
         <button v-if="!isNew" type="button" class="btn btn-ghost text-gray-500" :disabled="saving" @click="toggleCancel">{{ form.status === 'Cancelled' ? 'Reactivate' : 'Cancel contract' }}</button>
         <router-link :to="{ name: 'OpsContracts' }" class="btn btn-secondary ml-auto">Close</router-link>
