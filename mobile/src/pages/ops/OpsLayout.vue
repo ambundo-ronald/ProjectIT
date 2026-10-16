@@ -74,15 +74,47 @@
         </div>
       </main>
       <!-- Mobile tab bar -->
-      <nav v-if="me.ops_access !== false" class="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-gray-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden" aria-label="Ops">
-        <router-link v-for="item in nav.filter((i) => !i.desktop)" :key="item.name" :to="{ name: item.name }" class="relative flex flex-col items-center gap-0.5 pb-1.5 pt-2 text-[11px] font-medium" :class="isActive(item) ? 'text-brand-700' : 'text-gray-500'">
-          <span class="flex h-7 w-12 items-center justify-center rounded-full transition-colors" :class="isActive(item) ? 'bg-brand-50' : ''">
+      <nav v-if="me.ops_access !== false" class="fixed inset-x-0 bottom-0 grid grid-cols-5 border-t border-gray-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden" :class="moreOpen ? 'z-[48]' : 'z-40'" aria-label="Ops">
+        <router-link v-for="item in nav.filter((i) => i.tab)" :key="item.name" :to="{ name: item.name }" class="relative flex flex-col items-center gap-0.5 pb-1.5 pt-2 text-[11px] font-medium" :class="isActive(item) && !moreOpen ? 'text-brand-700' : 'text-gray-500'">
+          <span class="flex h-7 w-12 items-center justify-center rounded-full transition-colors" :class="isActive(item) && !moreOpen ? 'bg-brand-50' : ''">
             <FeatherIcon :name="item.icon" class="h-5 w-5" />
           </span>
           {{ item.short }}
           <span v-if="badge(item)" class="absolute left-1/2 top-1 ml-2 min-w-[1.1rem] rounded-full px-1 text-center text-[10px] font-bold text-white" :class="item.name === 'OpsChat' ? 'bg-red-500' : 'bg-brand-600'">{{ badge(item) }}</span>
         </router-link>
+        <button type="button" class="relative flex flex-col items-center gap-0.5 pb-1.5 pt-2 text-[11px] font-medium" :class="moreOpen || moreActive ? 'text-brand-700' : 'text-gray-500'" aria-haspopup="dialog" :aria-expanded="moreOpen" @click="moreOpen = !moreOpen">
+          <span class="flex h-7 w-12 items-center justify-center rounded-full transition-colors" :class="moreOpen || moreActive ? 'bg-brand-50' : ''">
+            <FeatherIcon name="grid" class="h-5 w-5" />
+          </span>
+          More
+          <span v-if="moreBadge" class="absolute left-1/2 top-1 ml-2 min-w-[1.1rem] rounded-full bg-brand-600 px-1 text-center text-[10px] font-bold text-white">{{ moreBadge }}</span>
+        </button>
       </nav>
+
+      <!-- Mobile "More": every page that has no tab of its own. It sits above the chat bubble (z-45), with the tab
+           bar lifted above it while open so More closes it again. -->
+      <Transition enter-from-class="opacity-0" leave-to-class="opacity-0" enter-active-class="transition-opacity duration-150" leave-active-class="transition-opacity duration-150">
+        <div v-if="moreOpen" class="fixed inset-0 z-[46] bg-black/30 md:hidden" @click="moreOpen = false" />
+      </Transition>
+      <Transition enter-from-class="translate-y-full" leave-to-class="translate-y-full" enter-active-class="transition-transform duration-200 ease-out" leave-active-class="transition-transform duration-150 ease-in">
+        <div v-if="moreOpen" ref="moreSheet" class="fixed inset-x-0 bottom-0 z-[47] rounded-t-2xl bg-white px-4 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-3 shadow-pop md:hidden" role="dialog" aria-modal="true" aria-label="More" tabindex="-1">
+          <div class="mx-auto mb-3 h-1 w-10 rounded-full bg-gray-200" aria-hidden="true" />
+          <ul class="grid grid-cols-3 gap-2">
+            <li v-for="item in moreItems" :key="item.name">
+              <router-link :to="{ name: item.name }" class="relative flex flex-col items-center gap-1.5 rounded-xl px-1 py-3 text-center text-xs font-medium" :class="isActive(item) ? 'bg-brand-50 text-brand-700' : 'text-gray-700 hover:bg-gray-50'" @click="moreOpen = false">
+                <FeatherIcon :name="item.icon" class="h-6 w-6" />
+                {{ item.label }}
+                <span v-if="badge(item)" class="absolute right-3 top-2 min-w-[1.1rem] rounded-full bg-brand-600 px-1 text-[10px] font-bold text-white">{{ badge(item) }}</span>
+              </router-link>
+            </li>
+            <li>
+              <router-link :to="{ name: 'Home' }" class="flex flex-col items-center gap-1.5 rounded-xl px-1 py-3 text-center text-xs font-medium text-gray-700 hover:bg-gray-50" @click="moreOpen = false">
+                <FeatherIcon name="home" class="h-6 w-6" />All apps
+              </router-link>
+            </li>
+          </ul>
+        </div>
+      </Transition>
     </div>
     <WorkOrderForm v-model="showNew" :asset="newAsset" :equipment="newEquipment" :message="newMessage" @saved="(r) => router.push({ name: 'OpsWorkOrder', params: { name: r.name } })" />
   </div>
@@ -112,9 +144,9 @@ const newEquipment = ref(null)
 const newMessage = ref(null)
 
 const nav = [
-  { name: 'OpsWorkOrders', label: 'Work orders', short: 'Work', icon: 'tool', prefix: '/ops/work-orders' },
-  { name: 'OpsRequests', label: 'Requests', short: 'Requests', icon: 'inbox', prefix: '/ops/requests' },
-  { name: 'OpsEquipment', label: 'Equipment', short: 'Equipment', icon: 'droplet', prefix: ['/ops/equipment', '/ops/contracts', '/ops/assets'] },
+  { name: 'OpsWorkOrders', label: 'Work orders', short: 'Work', icon: 'tool', prefix: '/ops/work-orders', tab: true },
+  { name: 'OpsRequests', label: 'Requests', short: 'Requests', icon: 'inbox', prefix: '/ops/requests', tab: true },
+  { name: 'OpsEquipment', label: 'Equipment', short: 'Equipment', icon: 'droplet', prefix: ['/ops/equipment', '/ops/contracts', '/ops/assets'], tab: true },
   { name: 'OpsPM', label: 'Preventive maintenance', short: 'PM', icon: 'calendar', prefix: '/ops/pm' },
   { name: 'OpsDispatch', label: 'Dispatch', short: 'Dispatch', icon: 'columns', prefix: '/ops/dispatch', desktop: true, show: () => me.manager },
   { name: 'OpsInvestigations', label: 'Investigations', short: 'RCA', icon: 'crosshair', prefix: '/ops/investigations', desktop: true },
@@ -122,11 +154,26 @@ const nav = [
   { name: 'OpsPartsRequests', label: 'Parts requests', short: 'Parts', icon: 'package', prefix: '/ops/parts-requests', desktop: true, show: () => me.can_approve_parts },
   { name: 'OpsBilling', label: 'Billing', short: 'Billing', icon: 'file-text', prefix: '/ops/billing', desktop: true, show: () => me.can_invoice },
   { name: 'OpsReports', label: 'Reports', short: 'Reports', icon: 'bar-chart-2', prefix: '/ops/reports', desktop: true, show: () => me.manager },
-  { name: 'OpsChat', label: 'Chat', short: 'Chat', icon: 'message-circle', prefix: '/ops/chat' },
+  { name: 'OpsChat', label: 'Chat', short: 'Chat', icon: 'message-circle', prefix: '/ops/chat', tab: true },
 ]
 // Without the Ops module (e.g. a stock keeper) only the queues the user's roles allow are shown.
 const visibleNav = computed(() => nav.filter((i) => (!i.show || i.show()) && (me.ops_access !== false || i.show)))
 const isActive = (item) => [].concat(item.prefix).some((p) => route.path.startsWith(p))
+// Phones: four tabs (tab: true) and More for the rest, limited to what the person may open.
+const moreOpen = ref(false)
+const moreSheet = ref(null)
+const moreItems = computed(() => visibleNav.value.filter((i) => !i.tab))
+const moreActive = computed(() => moreItems.value.some(isActive))
+const moreBadge = computed(() => moreItems.value.reduce((n, i) => n + (Number(badge(i)) || 0), 0))
+watch(() => route.fullPath, () => (moreOpen.value = false))
+const closeMore = (e) => e.key === 'Escape' && (moreOpen.value = false)
+watch(moreOpen, (open) => {
+  if (open) {
+    window.addEventListener('keydown', closeMore)
+    setTimeout(() => moreSheet.value?.focus(), 50)
+  } else window.removeEventListener('keydown', closeMore)
+})
+onBeforeUnmount(() => window.removeEventListener('keydown', closeMore))
 const title = computed(() => route.meta.title || nav.find(isActive)?.label || 'Techy Ops')
 const joined = computed(() => channels.value.filter((c) => c.is_member))
 const cap = (n) => (n > 99 ? '99+' : n || 0)

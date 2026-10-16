@@ -24,6 +24,15 @@ Techy Ops is a maintenance and team-collaboration workspace (similar to Maintain
 5. Optional: in **Techy Ops Settings**, enable public requests from asset QR codes and set how many days before the due date PM work orders are created (the default is 3).
 6. Realtime updates use the site's standard Frappe socket.io service. The green dot in the Ops header shows that live updates are connected. Without a connection, pages still work, and Refresh reloads the data.
 
+## On a phone
+
+The bar at the bottom has **Work**, **Requests**, **Equipment** and **Chat**. **More** holds everything else the person may open:
+- Preventive maintenance, Investigations and Procedures;
+- Dispatch, Reports, Billing and Parts requests, for those allowed;
+- All apps.
+
+More shows a count when parts requests are waiting, and is highlighted while you are on one of its pages.
+
 ## Lists
 
 - **Pages:** long lists show numbered pages under the list, with *Showing 26–50 of 132*, previous and next buttons, and 25, 50 or 100 rows per page. The page size is remembered on each device.
@@ -66,7 +75,7 @@ Technicians can keep working where there is no signal.
 
 ## Dispatch calendar
 
-Managers plan the work under **Dispatch** (sidebar on a computer, name menu on a phone).
+Managers plan the work under **Dispatch** (sidebar on a computer, **More** on a phone).
 
 - **The board.** Technicians run down the side and days across, by day, week (Monday to Sunday) or two weeks. **Not assigned** holds planned jobs nobody has yet. Each person shows how many jobs they have in view, and a cell with more than four jobs is marked *Busy day*.
   - Technicians are staff with the Maintenance User or Maintenance Manager role, plus anyone with a planned job in view.
@@ -82,7 +91,7 @@ Managers plan the work under **Dispatch** (sidebar on a computer, name menu on a
 
 ## Procedures
 
-Procedures are reusable checklists with typed steps, like MaintainX procedures. Find them under **Procedures** in the desktop sidebar, or from the **PM** page on a phone.
+Procedures are reusable checklists with typed steps, like MaintainX procedures. Find them under **Procedures** in the sidebar on a computer, or under **More** on a phone.
 
 - **Step types:** checkbox, Pass / Fail, Yes / No / N/A, number (with an optional minimum, maximum and unit), text, multiple choice, photo, signature, and section headings. Any step except a heading can be marked **Required**.
 - **Building:** managers build procedures in an editor that shows a live preview of what a technician will see. There are three starter templates: pump inspection, electrical isolation (LOTO) and fire extinguisher check. Archive a procedure to stop it being added to new work orders.
@@ -325,7 +334,7 @@ When a customer job is completed, the customer can rate the visit from 1 to 5 st
 
 ## Reports
 
-Managers open **Reports** from the sidebar, or from the account menu on a phone. Choose a period: 7 days, 30 days, 90 days or 12 months. The headline figures are compared with the period before.
+Managers open **Reports** from the sidebar, or from **More** on a phone. Choose a period: 7 days, 30 days, 90 days or 12 months. The headline figures are compared with the period before.
 
 - **Work:**
   - jobs completed and opened;
