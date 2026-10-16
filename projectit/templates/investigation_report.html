@@ -1,0 +1,130 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>{{ _("Root cause analysis") }} {{ doc.name | e }}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 9.5pt; color: #1f2937; margin: 0; }
+  h1 { font-size: 16pt; margin: 0; color: #0f2a4a; text-transform: uppercase; letter-spacing: .02em; text-align: center; }
+  h2 { font-size: 13pt; color: #1d4ed8; margin: 0 0 6px; }
+  table { width: 100%; border-collapse: collapse; }
+  td, th { vertical-align: top; text-align: left; }
+  .muted { color: #6b7280; }
+  .small { font-size: 8pt; }
+  .sub { text-align: center; margin: 4px 0 10px; color: #374151; }
+  .page { page-break-before: always; }
+  .focus { margin-top: 8px; border: 1px solid #93c5fd; background: #eff6ff; border-radius: 6px; padding: 7px 10px; text-align: center; font-weight: bold; }
+  .rows td, .rows th { padding: 4px 5px; border: 1px solid #9ca3af; font-size: 8pt; line-height: 1.3; }
+  .rows th { background: #f3f4f6; font-weight: bold; }
+  .rows tr { page-break-inside: avoid; }
+  .text { white-space: pre-wrap; }
+  .tag { font-weight: bold; }
+  .ok { color: #047857; font-weight: bold; }
+  .why td { padding: 0 4px; width: {{ (100 / (whys | length or 1)) | round(2) }}%; }
+  .why .head { color: #fff; font-weight: bold; font-size: 12pt; text-align: center; padding: 5px; border-radius: 6px 6px 0 0; }
+  .why .q { border: 1.5px solid; border-top: 0; border-radius: 0 0 6px 6px; padding: 7px; font-weight: bold; text-align: center; min-height: 54px; }
+  .why .a { border: 1px solid #d1d5db; border-radius: 6px; padding: 7px; margin-top: 6px; min-height: 70px; }
+  .why .e { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 7px; margin-top: 6px; min-height: 70px; }
+  .why ul, .factors ul { margin: 3px 0 0; padding-left: 14px; }
+  .label { font-weight: bold; }
+  .root { border: 2px solid #dc2626; background: #fef2f2; border-radius: 8px; padding: 9px 12px; }
+  .root h3 { margin: 0 0 4px; color: #b91c1c; text-align: center; font-size: 12pt; }
+  .factors { border: 2px solid #2563eb; background: #eff6ff; border-radius: 8px; padding: 9px 12px; }
+  .factors h3 { margin: 0 0 4px; color: #1e3a8a; text-align: center; font-size: 12pt; }
+  .footer { margin-top: 12px; padding-top: 6px; border-top: 1px solid #e5e7eb; font-size: 7.5pt; color: #6b7280; }
+  .avoid { page-break-inside: avoid; }
+</style>
+</head>
+<body>
+  {% macro footer() %}
+  <div class="footer">
+    {% if prepared_by %}{{ _("Prepared by {0}").format(prepared_by) | e }} · {% endif %}{{ (company.name or "") | e }} · {{ _("Printed {0}").format(printed) }}
+  </div>
+  {% endmacro %}
+  {% if company.letter_head %}<div>{{ company.letter_head | safe }}</div>{% endif %}
+
+  <h1>{% if doc.customer_name %}{{ doc.customer_name | e }} — {% endif %}{{ _("Fishbone root cause analysis") }}</h1>
+  <div class="sub">
+    {{ subline | e }}
+    <div class="small muted">
+      {{ doc.name | e }}{% if machine %} · {{ machine.label | e }}{% if machine.detail %} ({{ machine.detail | e }}){% endif %}{% endif %}{% if job %} · {{ _("Job") }} {{ doc.work_order | e }}: {{ job | e }}{% endif %}
+      · {% if doc.status == "Closed" %}{{ _("Closed {0}").format(closed_on) }}{% if closed_by %} {{ _("by") }} {{ closed_by | e }}{% endif %}{% else %}{{ _("Open") }}{% endif %}
+    </div>
+  </div>
+  <img src="{{ fishbone }}" style="width:100%">
+  {% if doc.focus %}<div class="focus">{{ _("RCA focus:") }} {{ doc.focus | e }}</div>{% endif %}
+  {% if doc.problem %}<p class="small text" style="margin-top:8px"><b>{{ _("What happened:") }}</b> {{ doc.problem | e }}</p>{% endif %}
+
+  <div class="page">
+    <h2>{{ _("RCA evidence table") }}</h2>
+    <p class="small" style="margin:0 0 6px">{{ _("Classification: Confirmed = documented site observation; Reported = account requiring verification; Potential = investigate before assigning root cause; Open = still being worked out.") }}</p>
+    <table class="rows">
+      <thead><tr>
+        <th style="width:9%">6M</th><th style="width:14%">{{ _("Cause / failure") }}</th><th style="width:14%">{{ _("Evidence") }}</th>
+        <th style="width:12%">{{ _("Actual vs required") }}</th><th style="width:10%">{{ _("Status") }}</th>
+        <th style="width:15%">{{ _("Corrective / preventive action") }}</th><th style="width:10%">{{ _("Owner") }}</th>
+        <th style="width:16%">{{ _("Closure evidence") }}</th>
+      </tr></thead>
+      <tbody>
+        {% for c in causes %}
+        <tr>
+          <td><span class="tag" style="color:{{ c.colour }}">{{ _(c.category) }}</span></td>
+          <td class="text">{{ c.cause | e }}</td>
+          <td class="text">{{ c.evidence | e }}</td>
+          <td class="text">{{ c.actual | e }}</td>
+          <td class="{% if c.confirmed %}ok{% endif %}">{{ c.status | e }}</td>
+          <td class="text">{{ c.action | e }}{% if c.due %}<br><span class="muted">{{ _("Due {0}").format(c.due) }}</span>{% endif %}</td>
+          <td>{{ c.owner | e }}</td>
+          <td class="text">{{ c.closure | e }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="muted">{{ _("No causes recorded.") }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if doc.closure_requirements %}
+    <div class="avoid">
+      <h2 style="margin-top:12px">{{ _("RCA closure requirements") }}</h2>
+      <div class="text">{{ doc.closure_requirements | e }}</div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if whys or doc.root_cause or contributing %}
+  <div class="page">
+    <h2 style="text-align:center;color:#0f2a4a;font-size:15pt">{{ _("5 Whys analysis") }}{% if doc.customer_name %} — {{ doc.customer_name | e }}{% endif %}</h2>
+    <p style="text-align:center;margin:0 0 10px;font-weight:bold">{{ _("Problem:") }} {{ doc.title | e }}{% if doc.actual %} ({{ doc.actual | e }}{% if doc.target %}, {{ _("target") }} {{ doc.target | e }}{% endif %}){% endif %}</p>
+    {% if whys %}
+    <table class="why avoid"><tr>
+      {% for w in whys %}
+      <td>
+        <div class="head" style="background:{{ w.colour }}">{{ _("WHY {0}?").format(w.n) }}</div>
+        <div class="q" style="border-color:{{ w.colour }}">{{ w.question | e }}</div>
+        <div class="a"><span class="label">{{ _("Answer:") }}</span><br>{{ (w.answer or "—") | e }}</div>
+        <div class="e"><span class="label">{{ _("Evidence:") }}</span>
+          {% if w.evidence %}<ul>{% for e in w.evidence %}<li>{{ e | e }}</li>{% endfor %}</ul>{% else %}<br>—{% endif %}
+        </div>
+      </td>
+      {% endfor %}
+    </tr></table>
+    {% endif %}
+    <table class="avoid" style="margin-top:14px"><tr>
+      <td style="width:48%;padding-right:10px">
+        <div class="root"><h3>{{ _("ROOT CAUSE") }}</h3><div class="text">{{ (doc.root_cause or _("Not yet established.")) | e }}</div></div>
+      </td>
+      <td style="width:52%;padding-left:10px">
+        <div class="factors"><h3>{{ _("CONTRIBUTING FACTORS") }}</h3>
+          {% if contributing %}<ul>{% for f in contributing %}<li>{{ f | e }}</li>{% endfor %}</ul>{% else %}<div class="muted">—</div>{% endif %}
+        </div>
+      </td>
+    </tr></table>
+    {{ footer() }}
+  </div>
+  {% else %}
+  {{ footer() }}
+  {% endif %}
+
+  {% if company.letter_foot %}<div>{{ company.letter_foot | safe }}</div>{% endif %}
+</body>
+</html>

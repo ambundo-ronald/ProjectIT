@@ -61,6 +61,51 @@ self.addEventListener("fetch", (event) => {
 	}
 })
 
+// Phone notifications (Web Push) -----------------------------------------------------------------------------
+// The site sends an empty push; ask it what is new and show that. Each notification is tagged with its name, so
+// one already on screen is replaced quietly rather than shown twice. See projectit/push.py.
+const ICON = "/assets/projectit/projectit/icons/icon-192.png"
+// Android shows the badge in the status bar using only its shape: white on transparent.
+const BADGE = "/assets/projectit/projectit/icons/badge-96.png"
+
+self.addEventListener("push", (event) => {
+	event.waitUntil(
+		(async () => {
+			let items = []
+			try {
+				const response = await fetch("/api/method/projectit.push.pending", { credentials: "include", headers: { Accept: "application/json" } })
+				if (response.ok) items = (await response.json()).message || []
+			} catch (e) {
+				/* offline or signed out: fall back to a plain alert */
+			}
+			if (!items.length) {
+				// Browsers expect every push to show something.
+				return self.registration.showNotification("Techy Ops", { body: "You have new notifications.", tag: "techy-push", icon: ICON, badge: BADGE, data: { url: "/techy-app/home" } })
+			}
+			for (const n of items.reverse()) {
+				await self.registration.showNotification(n.title, { body: n.body, tag: `techy-${n.tag}`, icon: ICON, badge: BADGE, data: { url: n.url } })
+			}
+		})()
+	)
+})
+
+self.addEventListener("notificationclick", (event) => {
+	const url = event.notification.data && event.notification.data.url
+	if (!url || !url.startsWith("/techy-app")) return
+	event.notification.close()
+	event.waitUntil(
+		(async () => {
+			const open = await clients.matchAll({ type: "window", includeUncontrolled: true })
+			const win = open.find((w) => new URL(w.url).pathname.startsWith("/techy-app"))
+			if (win) {
+				await win.focus()
+				return win.navigate(url).catch(() => clients.openWindow(url))
+			}
+			return clients.openWindow(url)
+		})()
+	)
+})
+
 const jsonConfig = new URL(location).searchParams.get("config")
 
 // Firebase config initialization

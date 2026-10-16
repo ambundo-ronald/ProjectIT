@@ -1,4 +1,5 @@
 import { ref, computed, reactive, watch } from 'vue'
+import { enablePush, disablePush } from './push'
 import { api, me, onRealtime, tokens } from './ops'
 import { KIND } from './links'
 
@@ -35,6 +36,9 @@ export async function setNotifications(on) {
   } catch (e) {
     /* storage unavailable */
   }
+  // Also alert this phone or computer while the app is closed.
+  if (notify.enabled) await enablePush()
+  else await disablePush()
 }
 
 export async function loadChannels() {
@@ -67,7 +71,7 @@ function announce(channelRow, message) {
   popups.value = [{ id: message.name, channel: channelRow?.name, direct: !!channelRow?.is_direct, where: channelRow?.is_direct ? 'Direct message' : `#${channelRow?.title}`, name: message.full_name, image: message.image, body }, ...popups.value.filter((p) => p.channel !== channelRow?.name)].slice(0, 3)
   if (notify.enabled && document.visibilityState === 'hidden') {
     try {
-      const n = new Notification(title, { body, tag: `techy-chat-${channelRow?.name}`, icon: `${import.meta.env.BASE_URL}techy-app.svg` })
+      const n = new Notification(title, { body, tag: `techy-chat-${channelRow?.name}`, icon: `${import.meta.env.BASE_URL}icons/icon-192.png` })
       n.onclick = () => {
         window.focus()
         openDock(channelRow?.name)
@@ -84,11 +88,13 @@ let listening = false
 export function listenForChat() {
   if (listening) return
   listening = true
+  // Keep this browser's push subscription current (it can change, or the site key can be replaced).
+  if (notify.enabled) enablePush()
   onRealtime('techy_reminder', ({ name, channel, message, note }) => {
     popups.value = [{ id: `reminder-${name}`, channel, message, where: 'Now', name: 'Reminder', body: note, sticky: true }, ...popups.value].slice(0, 3)
     if (notify.enabled && document.visibilityState === 'hidden') {
       try {
-        new Notification('Reminder', { body: note, tag: `techy-reminder-${name}`, icon: `${import.meta.env.BASE_URL}techy-app.svg` })
+        new Notification('Reminder', { body: note, tag: `techy-reminder-${name}`, icon: `${import.meta.env.BASE_URL}icons/icon-192.png` })
       } catch (e) {
         /* notifications need a service worker on some phones */
       }
@@ -118,3 +124,13 @@ watch(unread, (n) => {
     /* badging unsupported */
   }
 })
+
+let replySeq = 0
+/** A slash command's answer as a message only I see (it is never stored). */
+export function commandReply(result) {
+  replySeq += 1
+  const now = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  const creation = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
+  return { name: `command-${replySeq}`, ephemeral: true, command: result.command, content: result.reply, creation, photos: [], reactions: [] }
+}

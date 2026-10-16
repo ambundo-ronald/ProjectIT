@@ -29,10 +29,8 @@ def _employee(lock=False):
     employee = employees[0]
     if lock:
         frappe.db.get_value("Employee", employee.name, "name", for_update=True)
-    if not frappe.db.exists("Mobile Module", {
-        "parent": employee.name, "parenttype": "Employee",
-        "parentfield": "custom_mobile_module", "module_name": "WorkIT",
-    }):
+    from projectit.api import has_app
+    if not has_app("WorkIT"):
         frappe.throw(_("Techy Work access is required."), frappe.PermissionError)
     return employee
 

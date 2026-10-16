@@ -179,6 +179,9 @@ doc_events = {
         "on_cancel": "projectit.billing.release_jobs",
         "on_trash": "projectit.billing.release_jobs",
     },
+    "Notification Log": {
+        "after_insert": "projectit.push.on_notification",
+    },
     "Techy Service Contract": {
         "validate": "projectit.contracts.validate",
         "on_update": "projectit.contracts.on_update",
@@ -188,7 +191,7 @@ doc_events = {
 
 scheduler_events = {
     "daily": ["projectit.maintenance.generate_pm_work_orders", "projectit.contracts.generate_visits"],
-    "cron": {"* * * * *": ["projectit.reminders.send_due"]},
+    "cron": {"* * * * *": ["projectit.reminders.send_due"], "*/10 * * * *": ["projectit.sla.check_due"]},
 }
 
 # Scheduled Tasks

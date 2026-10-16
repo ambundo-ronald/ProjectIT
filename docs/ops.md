@@ -18,11 +18,20 @@ Techy Ops is a maintenance and team-collaboration workspace (similar to Maintain
 ## Setup
 
 1. Run `bench --site your-site migrate`. This adds the Task and Issue custom fields, the Techy Channel and Techy Ops Settings DocTypes, and the **Ops** mobile module.
-2. On each Employee, add **Ops** to *Techy App Access*. Signing in to the app then shows a **Techy Ops** button.
+2. Give people Techy Ops: users with Maintenance User, Maintenance Manager, Projects Manager or System Manager get it automatically. For anyone else, add **Ops** to *Techy App Access* on their Employee. Signing in then shows a **Techy Ops** button (see [docs/employee-access.md](employee-access.md)).
 3. Give technicians a role with Task read/write and File create (for example *Projects User*), plus **Maintenance User** for the Assets and PM screens. ERPNext gives the maintenance roles no Asset access, so Ops shows Maintenance Users, managers and anyone with Asset read a read-only, non-financial view of assets and PM plans. Completing a PM work order submits its Asset Maintenance Log on the technician's behalf.
 4. Managers need **Maintenance Manager**, **Projects Manager** or **System Manager**. In Techy Ops, these roles let them see every work order, assign and reprioritise work, approve or decline requests, and run PM generation.
 5. Optional: in **Techy Ops Settings**, enable public requests from asset QR codes and set how many days before the due date PM work orders are created (the default is 3).
 6. Realtime updates use the site's standard Frappe socket.io service. The green dot in the Ops header shows that live updates are connected. Without a connection, pages still work, and Refresh reloads the data.
+
+## On a phone
+
+The bar at the bottom has **Work**, **Requests**, **Equipment** and **Chat**. **More** holds everything else the person may open:
+- Preventive maintenance, Investigations and Procedures;
+- Dispatch, Reports, Billing and Parts requests, for those allowed;
+- All apps.
+
+More shows a count when parts requests are waiting, and is highlighted while you are on one of its pages.
 
 ## Lists
 
@@ -66,7 +75,7 @@ Technicians can keep working where there is no signal.
 
 ## Dispatch calendar
 
-Managers plan the work under **Dispatch** (sidebar on a computer, name menu on a phone).
+Managers plan the work under **Dispatch** (sidebar on a computer, **More** on a phone).
 
 - **The board.** Technicians run down the side and days across, by day, week (Monday to Sunday) or two weeks. **Not assigned** holds planned jobs nobody has yet. Each person shows how many jobs they have in view, and a cell with more than four jobs is marked *Busy day*.
   - Technicians are staff with the Maintenance User or Maintenance Manager role, plus anyone with a planned job in view.
@@ -82,7 +91,7 @@ Managers plan the work under **Dispatch** (sidebar on a computer, name menu on a
 
 ## Procedures
 
-Procedures are reusable checklists with typed steps, like MaintainX procedures. Find them under **Procedures** in the desktop sidebar, or from the **PM** page on a phone.
+Procedures are reusable checklists with typed steps, like MaintainX procedures. Find them under **Procedures** in the sidebar on a computer, or under **More** on a phone.
 
 - **Step types:** checkbox, Pass / Fail, Yes / No / N/A, number (with an optional minimum, maximum and unit), text, multiple choice, photo, signature, and section headings. Any step except a heading can be marked **Required**.
 - **Building:** managers build procedures in an editor that shows a live preview of what a technician will see. There are three starter templates: pump inspection, electrical isolation (LOTO) and fire extinguisher check. Archive a procedure to stop it being added to new work orders.
@@ -159,6 +168,18 @@ What each contract covers varies per customer, so contracts are kept as **Techy 
 - **Payment warnings:** if the linked Subscription is *Grace Period*, *Unpaid* or *Cancelled*, the job and the contract list show a payment warning. The status comes from ERPNext. For example, a subscription whose first period has ended without a paid invoice shows as *Unpaid*.
 - **Lists:** the contract list filters Active, Expiring in 60 days (renewals), Expired and Cancelled.
 - **Permissions:** only managers can create or change contracts. Cancel the ERPNext Subscription separately when a contract ends.
+
+### Response times
+
+A contract can promise response times for breakdowns: **On site within** and **Fixed within**, in hours. Leave them empty for no promise.
+
+- **Deadlines:**
+  - A repair (Corrective) job on a machine under an active contract with a promise gets *Respond by* and *Fix by* times when it is created.
+  - The clock starts when the customer's request came in, or when the job was opened if there was no request.
+- **When each promise is met:** the response when work starts on the job (first set to *In progress*); the fix when the job is completed by its deadline.
+- **On jobs:** cards show what is due next (*Respond by 14:30*, *Respond within 40 min*, *Respond late by 1 h*). The job page also shows how each promise went.
+- **Warnings:** every 10 minutes the scheduler warns the job's technicians and the managers an hour before a response is due, and again once it is missed. Each warning is sent once.
+- **Reports › Response promises:** per contract, the share of responses and fixes in time, what is still due, and the jobs that missed, for repairs opened in the period. It is also a sheet in the Excel export.
 
 ## Parts on jobs (approval and Material Requests)
 
@@ -296,9 +317,24 @@ Every job has a **Service report** card. It produces a PDF for the customer.
 - **Automatic email:** tick *Techy Ops Settings › Email the Service Report when a Customer Job is Completed* to send it to the customer's first address on file as soon as the job is completed. It is off by default.
 - **Invoices:** creating an invoice attaches each job's report PDF to the draft Sales Invoice.
 
+## Customer ratings
+
+When a customer job is completed, the customer can rate the visit from 1 to 5 stars and leave a comment. No sign-in is needed.
+
+- **The link:**
+  - It is added to the service report email and printed at the foot of the service report PDF.
+  - On the job page, **Customer rating › Copy rating link** copies it to send by WhatsApp or SMS.
+  - Each job's link is private to that job.
+  - The customer can change their rating for 30 days after completion; after that the link only thanks them.
+- **Where ratings show:**
+  - on the job's **Customer rating** card;
+  - on the job's timeline;
+  - as a notification to the job's technicians, and to the managers when it's 1 or 2 stars;
+  - in Reports, as the *Customer rating* figure and in the technician scorecard.
+
 ## Reports
 
-Managers open **Reports** from the sidebar, or from the account menu on a phone. Choose a period: 7 days, 30 days, 90 days or 12 months. The headline figures are compared with the period before.
+Managers open **Reports** from the sidebar, or from **More** on a phone. Choose a period: 7 days, 30 days, 90 days or 12 months. The headline figures are compared with the period before.
 
 - **Work:**
   - jobs completed and opened;
@@ -308,14 +344,50 @@ Managers open **Reports** from the sidebar, or from the account menu on a phone.
   - a chart of jobs opened and completed per day, week or month.
 - **Preventive maintenance:** Preventive jobs due in the period are counted as on time (completed by the due date), late, missed (still open after the due date) or upcoming. *PM done on time* is on time ÷ (on time + late + missed). Late and missed jobs are listed.
 - **Requests:** received, turned into jobs, declined and waiting. Jobs are also broken down by type, with each type's average time to finish.
-- **Technicians:** jobs completed, average time to finish, labour hours (each person's timer entries; jobs without entries share their typed hours equally between the assignees) and open jobs, with how many are overdue.
+- **Technician scorecard:** how much each person did and how well. For jobs they completed in the period:
+  - **On time:** finished by the due date (jobs with a due date only).
+  - **Fixed first time:** repairs where the same machine needed no other repair opened within 30 days of completion.
+  - **Sent back:** jobs that went back to work after review or completion. Each return is counted on the job (*Times Sent Back* on the Task) from this update on; older jobs count as never sent back.
+  - **Coded:** repairs with both a problem and a cause code.
+  - **Customer rating:** the average of the customers' star ratings (see *Customer ratings*).
+  - Average time to finish, hours logged per job (from the job timer; jobs without entries share their typed hours between the assignees), and open jobs with how many are overdue.
+  - **Score** out of 100: on time 30, fixed first time 35, not sent back 20, coded 15, customer rating 20 (5 stars counts as 100). Only the measures that apply to someone's jobs count, and people with fewer than 3 completed jobs in the period are not scored. The best score is named above the table. Click a person to see the jobs that lowered their score, with a link to the follow-up repair for each repeat.
+  - Read it alongside the work mix: someone given the hardest breakdowns will have more repeats than someone doing routine visits.
 - **Machines with the most repairs:** customer equipment and our own assets with the most repair jobs opened in the period. Repeat breakdowns are worth a closer look.
 - **Service contract profit:**
   - **Money in** is the contract's subscription invoices plus invoices for extra work on its machines. Only submitted invoices count.
   - **Money out** is the parts issued at stock valuation cost plus labour hours × *Techy Ops Settings › Labour Cost per Hour*. Set that to what an hour of technician time costs you; until it is set, labour is not costed.
   - Contracts losing money are listed first.
 
+The **Machines** tab covers the equipment side for the same period:
+
+- **Cost and reliability**, per machine or per customer:
+  - jobs done and breakdowns (repair jobs opened);
+  - **time between breakdowns** (MTBF): the machine's running time in the period, from when it went into service, less its downtime, divided by its breakdowns;
+  - hours down;
+  - parts at stock cost, labour hours at your cost per hour, and the total.
+- **Preventive maintenance by customer:** done on time, late and missed per customer. Open a customer to see each machine's figures.
+- **Cover ending soon:** machine warranties and service contracts ending in the next 30, 60 or 90 days, as renewals to offer.
+
+**Excel** downloads every table for the period as one workbook, a sheet per table. **Print / PDF** prints the tab you are on (choose *Save as PDF* in the print dialog). Both are for managers.
+
 Jobs record when they were first started and when they were completed (*Started At*, *Completed At* on the Task). Jobs completed before this update use their last-modified time instead.
+
+## Root cause investigations
+
+When a problem keeps coming back, or a customer needs a proper explanation, open **Investigations** in the sidebar, or press **Investigate root cause** on a repair, inspection or safety job, or on a machine. Starting from a job fills in the problem, customer, site and machine, plus the job's failure codes. Anyone with Techy Ops can start and edit an investigation.
+
+- **Problem:** what went wrong, what was measured against the target (e.g. 10 mg/L, target 0.5 mg/L), the site investigation and follow-up dates, what happened, and the RCA focus.
+- **Causes and evidence (6M):** add causes under Method, Machine, Material, Manpower, Measurement or Management. Each has:
+  - its evidence and actual vs required;
+  - a status: *Confirmed* (documented on site), *Reported* (an account still to verify), *Potential* (to investigate) or *Open*;
+  - the corrective or preventive action, its owner (e.g. Engineering / QC), a due date, the closure evidence, and *Action done*.
+- **Fishbone diagram:** drawn from the causes each time you save (up to 7 per heading; the rest stay in the evidence table).
+- **5 Whys:** each why with its answer and evidence (one point per line), then the **root cause**, **contributing factors** (one per line) and **closure requirements**.
+- The machine's recent jobs, with their failure codes, are listed as evidence to draw on.
+- **PDF report** (landscape, on the default letter head): the fishbone with the RCA focus, the RCA evidence table and closure requirements, then the 5 Whys with the root cause and contributing factors. Save first: the PDF shows what is saved.
+- **Closing:** managers close an investigation once it has causes and a root cause, and every action is done with its closure evidence. A closed investigation is read-only until a manager reopens it. Managers can also delete one.
+- In Desk the records are *Techy Investigation*.
 
 ## Assets and preventive maintenance
 
@@ -371,6 +443,40 @@ Jobs record when they were first started and when they were completed (*Started 
 - Members of a direct message are notified of every message. In channels, only @mentioned members are notified.
 - Authors can delete their own messages; managers can delete any message. Deleting a thread root also deletes its replies.
 - Private channels are hidden in Desk from non-members through permission hooks. System Managers can administer all channels in Desk.
+
+### Slash commands
+
+Type a command at the start of a chat message. Typing `/` lists them; keep typing a job's name instead to link the job as before.
+
+| Command | Does |
+|---|---|
+| `/job Pump leaking at the clinic` | Creates a repair job, in the channel's project if it has one. Add `@someone` to assign them (managers) and `!urgent`, `!high` or `!low` for the priority. The channel is told the job was created. |
+| `/jobs` | Lists my open jobs. |
+| `/remind 1h Call the clinic` | Reminds me later: `20m`, `1h`, `3h`, `tomorrow` or `monday` (8 am). |
+| `/status 🚗 On the road` | Sets my status; `/status clear` clears it. |
+| `/away`, `/back` | Shows me as away, or back. |
+| `/help` | Lists the commands. |
+
+Commands are not posted as messages. Their answer shows only to the person who typed it, and can be dismissed.
+
+## Phone notifications
+
+Turn on **Notifications** in the name menu. Techy Ops then alerts that phone or computer even when the app is closed, for everything that shows up as a notification:
+- jobs assigned to you, and mentions and direct messages;
+- reminders and response-time warnings;
+- low customer ratings, parts approvals, and so on.
+
+Tapping a notification opens the job, chat or page it is about. **Send a test notification**, in the same menu, checks that it works. Turn notifications on separately on each device.
+
+- **Requirements:**
+  - The site must be served over **HTTPS**.
+  - On iPhone and iPad, notifications work only for the app added to the home screen (Share › Add to Home Screen, iOS 16.4 or later).
+  - On Android and computers they work in Chrome, Edge and Firefox.
+- **How it works:**
+  - The site sends each device an empty push signed with its own key (Web Push with VAPID); no Firebase or relay service is needed.
+  - The app then fetches what is new from the site, so notification text never passes through the push service.
+  - The key pair is made the first time someone turns notifications on, and is kept in *Techy Ops Settings › Phone Notifications*.
+- **Devices:** subscribed devices are listed in Desk as *Techy Push Subscription*. Ones the push service no longer knows are removed automatically.
 
 ## Verification on staging
 

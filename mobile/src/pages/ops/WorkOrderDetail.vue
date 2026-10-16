@@ -25,6 +25,7 @@
           <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
             <StatusPill :status="overdue ? 'Overdue' : wo.status" />
             <PriorityFlag :priority="wo.priority" />
+            <PromiseBadge v-if="data.promise" :wo="wo" :contract="data.promise.contract_title" detail />
             <span v-if="wo.exp_end_date" class="inline-flex items-center gap-1 text-[13px]" :class="overdue ? 'font-semibold text-red-600' : 'text-gray-600'"><FeatherIcon name="calendar" class="h-3.5 w-3.5" />Due {{ formatDate(wo.exp_end_date) }}</span>
             <router-link v-if="data.asset" :to="{ name: 'OpsAsset', params: { name: data.asset.name } }" class="inline-flex items-center gap-1 text-[13px] text-gray-600 hover:text-brand-700"><FeatherIcon name="box" class="h-3.5 w-3.5" />{{ data.asset.asset_name }}</router-link>
             <router-link v-if="data.equipment" :to="{ name: 'OpsEquipmentDetail', params: { name: data.equipment.name } }" class="inline-flex items-center gap-1 text-[13px] text-gray-600 hover:text-brand-700"><FeatherIcon name="droplet" class="h-3.5 w-3.5" />{{ data.equipment.equipment_name }}</router-link>
@@ -94,6 +95,8 @@
         <PartsCard v-if="data.parts && (data.parts.rows.length || data.parts.can_edit)" :parts="data.parts" :work-order="wo.name" @updated="set" @error="warn" @reload="load" />
         <LabourCard v-if="data.billing?.customer" :billing="data.billing" :logged="data.timer?.total || 0" :work-order="wo.name" @updated="set" @error="warn" />
         <ServiceReportCard v-if="data.report" :report="data.report" :work-order="wo.name" @updated="set" @error="warn" />
+        <RatingCard v-if="data.rating" :rating="data.rating" :work-order="wo.name" />
+        <InvestigationsCard v-if="['Corrective', 'Inspection', 'Safety'].includes(wo.custom_work_category)" :key="wo.name" :work-order="wo.name" />
         <MetersCard v-if="data.meters?.length" :meters="data.meters" :work-order="wo.name" :can-record="data.can_write && !closed" @reload="load" />
 
         <!-- Quick checklist (child Tasks) -->
@@ -231,6 +234,9 @@ import PartsCard from '@/components/ops/PartsCard.vue'
 import LabourCard from '@/components/ops/LabourCard.vue'
 import MetersCard from '@/components/ops/MetersCard.vue'
 import ServiceReportCard from '@/components/ops/ServiceReportCard.vue'
+import InvestigationsCard from '@/components/ops/InvestigationsCard.vue'
+import RatingCard from '@/components/ops/RatingCard.vue'
+import PromiseBadge from '@/components/ops/PromiseBadge.vue'
 import TimerCard from '@/components/ops/TimerCard.vue'
 import FailureCard from '@/components/ops/FailureCard.vue'
 import PhotoButtons from '@/components/ops/PhotoButtons.vue'

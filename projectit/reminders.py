@@ -51,11 +51,17 @@ def remind(message, when):
     if not row or row.reference_doctype != "Techy Channel" or row.comment_type != "Comment":
         frappe.throw(_("Message not found."))
     chat._channel(row.reference_name, member=False)
+    return add(row.reference_name, row.name, _note(row.content), when)
+
+
+def add(channel, message, note, when):
+    """A reminder for me in a channel I can read: about a message, or a note typed with /remind."""
     me = frappe.session.user
     if frappe.db.count(DOCTYPE, {"user": me, "sent": 0}) >= MAX_PENDING:
         frappe.throw(_("You have {0} reminders waiting. Cancel some first.").format(MAX_PENDING))
-    doc = frappe.get_doc({"doctype": DOCTYPE, "user": me, "channel": row.reference_name, "message": row.name,
-        "remind_at": remind_at(when), "note": _note(row.content)}).insert(ignore_permissions=True)
+    note = str(note or "").strip()
+    doc = frappe.get_doc({"doctype": DOCTYPE, "user": me, "channel": channel, "message": message,
+        "remind_at": remind_at(when), "note": (note[:137] + "…") if len(note) > 140 else note}).insert(ignore_permissions=True)
     return {"name": doc.name, "remind_at": doc.remind_at}
 
 

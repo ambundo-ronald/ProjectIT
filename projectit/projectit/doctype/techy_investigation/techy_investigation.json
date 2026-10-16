@@ -1,0 +1,264 @@
+{
+ "actions": [],
+ "creation": "2026-10-16 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "status",
+  "actual",
+  "target",
+  "column_break_where",
+  "customer",
+  "customer_name",
+  "site",
+  "equipment",
+  "asset",
+  "work_order",
+  "column_break_when",
+  "investigated_on",
+  "follow_up_on",
+  "prepared_by",
+  "closed_on",
+  "closed_by",
+  "problem_section",
+  "problem",
+  "focus",
+  "causes_section",
+  "causes",
+  "whys_section",
+  "whys",
+  "conclusion_section",
+  "root_cause",
+  "contributing_factors",
+  "closure_requirements"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Problem",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "What went wrong, in a few words, e.g. Excessive chlorine residual."
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Open\nClosed",
+   "default": "Open",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "actual",
+   "fieldtype": "Data",
+   "label": "Actual",
+   "description": "What was measured or seen, e.g. 10 mg/L."
+  },
+  {
+   "fieldname": "target",
+   "fieldtype": "Data",
+   "label": "Target",
+   "description": "What it should be, e.g. 0.5 mg/L."
+  },
+  {
+   "fieldname": "column_break_where",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "options": "Customer",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "label": "Customer Name",
+   "fetch_from": "customer.customer_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "site",
+   "fieldtype": "Data",
+   "label": "Site"
+  },
+  {
+   "fieldname": "equipment",
+   "fieldtype": "Link",
+   "label": "Equipment",
+   "options": "Techy Equipment",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "asset",
+   "fieldtype": "Link",
+   "label": "Asset",
+   "options": "Asset"
+  },
+  {
+   "fieldname": "work_order",
+   "fieldtype": "Link",
+   "label": "Work Order",
+   "options": "Task"
+  },
+  {
+   "fieldname": "column_break_when",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "investigated_on",
+   "fieldtype": "Date",
+   "label": "Site Investigation"
+  },
+  {
+   "fieldname": "follow_up_on",
+   "fieldtype": "Date",
+   "label": "Follow-up"
+  },
+  {
+   "fieldname": "prepared_by",
+   "fieldtype": "Link",
+   "label": "Prepared By",
+   "options": "User"
+  },
+  {
+   "fieldname": "closed_on",
+   "fieldtype": "Date",
+   "label": "Closed On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "closed_by",
+   "fieldtype": "Link",
+   "label": "Closed By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "problem_section",
+   "fieldtype": "Section Break",
+   "label": "Problem"
+  },
+  {
+   "fieldname": "problem",
+   "fieldtype": "Small Text",
+   "label": "What Happened"
+  },
+  {
+   "fieldname": "focus",
+   "fieldtype": "Small Text",
+   "label": "RCA Focus",
+   "description": "What the investigation sets out to verify."
+  },
+  {
+   "fieldname": "causes_section",
+   "fieldtype": "Section Break",
+   "label": "Causes and Evidence (6M)"
+  },
+  {
+   "fieldname": "causes",
+   "fieldtype": "Table",
+   "label": "Causes",
+   "options": "Techy Investigation Cause"
+  },
+  {
+   "fieldname": "whys_section",
+   "fieldtype": "Section Break",
+   "label": "5 Whys"
+  },
+  {
+   "fieldname": "whys",
+   "fieldtype": "Table",
+   "label": "Whys",
+   "options": "Techy Investigation Why"
+  },
+  {
+   "fieldname": "conclusion_section",
+   "fieldtype": "Section Break",
+   "label": "Conclusion"
+  },
+  {
+   "fieldname": "root_cause",
+   "fieldtype": "Small Text",
+   "label": "Root Cause"
+  },
+  {
+   "fieldname": "contributing_factors",
+   "fieldtype": "Small Text",
+   "label": "Contributing Factors",
+   "description": "One per line."
+  },
+  {
+   "fieldname": "closure_requirements",
+   "fieldtype": "Small Text",
+   "label": "Closure Requirements",
+   "description": "What must be in place before the investigation is closed."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-16 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Projectit",
+ "name": "Techy Investigation",
+ "owner": "Administrator",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "RCA-.#####",
+ "naming_rule": "Expression (old style)",
+ "title_field": "title",
+ "show_title_field_in_link": 1,
+ "search_fields": "title,customer_name,equipment",
+ "track_changes": 1,
+ "permissions": [
+  {
+   "role": "System Manager",
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Maintenance Manager",
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Projects Manager",
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Maintenance User",
+   "create": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "print": 1
+  }
+ ]
+}

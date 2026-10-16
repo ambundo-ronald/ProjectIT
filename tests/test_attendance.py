@@ -171,6 +171,13 @@ class AttendanceTests(unittest.TestCase):
 class EmployeeAccessTests(unittest.TestCase):
     def setUp(self):
         self.module = load_module()
+        api = ModuleType("projectit.api")
+        api.has_app = MagicMock(return_value=True)
+        self.has_app = api.has_app
+        patcher = patch.dict(sys.modules, {"projectit": sys.modules.get("projectit") or ModuleType("projectit"),
+            "projectit.api": api})
+        patcher.start()
+        self.addCleanup(patcher.stop)
         self.frappe = self.module.frappe
         self.frappe.session = SimpleNamespace(user="person@example.com")
         self.frappe.db = MagicMock()
@@ -187,7 +194,7 @@ class EmployeeAccessTests(unittest.TestCase):
             with self.assertRaises(PermissionError): self.module._employee()
 
     def test_workit_module_required(self):
-        self.frappe.db.exists.return_value = False
+        self.has_app.return_value = False
         with self.assertRaises(PermissionError): self.module._employee()
 
     def test_identity_comes_from_session_and_locks_employee(self):

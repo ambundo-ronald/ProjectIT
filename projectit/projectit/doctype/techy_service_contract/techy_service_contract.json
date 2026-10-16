@@ -18,6 +18,8 @@
   "visit_procedure",
   "labour_included",
   "callouts_included",
+  "response_hours",
+  "fix_hours",
   "column_break_cover",
   "included_items",
   "machines_section",
@@ -46,7 +48,7 @@
    "fieldtype": "Data",
    "label": "Title",
    "length": 140,
-   "description": "e.g. RO service \u2013 quarterly"
+   "description": "e.g. RO service – quarterly"
   },
   {
    "fieldname": "status",
@@ -118,6 +120,20 @@
    "default": "0"
   },
   {
+   "fieldname": "response_hours",
+   "fieldtype": "Float",
+   "label": "On Site Within (Hours)",
+   "non_negative": 1,
+   "description": "Promised response to a breakdown. Leave empty for no promise."
+  },
+  {
+   "fieldname": "fix_hours",
+   "fieldtype": "Float",
+   "label": "Fixed Within (Hours)",
+   "non_negative": 1,
+   "description": "Promised time to fix a breakdown. Leave empty for no promise."
+  },
+  {
    "fieldname": "column_break_cover",
    "fieldtype": "Column Break"
   },
@@ -146,7 +162,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-13 12:00:00.000000",
+ "modified": "2026-10-16 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Techy Service Contract",

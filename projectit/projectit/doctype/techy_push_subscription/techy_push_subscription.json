@@ -1,0 +1,73 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-10-16 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "user",
+  "device",
+  "endpoint",
+  "last_sent",
+  "failures"
+ ],
+ "fields": [
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "label": "User",
+   "options": "User",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "device",
+   "fieldtype": "Data",
+   "label": "Device",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "endpoint",
+   "fieldtype": "Small Text",
+   "label": "Push Address",
+   "reqd": 1
+  },
+  {
+   "fieldname": "last_sent",
+   "fieldtype": "Datetime",
+   "label": "Last Sent",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "failures",
+   "fieldtype": "Int",
+   "label": "Failed Sends",
+   "read_only": 1,
+   "default": "0"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-16 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Projectit",
+ "name": "Techy Push Subscription",
+ "owner": "Administrator",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0,
+ "description": "Browsers and phones that receive Techy Ops notifications. Removed automatically when the push service no longer knows them.",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  }
+ ]
+}

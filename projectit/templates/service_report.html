@@ -168,6 +168,7 @@
   {% endif %}
 
   <div class="footer">
+    {% if rating_link %}<div style="margin-bottom:6px;color:#0f2a4a"><b>{{ _("How did we do?") }}</b> {{ _("Rate this visit:") }} <a href="{{ rating_link | e }}">{{ rating_link | e }}</a></div>{% endif %}
     {% if footer %}<div class="text">{{ footer | e }}</div>{% endif %}
     <div>{{ _("Report for job {0}, produced {1}.").format(job.name, printed) }}</div>
   </div>

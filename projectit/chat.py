@@ -285,6 +285,11 @@ def post_message(channel, content=None, thread=None, photos=None):
     if doc.archived:
         frappe.throw(_("This channel is archived."))
     photos = _photos(photos)
+    if not photos:
+        from projectit import commands
+        result = commands.run(doc, content, thread)
+        if result:
+            return result
     content = PHOTO.sub("", ops.text(content, "a message", 4000, required=not photos)).strip()
     if not content and not photos:
         frappe.throw(_("Write a message or add a photo."))

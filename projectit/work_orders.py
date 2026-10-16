@@ -9,11 +9,11 @@ import frappe
 from frappe import _
 from frappe.utils import cint, getdate, now_datetime, nowdate
 
-from projectit import billing, equipment as installed, failures, meters, ops, parts, procedures, service_report, timer
+from projectit import billing, equipment as installed, failures, meters, ops, parts, procedures, ratings, service_report, sla, timer
 
 FIELDS = ["name", "subject", "status", "priority", "exp_end_date", "custom_work_category", "custom_asset",
     "custom_location", "custom_equipment", "custom_customer", "project", "is_group", "progress", "owner", "creation",
-    "modified"]
+    "modified", "custom_respond_by", "custom_fix_by", "custom_started_at", "custom_completed_at"]
 STATUSES = ("Open", "Working", "Pending Review", "Completed", "Cancelled")
 PRIORITIES = ("Low", "Medium", "High", "Urgent")
 CATEGORIES = ("Corrective", "Preventive", "Inspection", "Installation", "Safety", "Other")
@@ -114,7 +114,8 @@ def detail(doc):
         "billing": billing.summary(doc, can_write),
         "meters": meters.for_machine(doc.custom_equipment, None if doc.custom_equipment else doc.custom_asset),
         "report": service_report.summary(doc, can_write), "timer": timer.summary(doc, can_write),
-        "failure": failures.summary(doc, can_write),
+        "failure": failures.summary(doc, can_write), "rating": ratings.summary(doc),
+        "promise": sla.summary(doc),
         "pm_log": doc.custom_asset_maintenance_log, "workflow": _workflow(), "can_write": can_write,
         "manager": ops.manager()}
 
@@ -308,6 +309,9 @@ def _announce(doc, verb):
 
 # Document events ---------------------------------------------------------------------------------------------
 
+FINISHED = ("Pending Review", "Completed")
+
+
 def _stamp_times(doc):
     """Record when a job was first started and when it was completed, for the reports."""
     if not doc.get("custom_work_order") or not doc.has_value_changed("status"):
@@ -315,12 +319,17 @@ def _stamp_times(doc):
     if doc.status in ("Working", "Pending Review", "Completed") and not doc.get("custom_started_at"):
         doc.custom_started_at = now_datetime()
     doc.custom_completed_at = now_datetime() if doc.status == "Completed" else None
+    # A job taken back from review or reopened after completion: the technician scorecard counts it.
+    before = doc.get_doc_before_save() if callable(getattr(doc, "get_doc_before_save", None)) else None
+    if before and before.status in FINISHED and doc.status not in FINISHED + ("Cancelled",):
+        doc.custom_sent_back = cint(doc.get("custom_sent_back")) + 1
 
 
 def validate_task(doc, method=None):
     """Block completing a work order with unanswered required procedure steps, or a PM work order whose
     maintenance task requires a certificate but has no file."""
     _stamp_times(doc)
+    sla.stamp(doc)
     if doc.status != "Completed" or not doc.has_value_changed("status"):
         return
     if doc.get("custom_work_order") and not doc.is_new():
@@ -350,6 +359,7 @@ def on_task_update(doc, method=None):
         complete_log(doc)
     if doc.get("custom_equipment") and doc.custom_work_category == "Installation":
         installed.complete_installation(doc)
+    ratings.on_completed(doc)
     service_report.on_completed(doc)
     if doc.custom_work_request:
         request = frappe.get_doc("Issue", doc.custom_work_request)

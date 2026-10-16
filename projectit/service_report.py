@@ -108,7 +108,7 @@ def _day(value):
     return getdate(value).strftime("%d %b %Y") if value else ""
 
 
-def _company(job=None):
+def _company(job=None, title=None):
     company = frappe.defaults.get_user_default("Company") or frappe.db.get_single_value("Global Defaults",
         "default_company")
     row = frappe.db.get_value("Company", company, ["name", "company_logo", "phone_no", "email", "website"],
@@ -117,17 +117,17 @@ def _company(job=None):
     logo = row.company_logo if row else None
     return {"name": company, "logo": logo, "phone": row.phone_no if row else None,
         "email": row.email if row else None, "website": row.website if row else None,
-        "letter_head": _letter_head(head.content if head else None, company, logo, job),
-        "letter_foot": _letter_head(head.footer if head else None, company, logo, job)}
+        "letter_head": _letter_head(head.content if head else None, company, logo, job, title),
+        "letter_foot": _letter_head(head.footer if head else None, company, logo, job, title)}
 
 
-def _letter_head(html, company, logo, job=None):
+def _letter_head(html, company, logo, job=None, title=None):
     """A letter head is a Jinja template (ERPNext fills in the company and its logo when printing)."""
     if not html:
         return None
     try:
         return frappe.render_template(html, {"company": company, "company_logo": logo or "",
-            "doc": frappe._dict(company=company, doctype=_("Service report"), name=job or "")})
+            "doc": frappe._dict(company=company, doctype=title or _("Service report"), name=job or "")})
     except Exception:
         frappe.log_error(title="Techy Ops: service report letter head could not be rendered")
         return None
@@ -231,8 +231,13 @@ def context(name, trusted=False):
         "opened": format_datetime(doc.creation, "dd MMM yyyy HH:mm"),
         "started": format_datetime(doc.custom_started_at, "dd MMM yyyy HH:mm") if doc.get("custom_started_at") else None,
         "completed": format_datetime(doc.custom_completed_at, "dd MMM yyyy HH:mm") if doc.get("custom_completed_at") else None,
-        "footer": settings.get("service_report_footer") or "", "printed": format_datetime(frappe.utils.now_datetime(), "dd MMM yyyy HH:mm"),
+        "footer": settings.get("service_report_footer") or "", "rating_link": _rating_link(doc), "printed": format_datetime(frappe.utils.now_datetime(), "dd MMM yyyy HH:mm"),
     }
+
+
+def _rating_link(doc):
+    from projectit import ratings
+    return ratings.link(doc) if ratings.rateable(doc) and ratings.still_open(doc) else None
 
 
 def render(name, trusted=False):
@@ -304,6 +309,9 @@ def send(doc, recipients, message=None, auto=False):
     company = frappe.defaults.get_user_default("Company") or frappe.db.get_single_value("Global Defaults", "default_company")
     body = message.strip() if message and message.strip() else _("Dear {0},\n\nPlease find attached the service report for {1}.\n\nThank you,\n{2}").format(
         customer, doc.subject, company or "")
+    from projectit import ratings
+    if ratings.rateable(doc) and ratings.still_open(doc):
+        body += "\n\n" + _("How did we do? Rate this visit: {0}").format(ratings.link(doc))
     comm = _make(doctype="Task", name=doc.name, subject=_("Service report: {0}").format(doc.subject)[:140],
         content=escape(body).replace("\n", "<br>"), recipients=", ".join(recipients), send_email=True,
         attachments=[{"fname": filename, "fcontent": pdf}], print_letterhead=False)

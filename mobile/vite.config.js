@@ -29,9 +29,13 @@ export default defineConfig(({ command }) => ({
         description: 'Techy App - field workforce and project tracking',
         theme_color: '#163B65',
         background_color: '#ffffff',
+        // PNGs for phones (drawn from icon-src/); the maskable ones fill the square for Android's shaped crops.
         icons: [
+          { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'icons/maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+          { src: 'icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
           { src: 'techy-app.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-          { src: 'techy-app.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
         ],
       },
     }),
