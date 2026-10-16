@@ -308,6 +308,9 @@ def _announce(doc, verb):
 
 # Document events ---------------------------------------------------------------------------------------------
 
+FINISHED = ("Pending Review", "Completed")
+
+
 def _stamp_times(doc):
     """Record when a job was first started and when it was completed, for the reports."""
     if not doc.get("custom_work_order") or not doc.has_value_changed("status"):
@@ -315,6 +318,10 @@ def _stamp_times(doc):
     if doc.status in ("Working", "Pending Review", "Completed") and not doc.get("custom_started_at"):
         doc.custom_started_at = now_datetime()
     doc.custom_completed_at = now_datetime() if doc.status == "Completed" else None
+    # A job taken back from review or reopened after completion: the technician scorecard counts it.
+    before = doc.get_doc_before_save() if callable(getattr(doc, "get_doc_before_save", None)) else None
+    if before and before.status in FINISHED and doc.status not in FINISHED + ("Cancelled",):
+        doc.custom_sent_back = cint(doc.get("custom_sent_back")) + 1
 
 
 def validate_task(doc, method=None):

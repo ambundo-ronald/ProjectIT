@@ -308,7 +308,14 @@ Managers open **Reports** from the sidebar, or from the account menu on a phone.
   - a chart of jobs opened and completed per day, week or month.
 - **Preventive maintenance:** Preventive jobs due in the period are counted as on time (completed by the due date), late, missed (still open after the due date) or upcoming. *PM done on time* is on time ÷ (on time + late + missed). Late and missed jobs are listed.
 - **Requests:** received, turned into jobs, declined and waiting. Jobs are also broken down by type, with each type's average time to finish.
-- **Technicians:** jobs completed, average time to finish, labour hours (each person's timer entries; jobs without entries share their typed hours equally between the assignees) and open jobs, with how many are overdue.
+- **Technician scorecard:** how much each person did and how well. For jobs they completed in the period:
+  - **On time:** finished by the due date (jobs with a due date only).
+  - **Fixed first time:** repairs where the same machine needed no other repair opened within 30 days of completion.
+  - **Sent back:** jobs that went back to work after review or completion. Each return is counted on the job (*Times Sent Back* on the Task) from this update on; older jobs count as never sent back.
+  - **Coded:** repairs with both a problem and a cause code.
+  - Average time to finish, hours logged per job (from the job timer; jobs without entries share their typed hours between the assignees), and open jobs with how many are overdue.
+  - **Score** out of 100: on time 30, fixed first time 35, not sent back 20, coded 15. Only the measures that apply to someone's jobs count, and people with fewer than 3 completed jobs in the period are not scored. The best score is named above the table. Click a person to see the jobs that lowered their score, with a link to the follow-up repair for each repeat.
+  - Read it alongside the work mix: someone given the hardest breakdowns will have more repeats than someone doing routine visits.
 - **Machines with the most repairs:** customer equipment and our own assets with the most repair jobs opened in the period. Repeat breakdowns are worth a closer look.
 - **Service contract profit:**
   - **Money in** is the contract's subscription invoices plus invoices for extra work on its machines. Only submitted invoices count.
@@ -316,6 +323,22 @@ Managers open **Reports** from the sidebar, or from the account menu on a phone.
   - Contracts losing money are listed first.
 
 Jobs record when they were first started and when they were completed (*Started At*, *Completed At* on the Task). Jobs completed before this update use their last-modified time instead.
+
+## Root cause investigations
+
+When a problem keeps coming back, or a customer needs a proper explanation, open **Investigations** in the sidebar, or press **Investigate root cause** on a repair, inspection or safety job, or on a machine. Starting from a job fills in the problem, customer, site and machine, plus the job's failure codes. Anyone with Techy Ops can start and edit an investigation.
+
+- **Problem:** what went wrong, what was measured against the target (e.g. 10 mg/L, target 0.5 mg/L), the site investigation and follow-up dates, what happened, and the RCA focus.
+- **Causes and evidence (6M):** add causes under Method, Machine, Material, Manpower, Measurement or Management. Each has:
+  - its evidence and actual vs required;
+  - a status: *Confirmed* (documented on site), *Reported* (an account still to verify), *Potential* (to investigate) or *Open*;
+  - the corrective or preventive action, its owner (e.g. Engineering / QC), a due date, the closure evidence, and *Action done*.
+- **Fishbone diagram:** drawn from the causes each time you save (up to 7 per heading; the rest stay in the evidence table).
+- **5 Whys:** each why with its answer and evidence (one point per line), then the **root cause**, **contributing factors** (one per line) and **closure requirements**.
+- The machine's recent jobs, with their failure codes, are listed as evidence to draw on.
+- **PDF report** (landscape, on the default letter head): the fishbone with the RCA focus, the RCA evidence table and closure requirements, then the 5 Whys with the root cause and contributing factors. Save first: the PDF shows what is saved.
+- **Closing:** managers close an investigation once it has causes and a root cause, and every action is done with its closure evidence. A closed investigation is read-only until a manager reopens it. Managers can also delete one.
+- In Desk the records are *Techy Investigation*.
 
 ## Assets and preventive maintenance
 

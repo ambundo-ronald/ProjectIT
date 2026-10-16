@@ -117,6 +117,7 @@ const nav = [
   { name: 'OpsEquipment', label: 'Equipment', short: 'Equipment', icon: 'droplet', prefix: ['/ops/equipment', '/ops/contracts', '/ops/assets'] },
   { name: 'OpsPM', label: 'Preventive maintenance', short: 'PM', icon: 'calendar', prefix: '/ops/pm' },
   { name: 'OpsDispatch', label: 'Dispatch', short: 'Dispatch', icon: 'columns', prefix: '/ops/dispatch', desktop: true, show: () => me.manager },
+  { name: 'OpsInvestigations', label: 'Investigations', short: 'RCA', icon: 'crosshair', prefix: '/ops/investigations', desktop: true },
   { name: 'OpsProcedures', label: 'Procedures', short: 'Procedures', icon: 'clipboard', prefix: '/ops/procedures', desktop: true },
   { name: 'OpsPartsRequests', label: 'Parts requests', short: 'Parts', icon: 'package', prefix: '/ops/parts-requests', desktop: true, show: () => me.can_approve_parts },
   { name: 'OpsBilling', label: 'Billing', short: 'Billing', icon: 'file-text', prefix: '/ops/billing', desktop: true, show: () => me.can_invoice },

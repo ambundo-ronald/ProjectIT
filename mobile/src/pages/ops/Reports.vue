@@ -79,22 +79,72 @@
       </div>
 
       <div class="card overflow-hidden">
-        <div class="card-header"><h2 class="card-title">Technicians</h2><span class="text-xs text-gray-500">Completed in period · open now</span></div>
+        <div class="card-header flex-wrap gap-2"><h2 class="card-title">Technician scorecard</h2><span class="text-xs text-gray-500">Work completed in the period and how well it was done</span></div>
+        <div v-if="best" class="flex items-center gap-3 border-b border-gray-100 bg-green-50/60 px-5 py-3 text-sm">
+          <UserAvatar :name="best.full_name" :image="best.image" size="sm" />
+          <p class="min-w-0"><b>{{ best.full_name }}</b> has the best score this period: <b class="tabular-nums">{{ best.score }}</b> from {{ best.completed }} job{{ best.completed === 1 ? '' : 's' }}.</p>
+        </div>
         <div class="overflow-x-auto">
-          <table class="w-full min-w-[34rem] text-sm">
-            <thead class="border-b border-gray-100 text-left text-xs text-gray-500"><tr><th class="px-5 py-2 font-medium">Person</th><th class="px-3 py-2 text-right font-medium">Completed</th><th class="px-3 py-2 text-right font-medium">Avg time to finish</th><th class="px-3 py-2 text-right font-medium">Hours logged</th><th class="px-5 py-2 text-right font-medium">Open (overdue)</th></tr></thead>
-            <tbody class="divide-y divide-gray-100">
-              <tr v-for="t in r.technicians" :key="t.user">
-                <td class="px-5 py-2.5"><span class="flex items-center gap-2.5"><UserAvatar :name="t.full_name" :image="t.image" size="sm" /><span class="truncate font-medium">{{ t.full_name }}</span></span></td>
-                <td class="px-3 py-2.5 text-right tabular-nums">{{ t.completed }}</td>
-                <td class="px-3 py-2.5 text-right tabular-nums text-gray-600">{{ duration(t.avg_hours) }}</td>
-                <td class="px-3 py-2.5 text-right tabular-nums text-gray-600">{{ t.labour_hours || '–' }}</td>
-                <td class="px-5 py-2.5 text-right tabular-nums">{{ t.open }}<span v-if="t.overdue" class="ml-1 font-semibold text-red-600">({{ t.overdue }})</span></td>
+          <table class="w-full min-w-[56rem] text-sm">
+            <thead class="border-b border-gray-100 text-left text-xs text-gray-500">
+              <tr>
+                <th class="px-5 py-2 font-medium">Person</th>
+                <th class="px-3 py-2 text-center font-medium">Score</th>
+                <th class="px-3 py-2 text-right font-medium">Completed</th>
+                <th class="px-3 py-2 text-right font-medium" title="Finished by the due date">On time</th>
+                <th class="px-3 py-2 text-right font-medium" :title="`Repairs where the machine needed no other repair within ${r.scoring.repeat_days} days`">Fixed first time</th>
+                <th class="px-3 py-2 text-right font-medium" title="Jobs that went back to work after review or completion">Sent back</th>
+                <th class="px-3 py-2 text-right font-medium" title="Repairs with a problem and a cause code">Coded</th>
+                <th class="px-3 py-2 text-right font-medium">Avg time to finish</th>
+                <th class="px-3 py-2 text-right font-medium" title="Hours logged per completed job">Hours / job</th>
+                <th class="px-5 py-2 text-right font-medium">Open (overdue)</th>
               </tr>
-              <tr v-if="!r.technicians.length"><td colspan="5" class="px-5 py-3 text-gray-500">No assigned jobs in this period.</td></tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <template v-for="t in r.technicians" :key="t.user">
+                <tr class="cursor-pointer hover:bg-gray-50" :aria-expanded="open === t.user" @click="open = open === t.user ? '' : t.user">
+                  <td class="px-5 py-2.5">
+                    <button class="flex items-center gap-2.5 text-left" :aria-label="`${t.full_name}: show the jobs behind the score`" @click.stop="open = open === t.user ? '' : t.user">
+                      <UserAvatar :name="t.full_name" :image="t.image" size="sm" /><span class="truncate font-medium">{{ t.full_name }}</span>
+                      <FeatherIcon v-if="t.issues.length" :name="open === t.user ? 'chevron-up' : 'chevron-down'" class="h-3.5 w-3.5 text-gray-400" />
+                    </button>
+                  </td>
+                  <td class="px-3 py-2.5 text-center">
+                    <span v-if="t.score !== null" class="inline-block min-w-[2.5rem] rounded-md px-1.5 py-0.5 text-sm font-bold tabular-nums" :class="scoreTone(t.score)">{{ t.score }}</span>
+                    <span v-else class="text-xs text-gray-400" :title="`Scored after ${r.scoring.min_jobs} completed jobs`">–</span>
+                  </td>
+                  <td class="px-3 py-2.5 text-right tabular-nums">{{ t.completed }}</td>
+                  <td class="px-3 py-2.5 text-right"><Rate :value="t.on_time_rate" :part="t.on_time" :whole="t.due" /></td>
+                  <td class="px-3 py-2.5 text-right"><Rate :value="t.first_fix_rate" :part="t.first_fix" :whole="t.fixes" /></td>
+                  <td class="px-3 py-2.5 text-right tabular-nums" :class="t.reopened ? 'font-semibold text-amber-700' : 'text-gray-500'">{{ t.completed ? t.reopened : '–' }}</td>
+                  <td class="px-3 py-2.5 text-right"><Rate :value="t.coded_rate" :part="t.coded" :whole="t.repairs" /></td>
+                  <td class="px-3 py-2.5 text-right tabular-nums text-gray-600">{{ duration(t.avg_hours) }}</td>
+                  <td class="px-3 py-2.5 text-right tabular-nums text-gray-600">{{ t.hours_per_job ?? '–' }}</td>
+                  <td class="px-5 py-2.5 text-right tabular-nums">{{ t.open }}<span v-if="t.overdue" class="ml-1 font-semibold text-red-600">({{ t.overdue }})</span></td>
+                </tr>
+                <tr v-if="open === t.user">
+                  <td colspan="10" class="bg-gray-50 px-5 py-3">
+                    <p v-if="!t.issues.length" class="text-sm text-gray-600">Nothing counted against {{ t.full_name }} in this period.</p>
+                    <template v-else>
+                      <p class="section-label mb-2">Jobs that lowered the score</p>
+                      <ul class="space-y-1.5">
+                        <li v-for="i in t.issues" :key="`${i.kind}-${i.name}`" class="flex flex-wrap items-baseline gap-x-2 text-sm">
+                          <span class="w-28 shrink-0 rounded px-1.5 text-center text-[11px] font-semibold" :class="ISSUES[i.kind].tone">{{ ISSUES[i.kind].label }}</span>
+                          <router-link :to="{ name: 'OpsWorkOrder', params: { name: i.name } }" class="min-w-0 truncate font-medium hover:text-brand-700">{{ i.subject }}</router-link>
+                          <span class="text-xs text-gray-500">{{ i.detail }}<template v-if="i.other"> · <router-link :to="{ name: 'OpsWorkOrder', params: { name: i.other } }" class="text-brand-600 hover:underline">see the next repair</router-link></template></span>
+                        </li>
+                      </ul>
+                    </template>
+                  </td>
+                </tr>
+              </template>
+              <tr v-if="!r.technicians.length"><td colspan="10" class="px-5 py-3 text-gray-500">No assigned jobs in this period.</td></tr>
             </tbody>
           </table>
         </div>
+        <p class="border-t border-gray-100 px-5 py-3 text-xs text-gray-500">
+          The score is out of 100: on time counts {{ r.scoring.weights.on_time }}, fixed first time {{ r.scoring.weights.first_fix }} (no other repair on the same machine within {{ r.scoring.repeat_days }} days), not sent back {{ r.scoring.weights.no_rework }} and coded repairs {{ r.scoring.weights.coded }}. Only the measures that apply to someone's jobs count. People with fewer than {{ r.scoring.min_jobs }} completed jobs in the period are not scored. Click a person to see the jobs behind their score.
+        </p>
       </div>
 
       <div class="grid gap-5 lg:grid-cols-2">
@@ -197,7 +247,7 @@
   </section>
 </template>
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, h } from 'vue'
 import { FeatherIcon } from 'frappe-ui'
 import PageHeader from '@/components/ops/PageHeader.vue'
 import Modal from '@/components/ops/Modal.vue'
@@ -232,6 +282,29 @@ function change(now, before, lowerIsBetter = false, neutral = false) {
   const good = lowerIsBetter ? pct < 0 : pct > 0
   return { sub: `${pct > 0 ? '▲' : '▼'} ${Math.abs(pct)}% vs prior period`, subTone: neutral ? 'text-gray-500' : good ? 'text-green-700' : 'text-red-600' }
 }
+
+// Technician scorecard -------------------------------------------------------------------------------------------
+const open = ref('')
+const ISSUES = {
+  late: { label: 'Late', tone: 'bg-amber-100 text-amber-800' },
+  repeat: { label: 'Repaired again', tone: 'bg-red-100 text-red-700' },
+  reopened: { label: 'Sent back', tone: 'bg-orange-100 text-orange-800' },
+  uncoded: { label: 'Not coded', tone: 'bg-gray-200 text-gray-700' },
+}
+const scoreTone = (n) => (n >= 85 ? 'bg-green-100 text-green-800' : n >= 70 ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-700')
+const best = computed(() => {
+  const scored = (r.value?.technicians || []).filter((t) => t.score !== null)
+  return scored.length > 1 ? scored[0] : null
+})
+// A percentage with the counts behind it ("67%", "2 of 3").
+const Rate = (props) =>
+  props.value === null || props.value === undefined
+    ? h('span', { class: 'text-gray-400' }, '–')
+    : h('span', { class: 'tabular-nums' }, [
+        h('span', { class: props.value >= 85 ? 'text-gray-900' : props.value >= 70 ? 'text-amber-700' : 'font-semibold text-red-600' }, `${props.value}%`),
+        h('span', { class: 'block text-[11px] text-gray-400' }, `${props.part} of ${props.whole}`),
+      ])
+Rate.props = ['value', 'part', 'whole']
 
 const tiles = computed(() => {
   const w = r.value.work

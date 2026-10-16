@@ -1,0 +1,117 @@
+{
+ "actions": [],
+ "creation": "2026-10-16 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "category",
+  "cause",
+  "evidence",
+  "actual_vs_required",
+  "status",
+  "action",
+  "owner_name",
+  "due_date",
+  "closure_evidence",
+  "done",
+  "done_on",
+  "done_by"
+ ],
+ "fields": [
+  {
+   "fieldname": "category",
+   "fieldtype": "Select",
+   "label": "6M",
+   "options": "Method\nMachine\nMaterial\nManpower\nMeasurement\nManagement",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "cause",
+   "fieldtype": "Small Text",
+   "label": "Cause / Failure",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 3
+  },
+  {
+   "fieldname": "evidence",
+   "fieldtype": "Small Text",
+   "label": "Evidence",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "actual_vs_required",
+   "fieldtype": "Small Text",
+   "label": "Actual vs Required"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Confirmed\nReported\nPotential\nOpen",
+   "default": "Potential",
+   "in_list_view": 1,
+   "columns": 1,
+   "description": "Confirmed: seen and documented on site. Reported: someone's account, to verify. Potential: to investigate before naming it a root cause. Open: still being worked out."
+  },
+  {
+   "fieldname": "action",
+   "fieldtype": "Small Text",
+   "label": "Corrective / Preventive Action"
+  },
+  {
+   "fieldname": "owner_name",
+   "fieldtype": "Data",
+   "label": "Owner",
+   "description": "Who carries out the action, e.g. Engineering / QC."
+  },
+  {
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "label": "Due"
+  },
+  {
+   "fieldname": "closure_evidence",
+   "fieldtype": "Small Text",
+   "label": "Closure Evidence",
+   "description": "What shows the action is done."
+  },
+  {
+   "fieldname": "done",
+   "fieldtype": "Check",
+   "label": "Action Done",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "done_on",
+   "fieldtype": "Date",
+   "label": "Done On",
+   "depends_on": "done"
+  },
+  {
+   "fieldname": "done_by",
+   "fieldtype": "Link",
+   "label": "Done By",
+   "options": "User",
+   "read_only": 1,
+   "depends_on": "done"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-16 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Projectit",
+ "name": "Techy Investigation Cause",
+ "owner": "Administrator",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1,
+ "editable_grid": 1,
+ "permissions": []
+}

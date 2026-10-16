@@ -10,8 +10,15 @@ Labour hours are the time logged with the job timer, per person; jobs without ti
 their recorded labour hours, shared between the assignees.
 
 Jobs completed before start and finish times were recorded fall back to their last-modified time.
+
+The technician scorecard weighs how well the work was done, not only how much: jobs finished by their due
+date, repairs that held (the machine needed no other repair within 30 days), jobs that never went back
+from review or completion, and repairs coded with what was wrong and why. Each person gets a score out of
+100 from the measures that apply to their jobs, once they have completed enough jobs for it to mean
+something.
 """
 from collections import Counter, defaultdict
+from datetime import timedelta
 
 import frappe
 from frappe import _
@@ -24,8 +31,12 @@ JOB_FIELDS = ["name", "subject", "status", "creation", "modified", "exp_end_date
     "custom_equipment", "custom_asset", "custom_customer", "custom_service_contract", "custom_started_at",
     "custom_completed_at", "custom_labour_hours", "custom_labour_billing", "custom_labour_mode", "custom_labour_rate",
     "custom_flat_fee", "custom_sales_invoice", "custom_problem_code", "custom_cause_code", "custom_machine_down",
-    "custom_down_from", "custom_down_to"]
+    "custom_down_from", "custom_down_to", "custom_sent_back"]
 OPEN = ("Completed", "Cancelled")
+REPEAT_DAYS = 30
+MIN_SCORED = 3
+# Out of 100: what each measure counts towards a technician's score.
+WEIGHTS = {"on_time": 30, "first_fix": 35, "no_rework": 20, "coded": 15}
 
 
 def hours_between(start, end):
@@ -144,9 +155,50 @@ def by_category(jobs, start, end):
         key=lambda r: -(r["created"] + r["completed"]))
 
 
-def by_technician(jobs, assigned, start, end, today, logged=None):
+def machine_of(job):
+    return ("equipment", job.custom_equipment) if job.get("custom_equipment") else \
+        ("asset", job.custom_asset) if job.get("custom_asset") else None
+
+
+def repeat_repairs(jobs, days=REPEAT_DAYS):
+    """{completed repair: the next repair on the same machine opened within `days` of its completion}."""
+    repairs = defaultdict(list)
+    for job in jobs:
+        key = machine_of(job)
+        if key and job.custom_work_category == "Corrective" and job.status != "Cancelled":
+            repairs[key].append(job)
+    result = {}
+    for rows in repairs.values():
+        for job in rows:
+            if job.status != "Completed":
+                continue
+            done = get_datetime(completed_at(job))
+            later = [o for o in rows if o.name != job.name and done <= get_datetime(o.creation) <= done + timedelta(days=days)]
+            if later:
+                result[job.name] = min(later, key=lambda o: get_datetime(o.creation))
+    return result
+
+
+def rate(part, whole):
+    return round(100 * part / whole) if whole else None
+
+
+def score(row):
+    """Out of 100 from the measures that apply; None until enough jobs are completed."""
+    if row["completed"] < MIN_SCORED:
+        return None
+    measures = {"on_time": row["on_time_rate"], "first_fix": row["first_fix_rate"],
+        "no_rework": 100 - rate(row["reopened"], row["completed"]), "coded": row["coded_rate"]}
+    used = {k: v for k, v in measures.items() if v is not None}
+    return round(sum(WEIGHTS[k] * v for k, v in used.items()) / sum(WEIGHTS[k] for k in used))
+
+
+def by_technician(jobs, assigned, start, end, today, logged=None, repeats=None):
+    """Each person's work in the period and how well it was done (see the scorecard at the top)."""
     logged = logged or {}
-    rows = defaultdict(lambda: {"completed": 0, "open": 0, "overdue": 0, "labour_hours": 0.0, "hours": []})
+    repeats = repeats if repeats is not None else repeat_repairs(jobs)
+    rows = defaultdict(lambda: {"completed": 0, "open": 0, "overdue": 0, "labour_hours": 0.0, "hours": [], "due": 0,
+        "on_time": 0, "fixes": 0, "first_fix": 0, "repairs": 0, "coded": 0, "reopened": 0, "issues": []})
     for job in jobs:
         done = job.status == "Completed" and _in(completed_at(job), start, end)
         if done and logged.get(job.name):
@@ -159,6 +211,7 @@ def by_technician(jobs, assigned, start, end, today, logged=None):
                 if not logged.get(job.name):
                     row["labour_hours"] += flt(job.custom_labour_hours) / len(assigned[job.name])
                 row["hours"].append(hours_between(job.creation, completed_at(job)))
+                _judge(row, job, repeats)
             elif job.status not in OPEN:
                 row["open"] += 1
                 if job.exp_end_date and getdate(job.exp_end_date) < today:
@@ -166,9 +219,50 @@ def by_technician(jobs, assigned, start, end, today, logged=None):
     result = []
     for person in ops.people(list(rows)):
         row = rows[person["user"]]
-        result.append({**person, "completed": row["completed"], "open": row["open"], "overdue": row["overdue"],
-            "labour_hours": round(row["labour_hours"], 1), "avg_hours": average(row["hours"])})
-    return sorted(result, key=lambda r: (-r["completed"], -r["open"], r["full_name"] or ""))
+        entry = {**person, "completed": row["completed"], "open": row["open"], "overdue": row["overdue"],
+            "labour_hours": round(row["labour_hours"], 1), "avg_hours": average(row["hours"]),
+            "hours_per_job": round(row["labour_hours"] / row["completed"], 1) if row["completed"] and row["labour_hours"] else None,
+            "due": row["due"], "on_time": row["on_time"], "on_time_rate": rate(row["on_time"], row["due"]),
+            "fixes": row["fixes"], "first_fix": row["first_fix"], "first_fix_rate": rate(row["first_fix"], row["fixes"]),
+            "repairs": row["repairs"], "coded": row["coded"], "coded_rate": rate(row["coded"], row["repairs"]),
+            "reopened": row["reopened"],
+            "issues": sorted(row["issues"], key=lambda i: str(i["on"]), reverse=True)[:15]}
+        entry["score"] = score(entry)
+        result.append(entry)
+    return sorted(result, key=lambda r: (r["score"] is None, -(r["score"] or 0), -r["completed"], -r["open"],
+        r["full_name"] or ""))
+
+
+def _judge(row, job, repeats):
+    """Count one completed job towards a person's accuracy measures, noting what went wrong."""
+    def issue(kind, detail, other=None):
+        row["issues"].append({"kind": kind, "name": job.name, "subject": job.subject, "on": completed_at(job),
+            "detail": detail, "other": other})
+    if job.exp_end_date:
+        row["due"] += 1
+        if getdate(completed_at(job)) <= getdate(job.exp_end_date):
+            row["on_time"] += 1
+        else:
+            late = (getdate(completed_at(job)) - getdate(job.exp_end_date)).days
+            issue("late", _("Finished {0} day(s) after it was due").format(late))
+    if cint(job.get("custom_sent_back")):
+        row["reopened"] += 1
+        issue("reopened", _("Went back to work {0} time(s) after review or completion").format(cint(job.custom_sent_back)))
+    if job.custom_work_category != "Corrective":
+        return
+    row["repairs"] += 1
+    if job.get("custom_problem_code") and job.get("custom_cause_code"):
+        row["coded"] += 1
+    else:
+        issue("uncoded", _("Problem or cause code missing"))
+    if machine_of(job):
+        row["fixes"] += 1
+        again = repeats.get(job.name)
+        if again:
+            days = max(0, (get_datetime(again.creation) - get_datetime(completed_at(job))).days)
+            issue("repeat", _("The machine needed another repair {0} day(s) later").format(days), again.name)
+        else:
+            row["first_fix"] += 1
 
 
 def repeat_failures(jobs, start, end):
@@ -331,6 +425,7 @@ def dashboard(days=30):
         "pm": pm_summary(jobs, start, end, today),
         "categories": by_category(jobs, start, end),
         "technicians": by_technician(jobs, assigned, start, end, today, logged),
+        "scoring": {"weights": WEIGHTS, "min_jobs": MIN_SCORED, "repeat_days": REPEAT_DAYS},
         "machines": repeat_failures(jobs, start, end),
         "requests": request_summary(start, end),
         "contracts": contract_profit(start, end, jobs, logged),

@@ -109,6 +109,8 @@
           <p v-else class="px-5 py-4 text-sm text-gray-500">No jobs yet.</p>
         </div>
 
+        <InvestigationsCard :key="data.equipment.name" :equipment="data.equipment.name" />
+
         <div v-if="data.parts?.length" class="card overflow-hidden">
           <div class="card-header"><h2 class="card-title">Parts fitted</h2><span class="text-xs text-gray-500">{{ data.parts.length }}</span></div>
           <ul class="divide-y divide-gray-100">
@@ -178,6 +180,7 @@ import LinkChip from '@/components/ops/LinkChip.vue'
 import EquipmentForm from '@/components/ops/EquipmentForm.vue'
 import ContractTerms from '@/components/ops/ContractTerms.vue'
 import MetersCard from '@/components/ops/MetersCard.vue'
+import InvestigationsCard from '@/components/ops/InvestigationsCard.vue'
 import { api, me, formatDate, fromNow } from '@/data/ops'
 import { EQUIPMENT_STATUS, mapLink } from '@/data/equipment'
 
