@@ -71,7 +71,7 @@ function announce(channelRow, message) {
   popups.value = [{ id: message.name, channel: channelRow?.name, direct: !!channelRow?.is_direct, where: channelRow?.is_direct ? 'Direct message' : `#${channelRow?.title}`, name: message.full_name, image: message.image, body }, ...popups.value.filter((p) => p.channel !== channelRow?.name)].slice(0, 3)
   if (notify.enabled && document.visibilityState === 'hidden') {
     try {
-      const n = new Notification(title, { body, tag: `techy-chat-${channelRow?.name}`, icon: `${import.meta.env.BASE_URL}techy-app.svg` })
+      const n = new Notification(title, { body, tag: `techy-chat-${channelRow?.name}`, icon: `${import.meta.env.BASE_URL}icons/icon-192.png` })
       n.onclick = () => {
         window.focus()
         openDock(channelRow?.name)
@@ -94,7 +94,7 @@ export function listenForChat() {
     popups.value = [{ id: `reminder-${name}`, channel, message, where: 'Now', name: 'Reminder', body: note, sticky: true }, ...popups.value].slice(0, 3)
     if (notify.enabled && document.visibilityState === 'hidden') {
       try {
-        new Notification('Reminder', { body: note, tag: `techy-reminder-${name}`, icon: `${import.meta.env.BASE_URL}techy-app.svg` })
+        new Notification('Reminder', { body: note, tag: `techy-reminder-${name}`, icon: `${import.meta.env.BASE_URL}icons/icon-192.png` })
       } catch (e) {
         /* notifications need a service worker on some phones */
       }

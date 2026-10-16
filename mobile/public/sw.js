@@ -64,7 +64,9 @@ self.addEventListener("fetch", (event) => {
 // Phone notifications (Web Push) -----------------------------------------------------------------------------
 // The site sends an empty push; ask it what is new and show that. Each notification is tagged with its name, so
 // one already on screen is replaced quietly rather than shown twice. See projectit/push.py.
-const ICON = "/assets/projectit/projectit/techy-app.svg"
+const ICON = "/assets/projectit/projectit/icons/icon-192.png"
+// Android shows the badge in the status bar using only its shape: white on transparent.
+const BADGE = "/assets/projectit/projectit/icons/badge-96.png"
 
 self.addEventListener("push", (event) => {
 	event.waitUntil(
@@ -78,10 +80,10 @@ self.addEventListener("push", (event) => {
 			}
 			if (!items.length) {
 				// Browsers expect every push to show something.
-				return self.registration.showNotification("Techy Ops", { body: "You have new notifications.", tag: "techy-push", icon: ICON, data: { url: "/techy-app/home" } })
+				return self.registration.showNotification("Techy Ops", { body: "You have new notifications.", tag: "techy-push", icon: ICON, badge: BADGE, data: { url: "/techy-app/home" } })
 			}
 			for (const n of items.reverse()) {
-				await self.registration.showNotification(n.title, { body: n.body, tag: `techy-${n.tag}`, icon: ICON, badge: ICON, data: { url: n.url } })
+				await self.registration.showNotification(n.title, { body: n.body, tag: `techy-${n.tag}`, icon: ICON, badge: BADGE, data: { url: n.url } })
 			}
 		})()
 	)
