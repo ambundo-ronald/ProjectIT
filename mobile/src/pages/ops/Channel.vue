@@ -33,7 +33,7 @@
           <div v-if="newDay(i)" class="sticky top-0 z-10 my-3 flex justify-center">
             <span class="rounded-full border border-gray-200 bg-white px-3 py-0.5 text-[11px] font-semibold text-gray-600 shadow-sm">{{ dayLabel(m.creation) }}</span>
           </div>
-          <Message :m="m" :compact="compact(i)" @reply="openThread(m)" @remove="remove(m)" @job="toJob(m)" />
+          <Message :m="m" :compact="compact(i)" @reply="openThread(m)" @remove="remove(m)" @job="toJob(m)" @dismiss="dismiss" />
         </template>
         <button v-if="hasNewer" class="btn btn-secondary btn-sm mx-auto mt-3 flex" @click="load()"><FeatherIcon name="arrow-down" class="h-4 w-4" />Jump to latest messages</button>
       </div>
@@ -57,7 +57,7 @@
       <div ref="threadScroller" class="min-h-0 flex-1 overflow-y-auto px-2 py-4 md:px-3" @load.capture="!highlight && scrollToEnd(threadScroller)">
         <Message :m="thread" thread-root @job="toJob(thread)" />
         <div class="mx-2 my-3 flex items-center gap-3 text-xs font-medium text-gray-500"><span>{{ replies.length }} repl{{ replies.length === 1 ? 'y' : 'ies' }}</span><span class="h-px flex-1 bg-gray-200" /></div>
-        <Message v-for="r in replies" :key="r.name" :m="r" thread-root @remove="remove(r)" @job="toJob(r)" />
+        <Message v-for="r in replies" :key="r.name" :m="r" thread-root @remove="remove(r)" @job="toJob(r)" @dismiss="dismiss" />
       </div>
       <p class="h-5 shrink-0 truncate px-4 text-xs italic text-gray-500" aria-live="polite">{{ typingLine(thread.name) }}</p>
       <div class="shrink-0 px-3 pb-3 pt-1">
@@ -128,7 +128,7 @@ import Modal from '@/components/ops/Modal.vue'
 import PeoplePicker from '@/components/ops/PeoplePicker.vue'
 import RichText from '@/components/ops/RichText.vue'
 import { api, me, onRealtime, formatTime, formatDate, fromNow } from '@/data/ops'
-import { REACTIONS } from '@/data/chat'
+import { REACTIONS, commandReply } from '@/data/chat'
 import { presence, statusLine, watchPeople } from '@/data/presence'
 import PresenceDot from '@/components/ops/PresenceDot.vue'
 import { activeChannel, channels, loadChannels } from '@/data/chat'
@@ -203,6 +203,15 @@ function dayLabel(value) {
 
 const Message = (props, { emit }) => {
   const m = props.m
+  if (m.ephemeral)
+    return h('div', { class: 'my-2 rounded-lg border border-brand-100 bg-brand-50/60 px-3 py-2 text-sm', role: 'status' }, [
+      h('div', { class: 'mb-1 flex items-center gap-2 text-[11px] text-gray-500' }, [
+        h(FeatherIcon, { name: 'terminal', class: 'h-3.5 w-3.5' }),
+        h('span', `/${m.command} · Only you can see this`),
+        h('button', { type: 'button', class: 'ml-auto rounded px-1 hover:bg-white hover:text-gray-800', 'aria-label': 'Dismiss', onClick: () => emit('dismiss', m) }, '✕'),
+      ]),
+      h(RichText, { text: m.content, names: names.value, class: 'whitespace-pre-line' }),
+    ])
   if (m.system)
     return h('div', { class: 'my-2 flex items-center justify-center gap-2 px-2 text-xs text-gray-500' }, [
       h(FeatherIcon, { name: 'info', class: 'h-3.5 w-3.5 shrink-0' }),
@@ -257,7 +266,7 @@ const Message = (props, { emit }) => {
   ])
 }
 Message.props = ['m', 'compact', 'threadRoot']
-Message.emits = ['reply', 'remove', 'job']
+Message.emits = ['reply', 'remove', 'job', 'dismiss']
 
 function scrollToEnd(el = scroller.value) {
   nextTick(() => el && (el.scrollTop = el.scrollHeight))
@@ -458,10 +467,11 @@ function upsert(list, message) {
 async function send(content, threadName = null, photos = []) {
   error.value = ''
   try {
-    const message = await api('projectit.chat.post_message', { channel: name, content, thread: threadName, photos })
+    const result = await api('projectit.chat.post_message', { channel: name, content, thread: threadName, photos })
+    const message = result.command ? commandReply(result) : result
     if (threadName) {
       upsert(replies, message)
-      bumpReplies(threadName, message.creation)
+      if (!message.ephemeral) bumpReplies(threadName, message.creation)
       scrollToEnd(threadScroller.value)
     } else {
       upsert(messages, message)
@@ -471,6 +481,12 @@ async function send(content, threadName = null, photos = []) {
     error.value = e.message
     throw e
   }
+}
+
+// A command's answer only lives on this screen.
+function dismiss(m) {
+  messages.value = messages.value.filter((x) => x !== m)
+  replies.value = replies.value.filter((x) => x !== m)
 }
 
 function bumpReplies(root, creation) {

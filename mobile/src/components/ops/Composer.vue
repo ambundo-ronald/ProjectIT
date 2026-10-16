@@ -1,5 +1,16 @@
 <template>
   <form class="relative" @submit.prevent="send">
+    <!-- slash commands, at the start of a message -->
+    <ul v-if="trigger?.type === 'command'" class="absolute bottom-full left-0 z-10 mb-2 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-pop" role="listbox" aria-label="Commands">
+      <li v-for="(c, i) in commands" :key="c.name" role="option" :aria-selected="i === active">
+        <button type="button" class="flex w-full items-baseline gap-3 px-3 py-2 text-left" :class="i === active ? 'bg-brand-50' : 'hover:bg-gray-50'" @mousedown.prevent="pick(c)">
+          <span class="shrink-0 font-mono text-sm font-semibold text-gray-900">/{{ c.name }}</span>
+          <span class="min-w-0 truncate text-xs text-gray-500">{{ c.hint }}</span>
+        </button>
+      </li>
+      <li class="border-t border-gray-100 px-3 py-1.5 text-[11px] text-gray-400">Commands aren't posted. Keep typing to link a job instead.</li>
+    </ul>
+
     <!-- @mention suggestions -->
     <ul v-if="trigger?.type === 'mention' && people.length" class="absolute bottom-full left-0 z-10 mb-2 max-h-56 w-72 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-pop" role="listbox" aria-label="People">
       <li v-for="(person, i) in people" :key="person.user" role="option" :aria-selected="i === active">
@@ -113,14 +124,27 @@ const people = computed(() => {
   const q = trigger.value.query.toLowerCase()
   return props.people.filter((p) => p.full_name?.toLowerCase().includes(q) || p.user.toLowerCase().includes(q)).slice(0, 8)
 })
-const options = computed(() => (trigger.value?.type === 'mention' ? people.value : trigger.value?.type === 'link' ? results.value : []))
+// Slash commands (run on the server; see projectit/commands.py).
+const COMMANDS = [
+  { name: 'job', hint: "Create a repair job: /job Pump leaking @tina !urgent", args: true },
+  { name: 'jobs', hint: 'List my open jobs' },
+  { name: 'remind', hint: 'Remind me: /remind 1h Call the clinic', args: true },
+  { name: 'status', hint: 'Set my status: /status 🚗 On the road', args: true },
+  { name: 'away', hint: 'Show me as away' },
+  { name: 'back', hint: "Show me as back" },
+  { name: 'help', hint: 'All commands' },
+]
+const commands = computed(() => (trigger.value?.type === 'command' ? COMMANDS.filter((c) => c.name.startsWith(trigger.value.query.toLowerCase())) : []))
+const options = computed(() => (trigger.value?.type === 'mention' ? people.value : trigger.value?.type === 'link' ? results.value : commands.value))
 
 const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 const KEYWORD = new RegExp(`(?:^|\\s)(${KEYWORDS.map(([w]) => escape(w).replace(/ /g, '\\s')).join('|')})[\\s:#]+([^\\s]*)$`, 'i')
 
 /** The trigger typed just before the caret: @name, /task, $project, or a keyword and a space ("project pump"). */
 function find(before) {
-  let m = before.match(/(?:^|\s)@([\w.+-]*)$/)
+  let m = before.match(/^\/([a-z]*)$/i)
+  if (m && COMMANDS.some((c) => c.name.startsWith(m[1].toLowerCase()))) return { type: 'command', query: m[1], start: 0 }
+  m = before.match(/(?:^|\s)@([\w.+-]*)$/)
   if (m) return { type: 'mention', query: m[1], start: before.length - m[1].length - 1 }
   m = before.match(/(?:^|\s)([/$])([^\s/$]*)$/)
   if (m) return { type: 'link', kind: m[1] === '$' ? 'project' : 'task', query: m[2], start: before.length - m[0].trimStart().length }
@@ -151,6 +175,7 @@ function detect() {
 
 function onInput() {
   if (text.value.trim()) emit('typing')
+  else dismissed.value = null // a cleared box starts afresh
   const el = input.value
   el.style.height = 'auto'
   el.style.height = `${el.scrollHeight}px`
@@ -192,7 +217,7 @@ function switchKind(kind) {
 function pick(item) {
   const el = input.value
   const { type, start } = trigger.value
-  const insert = type === 'mention' ? `@${item.user} ` : `${linkToken(item.kind, item.name)} `
+  const insert = type === 'mention' ? `@${item.user} ` : type === 'command' ? `/${item.name}${item.args ? ' ' : ''}` : `${linkToken(item.kind, item.name)} `
   const caret = el.selectionStart
   const before = text.value.slice(0, start) + insert
   const after = text.value.slice(caret)
@@ -273,6 +298,7 @@ async function send() {
     pending.value.forEach((p) => URL.revokeObjectURL(p.preview))
     pending.value = []
     trigger.value = null
+    dismissed.value = null
     nextTick(() => {
       if (input.value) input.value.style.height = 'auto'
     })

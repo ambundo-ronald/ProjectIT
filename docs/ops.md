@@ -435,6 +435,21 @@ When a problem keeps coming back, or a customer needs a proper explanation, open
 - Authors can delete their own messages; managers can delete any message. Deleting a thread root also deletes its replies.
 - Private channels are hidden in Desk from non-members through permission hooks. System Managers can administer all channels in Desk.
 
+### Slash commands
+
+Type a command at the start of a chat message. Typing `/` lists them; keep typing a job's name instead to link the job as before.
+
+| Command | Does |
+|---|---|
+| `/job Pump leaking at the clinic` | Creates a repair job, in the channel's project if it has one. Add `@someone` to assign them (managers) and `!urgent`, `!high` or `!low` for the priority. The channel is told the job was created. |
+| `/jobs` | Lists my open jobs. |
+| `/remind 1h Call the clinic` | Reminds me later: `20m`, `1h`, `3h`, `tomorrow` or `monday` (8 am). |
+| `/status 🚗 On the road` | Sets my status; `/status clear` clears it. |
+| `/away`, `/back` | Shows me as away, or back. |
+| `/help` | Lists the commands. |
+
+Commands are not posted as messages. Their answer shows only to the person who typed it, and can be dismissed.
+
 ## Verification on staging
 
 Local tests: `python -m unittest discover -s tests -v` and `yarn build`. They mock Frappe, so test the following on a v16 staging site with technician and manager accounts:

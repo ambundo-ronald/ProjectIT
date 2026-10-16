@@ -51,9 +51,9 @@
    "fieldname": "message",
    "fieldtype": "Data",
    "label": "Message",
-   "reqd": 1,
+   "reqd": 0,
    "read_only": 1,
-   "description": "The Comment that holds the chat message."
+   "description": "Empty for a reminder set with /remind."
   },
   {
    "fieldname": "note",
@@ -64,7 +64,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-15 15:00:00.000000",
+ "modified": "2026-10-16 17:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Techy Chat Reminder",

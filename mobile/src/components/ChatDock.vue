@@ -81,7 +81,11 @@
             <p v-if="loading" class="py-10 text-center text-sm text-gray-400">Loading…</p>
             <p v-else-if="!messages.length" class="py-10 text-center text-sm text-gray-500">No messages yet. Say hello 👋</p>
             <template v-for="(m, i) in messages" :key="m.name">
-              <p v-if="m.system" class="py-1 text-center text-[11px] text-gray-400">{{ preview(m, names) }}</p>
+              <div v-if="m.ephemeral" class="my-1 rounded-lg border border-brand-100 bg-brand-50/60 px-2.5 py-1.5 text-xs" role="status">
+                <p class="mb-0.5 text-[10px] text-gray-500">/{{ m.command }} · Only you can see this</p>
+                <RichText :text="m.content" :names="names" class="whitespace-pre-line" />
+              </div>
+              <p v-else-if="m.system" class="py-1 text-center text-[11px] text-gray-400">{{ preview(m, names) }}</p>
               <div v-else class="flex items-end gap-2" :class="m.user === me.user ? 'flex-row-reverse' : ''">
                 <UserAvatar v-if="m.user !== me.user" :name="m.full_name" :image="m.image" size="sm" :class="sameAuthor(i) ? 'invisible' : ''" />
                 <div class="max-w-[78%]">
@@ -119,7 +123,7 @@ import Composer from './ops/Composer.vue'
 import RichText from './ops/RichText.vue'
 import PeoplePicker from './ops/PeoplePicker.vue'
 import { api, me, loadMe, onRealtime, formatTime } from '@/data/ops'
-import { channels, unread, popups, dock, notify, activeChannel, loadChannels, listenForChat, openDock, setNotifications, preview } from '@/data/chat'
+import { channels, unread, popups, dock, notify, activeChannel, loadChannels, listenForChat, openDock, setNotifications, preview, commandReply } from '@/data/chat'
 import { myApps, loadApps, ui } from '@/data/apps'
 import { startPresence } from '@/data/presence'
 import { session } from '@/data/session'
@@ -201,7 +205,8 @@ async function openChannel(name) {
 async function send(content, photos = []) {
   error.value = ''
   try {
-    const message = await api('projectit.chat.post_message', { channel: dock.channel, content, photos })
+    const result = await api('projectit.chat.post_message', { channel: dock.channel, content, photos })
+    const message = result.command ? commandReply(result) : result
     if (!messages.value.some((m) => m.name === message.name)) messages.value = [...messages.value, message]
     scrollToEnd()
   } catch (e) {

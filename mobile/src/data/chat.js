@@ -118,3 +118,13 @@ watch(unread, (n) => {
     /* badging unsupported */
   }
 })
+
+let replySeq = 0
+/** A slash command's answer as a message only I see (it is never stored). */
+export function commandReply(result) {
+  replySeq += 1
+  const now = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  const creation = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
+  return { name: `command-${replySeq}`, ephemeral: true, command: result.command, content: result.reply, creation, photos: [], reactions: [] }
+}
