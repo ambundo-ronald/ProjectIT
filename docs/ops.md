@@ -322,6 +322,18 @@ Managers open **Reports** from the sidebar, or from the account menu on a phone.
   - **Money out** is the parts issued at stock valuation cost plus labour hours × *Techy Ops Settings › Labour Cost per Hour*. Set that to what an hour of technician time costs you; until it is set, labour is not costed.
   - Contracts losing money are listed first.
 
+The **Machines** tab covers the equipment side for the same period:
+
+- **Cost and reliability**, per machine or per customer:
+  - jobs done and breakdowns (repair jobs opened);
+  - **time between breakdowns** (MTBF): the machine's running time in the period, from when it went into service, less its downtime, divided by its breakdowns;
+  - hours down;
+  - parts at stock cost, labour hours at your cost per hour, and the total.
+- **Preventive maintenance by customer:** done on time, late and missed per customer. Open a customer to see each machine's figures.
+- **Cover ending soon:** machine warranties and service contracts ending in the next 30, 60 or 90 days, as renewals to offer.
+
+**Excel** downloads every table for the period as one workbook, a sheet per table. **Print / PDF** prints the tab you are on (choose *Save as PDF* in the print dialog). Both are for managers.
+
 Jobs record when they were first started and when they were completed (*Started At*, *Completed At* on the Task). Jobs completed before this update use their last-modified time instead.
 
 ## Root cause investigations

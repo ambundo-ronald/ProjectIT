@@ -117,6 +117,39 @@ class ReportsTests(OpsTestCase):
         self.assertEqual(rows["tom@x.com"]["first_fix_rate"], None)  # no machine on the job
         self.assertEqual(list(rows)[0], "tina@x.com")
 
+    def test_machine_costs_and_mtbf(self):
+        self.frappe.get_all = MagicMock(return_value=[])
+        self.frappe.db.sql = MagicMock(return_value=[("A", 300.0), ("C", 50.0)])
+        down = dict(custom_machine_down=1, custom_down_from="2026-10-02 08:00:00", custom_down_to="2026-10-03 08:00:00")
+        jobs = [job("A", "Completed", created="2026-10-02 08:00:00", completed="2026-10-03 08:00:00", hours=2, equipment="EQ-1", **down),
+            job("B", "Open", created="2026-10-06 08:00:00", equipment="EQ-1"),
+            job("C", "Completed", "Preventive", created="2026-10-04 08:00:00", completed="2026-10-04 12:00:00", equipment="EQ-2"),
+            job("D", "Completed", created="2026-08-01 08:00:00", completed="2026-08-02 08:00:00", equipment="EQ-2", hours=5)]
+        for j in jobs[:1]:
+            j.update(down)
+        r = self.reports.machine_costs(jobs, date(2026, 10, 1), TODAY, {"C": {"tina@x.com": 1.5}}, cost_rate=100)
+        rows = {m["name"]: m for m in r["machines"]}
+        one, two = rows["EQ-1"], rows["EQ-2"]
+        self.assertEqual((one["jobs"], one["breakdowns"], one["parts_cost"], one["labour_cost"], one["cost"]), (1, 2, 300, 200, 500))
+        self.assertEqual(one["down_hours"], 24)
+        # 1 Oct 00:00 to 11 Oct 09:00 is 249 h, less 24 h down, over 2 breakdowns
+        self.assertEqual(one["mtbf_hours"], 112.5)
+        self.assertEqual((two["jobs"], two["breakdowns"], two["cost"], two["mtbf_hours"]), (1, 0, 200, None))
+        self.assertEqual(r["total"], 700)
+        self.assertEqual([m["name"] for m in r["machines"]], ["EQ-1", "EQ-2"])
+
+    def test_pm_by_customer(self):
+        self.frappe.get_all = MagicMock(return_value=[])
+        jobs = [job("A", "Completed", "Preventive", completed="2026-10-03 10:00:00", due="2026-10-03", equipment="EQ-1"),
+            job("B", "Open", "Preventive", due="2026-10-05", equipment="EQ-1"),
+            job("C", "Completed", "Preventive", completed="2026-10-03 10:00:00", due="2026-10-04", equipment="EQ-2"),
+            job("D", "Open", "Preventive", due="2026-10-06", asset="AST-1")]
+        for j in jobs[:3]:
+            j.custom_customer = "CUST-1"
+        rows = self.reports.pm_by_customer(jobs, date(2026, 10, 1), TODAY, TODAY)
+        self.assertEqual([(c["customer"], c["compliance"]) for c in rows], [(None, 0), ("CUST-1", 67)])
+        self.assertEqual([(m["name"], m["compliance"]) for m in rows[1]["machines"]], [("EQ-1", 50), ("EQ-2", 100)])
+
     def test_dashboard_is_for_managers(self):
         self.frappe.get_roles.return_value = ["Employee", "Maintenance User"]
         with self.assertRaises(PermissionError):

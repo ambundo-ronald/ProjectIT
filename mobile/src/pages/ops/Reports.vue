@@ -1,18 +1,145 @@
 <template>
   <section class="mx-auto max-w-6xl space-y-5 p-4 md:p-8">
     <PageHeader title="Reports" subtitle="How the maintenance work is going and whether service contracts pay.">
-      <button class="btn btn-secondary" @click="openCodes"><FeatherIcon name="tag" class="h-4 w-4" /><span class="hidden sm:inline">Failure codes</span></button>
+      <a :href="`/api/method/projectit.reports.export?days=${days}`" class="btn btn-secondary print:hidden" download><FeatherIcon name="download" class="h-4 w-4" /><span class="hidden sm:inline">Excel</span></a>
+      <button class="btn btn-secondary print:hidden" @click="print"><FeatherIcon name="printer" class="h-4 w-4" /><span class="hidden sm:inline">Print / PDF</span></button>
+      <button class="btn btn-secondary print:hidden" @click="openCodes"><FeatherIcon name="tag" class="h-4 w-4" /><span class="hidden sm:inline">Failure codes</span></button>
     </PageHeader>
     <div class="flex flex-wrap items-center justify-between gap-2">
-      <div class="segmented" role="group" aria-label="Period">
-        <button v-for="p in PERIODS" :key="p.days" :aria-pressed="days === p.days" :disabled="busy" @click="days = p.days; load()">{{ p.label }}</button>
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="segmented print:hidden" role="tablist" aria-label="Report">
+          <button v-for="t in TABS" :key="t.key" role="tab" :aria-selected="tab === t.key" :aria-pressed="tab === t.key" @click="setTab(t.key)">{{ t.label }}</button>
+        </div>
+        <div class="segmented print:hidden" role="group" aria-label="Period">
+          <button v-for="p in PERIODS" :key="p.days" :aria-pressed="days === p.days" :disabled="busy" @click="days = p.days; load()">{{ p.label }}</button>
+        </div>
       </div>
       <p v-if="r" class="text-xs text-gray-500">{{ formatDate(r.start) }} – {{ formatDate(r.end) }}</p>
     </div>
     <p v-if="error" role="alert" class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>
     <div v-if="!r && busy" class="grid grid-cols-2 gap-3 md:grid-cols-4"><div v-for="i in 8" :key="i" class="h-24 animate-pulse rounded-xl bg-gray-200/70" /></div>
 
-    <template v-if="r">
+    <template v-if="tab === 'machines'">
+      <div v-if="!m" class="grid grid-cols-2 gap-3 md:grid-cols-4"><div v-for="i in 4" :key="i" class="h-24 animate-pulse rounded-xl bg-gray-200/70" /></div>
+      <template v-else>
+        <div class="grid grid-cols-2 gap-3 md:grid-cols-4" :class="busy && 'opacity-60'">
+          <div v-for="t in machineTiles" :key="t.label" class="card p-4">
+            <p class="text-xs font-medium text-gray-500">{{ t.label }}</p>
+            <p class="mt-1 text-[26px] font-semibold leading-tight tabular-nums" :class="t.tone">{{ t.value }}</p>
+            <p class="mt-0.5 text-xs text-gray-500">{{ t.sub }}</p>
+          </div>
+        </div>
+
+        <div class="card overflow-hidden">
+          <div class="card-header flex-wrap gap-2">
+            <h2 class="card-title">Cost and reliability</h2>
+            <div class="segmented print:hidden" role="group" aria-label="Group by">
+              <button :aria-pressed="costBy === 'machines'" @click="costBy = 'machines'">Per machine</button>
+              <button :aria-pressed="costBy === 'customers'" @click="costBy = 'customers'">Per customer</button>
+            </div>
+          </div>
+          <p v-if="!m.costs.labour_cost_rate" class="mx-5 mt-4 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">Labour isn't costed yet. Set <b>Labour Cost per Hour</b> in <a href="/desk/techy-ops-settings" target="_blank" rel="noopener" class="underline">Techy Ops Settings</a> to include technicians' time.</p>
+          <div class="overflow-x-auto">
+            <table v-if="costBy === 'machines'" class="w-full min-w-[52rem] text-sm">
+              <thead class="border-b border-gray-100 text-left text-xs text-gray-500"><tr>
+                <th class="px-5 py-2 font-medium">Machine</th><th class="px-3 py-2 text-right font-medium">Jobs done</th><th class="px-3 py-2 text-right font-medium">Breakdowns</th>
+                <th class="px-3 py-2 text-right font-medium" title="Average running time between breakdowns (MTBF)">Time between breakdowns</th><th class="px-3 py-2 text-right font-medium">Down</th>
+                <th class="px-3 py-2 text-right font-medium">Parts</th><th class="px-3 py-2 text-right font-medium">Labour</th><th class="px-5 py-2 text-right font-medium">Total cost</th>
+              </tr></thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr v-for="x in shownMachines" :key="`${x.kind}-${x.name}`">
+                  <td class="px-5 py-2.5"><router-link :to="machineLink(x)" class="font-medium hover:text-brand-700">{{ x.label }}</router-link><span class="block text-xs text-gray-500">{{ x.where }}</span></td>
+                  <td class="px-3 py-2.5 text-right tabular-nums">{{ x.jobs }}</td>
+                  <td class="px-3 py-2.5 text-right tabular-nums" :class="x.breakdowns > 2 ? 'font-semibold text-red-600' : ''">{{ x.breakdowns }}</td>
+                  <td class="px-3 py-2.5 text-right tabular-nums text-gray-600">{{ x.mtbf_hours === null ? 'No breakdowns' : duration(x.mtbf_hours) }}</td>
+                  <td class="px-3 py-2.5 text-right tabular-nums text-gray-600">{{ x.down_hours ? duration(x.down_hours) : '–' }}</td>
+                  <td class="px-3 py-2.5 text-right tabular-nums text-gray-600">{{ money(x.parts_cost) }}</td>
+                  <td class="px-3 py-2.5 text-right tabular-nums text-gray-600">{{ money(x.labour_cost) }}<span v-if="x.labour_hours" class="block text-[11px] text-gray-400">{{ x.labour_hours }} h</span></td>
+                  <td class="px-5 py-2.5 text-right font-semibold tabular-nums">{{ money(x.cost) }}</td>
+                </tr>
+                <tr v-if="!m.costs.machines.length"><td colspan="8" class="px-5 py-3 text-gray-500">No work on machines in this period.</td></tr>
+              </tbody>
+            </table>
+            <table v-else class="w-full min-w-[44rem] text-sm">
+              <thead class="border-b border-gray-100 text-left text-xs text-gray-500"><tr>
+                <th class="px-5 py-2 font-medium">Customer</th><th class="px-3 py-2 text-right font-medium">Machines</th><th class="px-3 py-2 text-right font-medium">Jobs done</th>
+                <th class="px-3 py-2 text-right font-medium">Breakdowns</th><th class="px-3 py-2 text-right font-medium">Down</th><th class="px-3 py-2 text-right font-medium">Parts</th>
+                <th class="px-3 py-2 text-right font-medium">Labour</th><th class="px-5 py-2 text-right font-medium">Total cost</th>
+              </tr></thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr v-for="c in m.costs.customers" :key="c.customer_name">
+                  <td class="px-5 py-2.5 font-medium">{{ c.customer_name || 'No customer' }}</td>
+                  <td class="px-3 py-2.5 text-right tabular-nums">{{ c.machines }}</td>
+                  <td class="px-3 py-2.5 text-right tabular-nums">{{ c.jobs }}</td>
+                  <td class="px-3 py-2.5 text-right tabular-nums">{{ c.breakdowns }}</td>
+                  <td class="px-3 py-2.5 text-right tabular-nums text-gray-600">{{ c.down_hours ? duration(c.down_hours) : '–' }}</td>
+                  <td class="px-3 py-2.5 text-right tabular-nums text-gray-600">{{ money(c.parts_cost) }}</td>
+                  <td class="px-3 py-2.5 text-right tabular-nums text-gray-600">{{ money(c.labour_cost) }}</td>
+                  <td class="px-5 py-2.5 text-right font-semibold tabular-nums">{{ money(c.cost) }}</td>
+                </tr>
+                <tr v-if="!m.costs.customers.length"><td colspan="8" class="px-5 py-3 text-gray-500">No work on machines in this period.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <button v-if="costBy === 'machines' && m.costs.machines.length > 15 && !allMachines" class="w-full border-t border-gray-100 py-2.5 text-sm font-medium text-brand-600 hover:bg-gray-50 print:hidden" @click="allMachines = true">Show all {{ m.costs.machines.length }} machines</button>
+          <p class="border-t border-gray-100 px-5 py-3 text-xs text-gray-500">Cost is the parts issued at stock cost plus labour hours at your cost per hour, for jobs completed in the period. Breakdowns are repair jobs opened in the period. Time between breakdowns is the machine's running time in the period (from when it went into service, less downtime) divided by its breakdowns.</p>
+        </div>
+
+        <div class="grid gap-5 lg:grid-cols-2">
+          <div class="card overflow-hidden">
+            <div class="card-header"><h2 class="card-title">Preventive maintenance by customer</h2><span class="text-xs text-gray-500">Due in the period</span></div>
+            <ul class="divide-y divide-gray-100">
+              <li v-for="c in m.pm" :key="c.customer_name">
+                <button class="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-gray-50" :aria-expanded="pmOpen === c.customer_name" @click="pmOpen = pmOpen === c.customer_name ? '' : c.customer_name">
+                  <span class="min-w-0 flex-1">
+                    <span class="block truncate font-medium">{{ c.customer_name }}</span>
+                    <span class="text-xs text-gray-500">{{ c.on_time }} on time · {{ c.late }} late · {{ c.missed }} missed<template v-if="c.upcoming"> · {{ c.upcoming }} upcoming</template></span>
+                  </span>
+                  <span class="shrink-0 text-right text-sm font-semibold tabular-nums" :class="pctTone(c.compliance)">{{ c.compliance === null ? '–' : `${c.compliance}%` }}</span>
+                  <FeatherIcon :name="pmOpen === c.customer_name ? 'chevron-up' : 'chevron-down'" class="h-4 w-4 shrink-0 text-gray-400" />
+                </button>
+                <ul v-if="pmOpen === c.customer_name" class="bg-gray-50 px-5 py-2">
+                  <li v-for="x in c.machines" :key="`${x.kind}-${x.name}`" class="flex items-center justify-between gap-3 py-1.5 text-sm">
+                    <router-link v-if="x.kind !== 'none'" :to="machineLink(x)" class="min-w-0 truncate hover:text-brand-700">{{ x.label }}</router-link><span v-else class="text-gray-500">{{ x.label }}</span>
+                    <span class="shrink-0 text-xs text-gray-500">{{ x.on_time }}/{{ x.on_time + x.late + x.missed }} on time <b class="ml-1 tabular-nums" :class="pctTone(x.compliance)">{{ x.compliance === null ? '–' : `${x.compliance}%` }}</b></span>
+                  </li>
+                </ul>
+              </li>
+              <li v-if="!m.pm.length" class="px-5 py-3 text-sm text-gray-500">No preventive jobs were due in this period.</li>
+            </ul>
+          </div>
+
+          <div class="card overflow-hidden">
+            <div class="card-header flex-wrap gap-2">
+              <h2 class="card-title">Cover ending soon</h2>
+              <div class="segmented print:hidden" role="group" aria-label="Ending within">
+                <button v-for="n in [30, 60, 90]" :key="n" :aria-pressed="coverDays === n" @click="coverDays = n; loadMachines()">{{ n }} days</button>
+              </div>
+            </div>
+            <ul class="divide-y divide-gray-100">
+              <li v-for="c in m.cover.contracts" :key="c.name">
+                <router-link :to="{ name: 'OpsContract', params: { name: c.name } }" class="flex items-center gap-3 px-5 py-2.5 hover:bg-gray-50">
+                  <span class="w-20 shrink-0 rounded bg-violet-50 px-1.5 text-center text-[11px] font-semibold text-violet-700">Contract</span>
+                  <span class="min-w-0 flex-1"><span class="block truncate text-sm font-medium">{{ c.customer_name }}</span><span class="block truncate text-xs text-gray-500">{{ c.title }} · {{ c.machines }} machine{{ c.machines === 1 ? '' : 's' }}</span></span>
+                  <span class="shrink-0 text-right text-xs"><span class="block font-semibold" :class="c.days_left <= 30 ? 'text-red-600' : 'text-amber-700'">{{ c.days_left }} days</span><span class="text-gray-500">{{ formatDate(c.ends) }}</span></span>
+                </router-link>
+              </li>
+              <li v-for="x in m.cover.machines" :key="`${x.kind}-${x.name}`">
+                <router-link :to="{ name: 'OpsEquipmentDetail', params: { name: x.name } }" class="flex items-center gap-3 px-5 py-2.5 hover:bg-gray-50">
+                  <span class="w-20 shrink-0 rounded px-1.5 text-center text-[11px] font-semibold" :class="x.kind === 'Warranty' ? 'bg-green-50 text-green-700' : 'bg-brand-50 text-brand-700'">{{ x.kind }}</span>
+                  <span class="min-w-0 flex-1"><span class="block truncate text-sm font-medium">{{ x.label }}</span><span class="block truncate text-xs text-gray-500">{{ x.where || x.customer_name }}</span></span>
+                  <span class="shrink-0 text-right text-xs"><span class="block font-semibold" :class="x.days_left <= 30 ? 'text-red-600' : 'text-amber-700'">{{ x.days_left }} days</span><span class="text-gray-500">{{ formatDate(x.ends) }}</span></span>
+                </router-link>
+              </li>
+              <li v-if="!m.cover.machines.length && !m.cover.contracts.length" class="px-5 py-3 text-sm text-gray-500">No warranties or contracts end in the next {{ coverDays }} days.</li>
+            </ul>
+            <p class="border-t border-gray-100 px-5 py-3 text-xs text-gray-500">A good time to offer a service contract or a renewal.</p>
+          </div>
+        </div>
+      </template>
+    </template>
+
+    <template v-if="r && tab === 'overview'">
       <div class="grid grid-cols-2 gap-3 md:grid-cols-4" :class="busy && 'opacity-60'">
         <div v-for="t in tiles" :key="t.label" class="card p-4">
           <p class="text-xs font-medium text-gray-500">{{ t.label }}</p>
@@ -377,6 +504,55 @@ async function saveCode(c) {
   }
 }
 
+// Tabs, the Machines tab, printing ------------------------------------------------------------------------------
+const TABS = [{ key: 'overview', label: 'Overview' }, { key: 'machines', label: 'Machines' }]
+const tab = ref('overview')
+try {
+  if (sessionStorage.getItem('techy_reports_tab') === 'machines') tab.value = 'machines'
+} catch (e) {
+  /* storage blocked */
+}
+const m = ref(null)
+const costBy = ref('machines')
+const allMachines = ref(false)
+const pmOpen = ref('')
+const coverDays = ref(90)
+const shownMachines = computed(() => (allMachines.value ? m.value.costs.machines : m.value.costs.machines.slice(0, 15)))
+const machineLink = (x) => (x.kind === 'asset' ? { name: 'OpsAsset', params: { name: x.name } } : { name: 'OpsEquipmentDetail', params: { name: x.name } })
+const pctTone = (n) => (n === null || n === undefined ? 'text-gray-400' : n >= 90 ? 'text-green-700' : n >= 70 ? 'text-amber-700' : 'text-red-600')
+const machineTiles = computed(() => {
+  const c = m.value.costs
+  const ending = m.value.cover.machines.length + m.value.cover.contracts.length
+  return [
+    { label: 'Cost of machine work', value: money(c.total), sub: `${c.machines.length} machine${c.machines.length === 1 ? '' : 's'} worked on` },
+    { label: 'Breakdowns', value: c.breakdowns, sub: 'Repair jobs opened' },
+    { label: 'Avg time between breakdowns', value: c.mtbf_hours === null ? '–' : duration(c.mtbf_hours), sub: 'Machines that broke down' },
+    { label: 'Cover ending soon', value: ending, tone: ending ? 'text-amber-700' : '', sub: `Within ${coverDays.value} days` },
+  ]
+})
+function setTab(key) {
+  tab.value = key
+  try {
+    sessionStorage.setItem('techy_reports_tab', key)
+  } catch (e) {
+    /* storage blocked */
+  }
+  if (key === 'machines' && (!m.value || m.value.days !== days.value)) loadMachines()
+}
+async function loadMachines() {
+  busy.value = true
+  try {
+    m.value = await api('projectit.reports.machines', { days: days.value, cover_days: coverDays.value })
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    busy.value = false
+  }
+}
+function print() {
+  window.print()
+}
+
 async function load() {
   busy.value = true
   error.value = ''
@@ -387,6 +563,16 @@ async function load() {
   } finally {
     busy.value = false
   }
+  if (tab.value === 'machines') loadMachines()
 }
 onMounted(load)
 </script>
+<style>
+/* Print or save as PDF: just the report, on paper-friendly cards. */
+@media print {
+  .ops aside, .ops header, .ops nav, .ops .fixed { display: none !important; }
+  .ops, .ops main { height: auto !important; overflow: visible !important; display: block !important; }
+  .ops .card { break-inside: avoid; box-shadow: none; }
+  .ops .overflow-x-auto { overflow: visible !important; }
+}
+</style>
