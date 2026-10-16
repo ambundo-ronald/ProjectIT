@@ -60,6 +60,13 @@ const routes = [
     ],
   },
   {
+    // Customers rate a completed visit from the link in their service report email (no sign-in).
+    path: '/rate',
+    name: 'Rate',
+    component: () => import('@/pages/Rate.vue'),
+    meta: { public: true },
+  },
+  {
     // Asset QR codes link here; guests may use it when public requests are enabled.
     path: '/request',
     name: 'PublicRequest',

@@ -94,6 +94,7 @@
         <PartsCard v-if="data.parts && (data.parts.rows.length || data.parts.can_edit)" :parts="data.parts" :work-order="wo.name" @updated="set" @error="warn" @reload="load" />
         <LabourCard v-if="data.billing?.customer" :billing="data.billing" :logged="data.timer?.total || 0" :work-order="wo.name" @updated="set" @error="warn" />
         <ServiceReportCard v-if="data.report" :report="data.report" :work-order="wo.name" @updated="set" @error="warn" />
+        <RatingCard v-if="data.rating" :rating="data.rating" :work-order="wo.name" />
         <InvestigationsCard v-if="['Corrective', 'Inspection', 'Safety'].includes(wo.custom_work_category)" :key="wo.name" :work-order="wo.name" />
         <MetersCard v-if="data.meters?.length" :meters="data.meters" :work-order="wo.name" :can-record="data.can_write && !closed" @reload="load" />
 
@@ -233,6 +234,7 @@ import LabourCard from '@/components/ops/LabourCard.vue'
 import MetersCard from '@/components/ops/MetersCard.vue'
 import ServiceReportCard from '@/components/ops/ServiceReportCard.vue'
 import InvestigationsCard from '@/components/ops/InvestigationsCard.vue'
+import RatingCard from '@/components/ops/RatingCard.vue'
 import TimerCard from '@/components/ops/TimerCard.vue'
 import FailureCard from '@/components/ops/FailureCard.vue'
 import PhotoButtons from '@/components/ops/PhotoButtons.vue'

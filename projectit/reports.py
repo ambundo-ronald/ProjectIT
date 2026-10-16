@@ -31,12 +31,12 @@ JOB_FIELDS = ["name", "subject", "status", "creation", "modified", "exp_end_date
     "custom_equipment", "custom_asset", "custom_customer", "custom_service_contract", "custom_started_at",
     "custom_completed_at", "custom_labour_hours", "custom_labour_billing", "custom_labour_mode", "custom_labour_rate",
     "custom_flat_fee", "custom_sales_invoice", "custom_problem_code", "custom_cause_code", "custom_machine_down",
-    "custom_down_from", "custom_down_to", "custom_sent_back"]
+    "custom_down_from", "custom_down_to", "custom_sent_back", "custom_rating"]
 OPEN = ("Completed", "Cancelled")
 REPEAT_DAYS = 30
 MIN_SCORED = 3
 # Out of 100: what each measure counts towards a technician's score.
-WEIGHTS = {"on_time": 30, "first_fix": 35, "no_rework": 20, "coded": 15}
+WEIGHTS = {"on_time": 30, "first_fix": 35, "no_rework": 20, "coded": 15, "rating": 20}
 
 
 def hours_between(start, end):
@@ -121,6 +121,8 @@ def work_summary(jobs, start, end, today):
         "overdue": sum(1 for j in open_now if j.exp_end_date and getdate(j.exp_end_date) < today),
         "repair_hours": average(hours_between(j.creation, completed_at(j)) for j in repairs),
         "response_hours": average(hours_between(j.creation, j.custom_started_at) for j in created if j.custom_started_at),
+        "rating": average(cint(j.get("custom_rating")) for j in done if cint(j.get("custom_rating"))),
+        "ratings": sum(1 for j in done if cint(j.get("custom_rating"))),
     }
 
 
@@ -188,7 +190,8 @@ def score(row):
     if row["completed"] < MIN_SCORED:
         return None
     measures = {"on_time": row["on_time_rate"], "first_fix": row["first_fix_rate"],
-        "no_rework": 100 - rate(row["reopened"], row["completed"]), "coded": row["coded_rate"]}
+        "no_rework": 100 - rate(row["reopened"], row["completed"]), "coded": row["coded_rate"],
+        "rating": round(row["rating"] * 20) if row.get("rating") else None}
     used = {k: v for k, v in measures.items() if v is not None}
     return round(sum(WEIGHTS[k] * v for k, v in used.items()) / sum(WEIGHTS[k] for k in used))
 
@@ -198,7 +201,7 @@ def by_technician(jobs, assigned, start, end, today, logged=None, repeats=None):
     logged = logged or {}
     repeats = repeats if repeats is not None else repeat_repairs(jobs)
     rows = defaultdict(lambda: {"completed": 0, "open": 0, "overdue": 0, "labour_hours": 0.0, "hours": [], "due": 0,
-        "on_time": 0, "fixes": 0, "first_fix": 0, "repairs": 0, "coded": 0, "reopened": 0, "issues": []})
+        "on_time": 0, "fixes": 0, "first_fix": 0, "repairs": 0, "coded": 0, "reopened": 0, "ratings": [], "issues": []})
     for job in jobs:
         done = job.status == "Completed" and _in(completed_at(job), start, end)
         if done and logged.get(job.name):
@@ -225,7 +228,7 @@ def by_technician(jobs, assigned, start, end, today, logged=None, repeats=None):
             "due": row["due"], "on_time": row["on_time"], "on_time_rate": rate(row["on_time"], row["due"]),
             "fixes": row["fixes"], "first_fix": row["first_fix"], "first_fix_rate": rate(row["first_fix"], row["fixes"]),
             "repairs": row["repairs"], "coded": row["coded"], "coded_rate": rate(row["coded"], row["repairs"]),
-            "reopened": row["reopened"],
+            "reopened": row["reopened"], "rating": average(row["ratings"]), "ratings": len(row["ratings"]),
             "issues": sorted(row["issues"], key=lambda i: str(i["on"]), reverse=True)[:15]}
         entry["score"] = score(entry)
         result.append(entry)
@@ -245,6 +248,10 @@ def _judge(row, job, repeats):
         else:
             late = (getdate(completed_at(job)) - getdate(job.exp_end_date)).days
             issue("late", _("Finished {0} day(s) after it was due").format(late))
+    if cint(job.get("custom_rating")):
+        row["ratings"].append(cint(job.custom_rating))
+        if cint(job.custom_rating) <= 2:
+            issue("rating", _("The customer rated it {0} out of 5").format(cint(job.custom_rating)))
     if cint(job.get("custom_sent_back")):
         row["reopened"] += 1
         issue("reopened", _("Went back to work {0} time(s) after review or completion").format(cint(job.custom_sent_back)))

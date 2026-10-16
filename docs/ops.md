@@ -296,6 +296,21 @@ Every job has a **Service report** card. It produces a PDF for the customer.
 - **Automatic email:** tick *Techy Ops Settings › Email the Service Report when a Customer Job is Completed* to send it to the customer's first address on file as soon as the job is completed. It is off by default.
 - **Invoices:** creating an invoice attaches each job's report PDF to the draft Sales Invoice.
 
+## Customer ratings
+
+When a customer job is completed, the customer can rate the visit from 1 to 5 stars and leave a comment. No sign-in is needed.
+
+- **The link:**
+  - It is added to the service report email and printed at the foot of the service report PDF.
+  - On the job page, **Customer rating › Copy rating link** copies it to send by WhatsApp or SMS.
+  - Each job's link is private to that job.
+  - The customer can change their rating for 30 days after completion; after that the link only thanks them.
+- **Where ratings show:**
+  - on the job's **Customer rating** card;
+  - on the job's timeline;
+  - as a notification to the job's technicians, and to the managers when it's 1 or 2 stars;
+  - in Reports, as the *Customer rating* figure and in the technician scorecard.
+
 ## Reports
 
 Managers open **Reports** from the sidebar, or from the account menu on a phone. Choose a period: 7 days, 30 days, 90 days or 12 months. The headline figures are compared with the period before.
@@ -313,8 +328,9 @@ Managers open **Reports** from the sidebar, or from the account menu on a phone.
   - **Fixed first time:** repairs where the same machine needed no other repair opened within 30 days of completion.
   - **Sent back:** jobs that went back to work after review or completion. Each return is counted on the job (*Times Sent Back* on the Task) from this update on; older jobs count as never sent back.
   - **Coded:** repairs with both a problem and a cause code.
+  - **Customer rating:** the average of the customers' star ratings (see *Customer ratings*).
   - Average time to finish, hours logged per job (from the job timer; jobs without entries share their typed hours between the assignees), and open jobs with how many are overdue.
-  - **Score** out of 100: on time 30, fixed first time 35, not sent back 20, coded 15. Only the measures that apply to someone's jobs count, and people with fewer than 3 completed jobs in the period are not scored. The best score is named above the table. Click a person to see the jobs that lowered their score, with a link to the follow-up repair for each repeat.
+  - **Score** out of 100: on time 30, fixed first time 35, not sent back 20, coded 15, customer rating 20 (5 stars counts as 100). Only the measures that apply to someone's jobs count, and people with fewer than 3 completed jobs in the period are not scored. The best score is named above the table. Click a person to see the jobs that lowered their score, with a link to the follow-up repair for each repeat.
   - Read it alongside the work mix: someone given the hardest breakdowns will have more repeats than someone doing routine visits.
 - **Machines with the most repairs:** customer equipment and our own assets with the most repair jobs opened in the period. Repeat breakdowns are worth a closer look.
 - **Service contract profit:**

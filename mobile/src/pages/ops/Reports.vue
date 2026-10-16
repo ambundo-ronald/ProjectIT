@@ -212,7 +212,7 @@
           <p class="min-w-0"><b>{{ best.full_name }}</b> has the best score this period: <b class="tabular-nums">{{ best.score }}</b> from {{ best.completed }} job{{ best.completed === 1 ? '' : 's' }}.</p>
         </div>
         <div class="overflow-x-auto">
-          <table class="w-full min-w-[56rem] text-sm">
+          <table class="w-full min-w-[62rem] text-sm">
             <thead class="border-b border-gray-100 text-left text-xs text-gray-500">
               <tr>
                 <th class="px-5 py-2 font-medium">Person</th>
@@ -222,6 +222,7 @@
                 <th class="px-3 py-2 text-right font-medium" :title="`Repairs where the machine needed no other repair within ${r.scoring.repeat_days} days`">Fixed first time</th>
                 <th class="px-3 py-2 text-right font-medium" title="Jobs that went back to work after review or completion">Sent back</th>
                 <th class="px-3 py-2 text-right font-medium" title="Repairs with a problem and a cause code">Coded</th>
+                <th class="px-3 py-2 text-right font-medium" title="Average of the customers' ratings">Customer rating</th>
                 <th class="px-3 py-2 text-right font-medium">Avg time to finish</th>
                 <th class="px-3 py-2 text-right font-medium" title="Hours logged per completed job">Hours / job</th>
                 <th class="px-5 py-2 text-right font-medium">Open (overdue)</th>
@@ -245,12 +246,13 @@
                   <td class="px-3 py-2.5 text-right"><Rate :value="t.first_fix_rate" :part="t.first_fix" :whole="t.fixes" /></td>
                   <td class="px-3 py-2.5 text-right tabular-nums" :class="t.reopened ? 'font-semibold text-amber-700' : 'text-gray-500'">{{ t.completed ? t.reopened : '–' }}</td>
                   <td class="px-3 py-2.5 text-right"><Rate :value="t.coded_rate" :part="t.coded" :whole="t.repairs" /></td>
+                  <td class="px-3 py-2.5 text-right tabular-nums"><template v-if="t.rating"><span class="font-semibold" :class="t.rating >= 4 ? 'text-gray-900' : t.rating >= 3 ? 'text-amber-700' : 'text-red-600'">★ {{ t.rating }}</span><span class="block text-[11px] text-gray-400">{{ t.ratings }} rating{{ t.ratings === 1 ? '' : 's' }}</span></template><span v-else class="text-gray-400">–</span></td>
                   <td class="px-3 py-2.5 text-right tabular-nums text-gray-600">{{ duration(t.avg_hours) }}</td>
                   <td class="px-3 py-2.5 text-right tabular-nums text-gray-600">{{ t.hours_per_job ?? '–' }}</td>
                   <td class="px-5 py-2.5 text-right tabular-nums">{{ t.open }}<span v-if="t.overdue" class="ml-1 font-semibold text-red-600">({{ t.overdue }})</span></td>
                 </tr>
                 <tr v-if="open === t.user">
-                  <td colspan="10" class="bg-gray-50 px-5 py-3">
+                  <td colspan="11" class="bg-gray-50 px-5 py-3">
                     <p v-if="!t.issues.length" class="text-sm text-gray-600">Nothing counted against {{ t.full_name }} in this period.</p>
                     <template v-else>
                       <p class="section-label mb-2">Jobs that lowered the score</p>
@@ -265,12 +267,12 @@
                   </td>
                 </tr>
               </template>
-              <tr v-if="!r.technicians.length"><td colspan="10" class="px-5 py-3 text-gray-500">No assigned jobs in this period.</td></tr>
+              <tr v-if="!r.technicians.length"><td colspan="11" class="px-5 py-3 text-gray-500">No assigned jobs in this period.</td></tr>
             </tbody>
           </table>
         </div>
         <p class="border-t border-gray-100 px-5 py-3 text-xs text-gray-500">
-          The score is out of 100: on time counts {{ r.scoring.weights.on_time }}, fixed first time {{ r.scoring.weights.first_fix }} (no other repair on the same machine within {{ r.scoring.repeat_days }} days), not sent back {{ r.scoring.weights.no_rework }} and coded repairs {{ r.scoring.weights.coded }}. Only the measures that apply to someone's jobs count. People with fewer than {{ r.scoring.min_jobs }} completed jobs in the period are not scored. Click a person to see the jobs behind their score.
+          The score is out of 100: on time counts {{ r.scoring.weights.on_time }}, fixed first time {{ r.scoring.weights.first_fix }} (no other repair on the same machine within {{ r.scoring.repeat_days }} days), not sent back {{ r.scoring.weights.no_rework }}, coded repairs {{ r.scoring.weights.coded }} and customer rating {{ r.scoring.weights.rating }}. Only the measures that apply to someone's jobs count. People with fewer than {{ r.scoring.min_jobs }} completed jobs in the period are not scored. Click a person to see the jobs behind their score.
         </p>
       </div>
 
@@ -417,6 +419,7 @@ const ISSUES = {
   repeat: { label: 'Repaired again', tone: 'bg-red-100 text-red-700' },
   reopened: { label: 'Sent back', tone: 'bg-orange-100 text-orange-800' },
   uncoded: { label: 'Not coded', tone: 'bg-gray-200 text-gray-700' },
+  rating: { label: 'Low rating', tone: 'bg-red-100 text-red-700' },
 }
 const scoreTone = (n) => (n >= 85 ? 'bg-green-100 text-green-800' : n >= 70 ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-700')
 const best = computed(() => {
@@ -443,8 +446,8 @@ const tiles = computed(() => {
     { label: 'Open now', value: w.open, sub: w.overdue ? `${w.overdue} overdue` : 'None overdue', subTone: w.overdue ? 'font-semibold text-red-600' : 'text-green-700' },
     { label: 'Avg time to fix (repairs)', value: duration(w.repair_hours), ...change(w.repair_hours, p.repair_hours, true) },
     { label: 'Avg time to start', value: duration(w.response_hours), sub: 'From opened to work started' },
+    { label: 'Customer rating', value: w.rating ? `★ ${w.rating}` : '–', tone: !w.rating ? '' : w.rating >= 4 ? 'text-green-700' : w.rating >= 3 ? 'text-amber-700' : 'text-red-600', sub: w.ratings ? `From ${w.ratings} rating${w.ratings === 1 ? '' : 's'}` : 'No ratings yet' },
     { label: 'PM done on time', value: pm.compliance === null ? '–' : `${pm.compliance}%`, tone: pm.compliance === null ? '' : pm.compliance >= 90 ? 'text-green-700' : pm.compliance >= 70 ? 'text-amber-700' : 'text-red-600', sub: `${pm.on_time + pm.late + pm.missed} due so far` },
-    { label: 'Requests received', value: r.value.requests.received, sub: `${r.value.requests.pending} waiting for review` },
     { label: 'Contract profit', value: money(r.value.contracts.rows.reduce((s, c) => s + c.profit, 0)), tone: r.value.contracts.rows.reduce((s, c) => s + c.profit, 0) < 0 ? 'text-red-600' : '', sub: `${r.value.contracts.rows.length} contract${r.value.contracts.rows.length === 1 ? '' : 's'}` },
   ]
 })
