@@ -8,7 +8,15 @@
     <p v-if="error" role="alert" class="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>
     <div v-if="!data && !error" class="h-40 animate-pulse rounded-xl bg-gray-200/70" />
 
-    <div v-if="data" class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+    <div v-if="data" class="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <div class="segmented" role="tablist" aria-label="Machine">
+        <button v-for="t in TABS" :key="t.key" role="tab" :aria-selected="tab === t.key" :aria-pressed="tab === t.key" @click="setTab(t.key)"><FeatherIcon :name="t.icon" class="h-3.5 w-3.5" />{{ t.label }}</button>
+      </div>
+      <p v-if="tab === 'health'" class="min-w-0 truncate text-sm text-gray-600"><span class="font-semibold text-gray-900">{{ eq.equipment_name }}</span> · {{ eq.customer_name }}</p>
+    </div>
+    <EquipmentHealth v-if="data && tab === 'health'" :key="eq.name" :equipment="eq.name" />
+
+    <div v-if="data && tab === 'overview'" class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
       <div class="min-w-0 space-y-5">
         <!-- Header -->
         <div class="card p-5">
@@ -171,7 +179,7 @@
 </template>
 <script setup>
 import { ref, computed, inject, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { FeatherIcon } from 'frappe-ui'
 import QRCode from 'qrcode'
 import StatusPill from '@/components/ops/StatusPill.vue'
@@ -180,11 +188,16 @@ import LinkChip from '@/components/ops/LinkChip.vue'
 import EquipmentForm from '@/components/ops/EquipmentForm.vue'
 import ContractTerms from '@/components/ops/ContractTerms.vue'
 import MetersCard from '@/components/ops/MetersCard.vue'
+import EquipmentHealth from '@/components/ops/health/EquipmentHealth.vue'
 import InvestigationsCard from '@/components/ops/InvestigationsCard.vue'
 import { api, me, formatDate, fromNow } from '@/data/ops'
 import { EQUIPMENT_STATUS, mapLink } from '@/data/equipment'
 
 const route = useRoute()
+const router = useRouter()
+const TABS = [{ key: 'overview', label: 'Overview', icon: 'info' }, { key: 'health', label: 'Health', icon: 'activity' }]
+const tab = computed(() => (route.query.tab === 'health' ? 'health' : 'overview'))
+const setTab = (key) => router.replace({ query: { ...route.query, tab: key === 'overview' ? undefined : key } })
 const openNew = inject('openNewWorkOrder')
 const data = ref(null)
 const error = ref('')

@@ -163,6 +163,41 @@ Machines you sell and install for customers, such as RO systems, belong to the c
 - **QR stickers:** each machine has a printable QR sticker. When public requests are on, the customer scans it, sees only the machine model and site, and reports a problem. The request is linked to the machine and the customer.
 - **Permissions:** all staff can look up customer equipment. Only managers can register or edit it.
 
+### Machine health
+
+Each machine has a **Health** tab, next to Overview. It is built from what the app already records: meter readings, services, breakdowns, downtime, repair jobs and costs.
+
+- **Health score** out of 100: **Good** (80+), **Watch** (60 to 79) or **At risk** (under 60, or down now). It is made of:
+  - **Condition** (30): gauge readings against their Above/Below limits.
+  - **Service** (25): meter services past due, overdue preventive jobs, a missed contract visit.
+  - **Reliability** (20): breakdowns in the last 90 days.
+  - **Availability** (15): hours down in the last 90 days.
+  - **Open repairs** (10): how many repairs are open, and whether they are overdue.
+
+  Each part shows its reason. Parts that don't apply (no limits set, no schedule) are left out, and the score is scaled to what is measured.
+- **Forecasts** (straight-line projections from recent readings and history):
+  - when each counter reaches its next service;
+  - when a gauge is heading past a limit;
+  - when the next breakdown is likely, from the time between breakdowns;
+  - for managers, the cost of the next 12 months.
+
+  Breakdown and cost forecasts start once the machine has 30 days of history.
+- **Graphs:**
+  - each meter's readings for the last 12 months, with its limits, the next service level and the projection; hover for exact values, or switch to a table;
+  - jobs per month (repairs, services, other);
+  - hours down per month;
+  - cost per month (managers);
+  - the most common failure codes.
+- **What-if planner:** change the use per day and the service interval (or services a year) to see expected services, breakdowns, hours down and, for managers, yearly cost against today. Nothing is saved.
+  - Breakdowns scale with use, and with the time between services to the power 0.8: servicing half as often means about 1.7 times the breakdowns.
+- **RO process model** (reverse-osmosis machines, or any machine with a TDS meter): recovery, feed TDS, pressure, temperature, salt rejection, fouling and salt-passage rates.
+  - **Starting values:** taken from the machine's own meters where they exist (*Feed TDS*, *Permeate TDS*, *Feed pressure*, *Product flow*, *Recovery*, *Temperature*). Fouling and salt-passage rates come from the flow and permeate TDS trends, and salt rejection from feed vs permeate TDS. Each value says where it came from.
+  - **Today:** feed and concentrate flows, concentrate and permeate TDS, osmotic and net driving pressure.
+  - **Next three years:** when the membranes need cleaning (CIP), and when permeate TDS passes the target.
+  - It is a rule-of-thumb planning model, not a design tool.
+
+Name meters clearly (for example *Feed TDS*, *Permeate TDS*, *Feed pressure*, *Product flow*) so the model finds them.
+
 ## Service contracts
 
 What each contract covers varies per customer, so contracts are kept as **Techy Service Contract** records (**Equipment › Contracts**). Billing stays on the customer's ERPNext **Subscription**.
