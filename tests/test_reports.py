@@ -182,14 +182,21 @@ class JobTimesTests(OpsTestCase):
         self.work_orders._stamp_times(doc)
         self.assertIsNone(doc.custom_completed_at)
 
-    def test_sent_back_counts_returns_to_work(self):
-        for before, after, expected in (("Pending Review", "Working", 2), ("Completed", "Open", 2),
-                ("Completed", "Cancelled", 1), ("Working", "Pending Review", 1), ("Pending Review", "Completed", 1)):
+    def test_sent_back_counts_only_a_managers_return(self):
+        # (status before, sent for review?, manager?, status after) -> times sent back (starting at 1)
+        for before, review, manager, after, expected in (
+                ("Pending Review", 1, True, "Working", 2),    # a manager sends a reviewed job back
+                ("Completed", 0, True, "Open", 2),            # a manager reopens a completed job
+                ("Pending Review", 1, False, "Working", 1),   # the technician takes back their own request
+                ("Pending Review", 0, True, "Working", 1),    # resuming a job that was on hold
+                ("Completed", 0, True, "Cancelled", 1),
+                ("Working", 0, False, "Pending Review", 1)):
+            self.frappe.get_roles.return_value = ["Maintenance Manager"] if manager else ["Maintenance User"]
             doc = self.doc(after, started="2026-10-10 08:00:00")
             doc.custom_sent_back = 1
-            doc.get_doc_before_save = lambda status=before: Dict(status=status)
+            doc.get_doc_before_save = lambda status=before, flag=review: Dict(status=status, custom_review_requested=flag)
             self.work_orders._stamp_times(doc)
-            self.assertEqual(doc.custom_sent_back, expected, (before, after))
+            self.assertEqual(doc.custom_sent_back, expected, (before, review, manager, after))
 
     def test_unchanged_status_keeps_times(self):
         doc = self.doc("Completed", changed=False)

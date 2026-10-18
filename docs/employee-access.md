@@ -13,7 +13,58 @@
   - **Reports** and **Dispatch:** managers.
   - Their data is checked on the server as well.
 - The rule lives in `projectit/api.py` (`apps_for`). The home page, the app's routes and the server's Techy Work and Techy Manage endpoints all use it.
-- **What the apps can do** still follows ERPNext permissions on the linked User. For example, technicians need Projects User for their jobs, and managers need Projects Manager to change project crews.
+- **What the apps can do** follows the roles below. Managers need Projects Manager to change project crews.
+
+# Roles and rights
+
+| Person | Roles to give | What they can do |
+|---|---|---|
+| **Technician** | Employee, **Maintenance User** (and *WorkIT* ticked if they also check in to projects) | Their own jobs and tasks; open jobs nobody has, to pick up |
+| **Field staff** (projects only) | Employee, with *WorkIT* ticked | Their own project tasks, in the projects they are allocated to |
+| **Maintenance manager** | Maintenance Manager (and Projects Manager for project crews) | Every job: assign, prioritise, complete, reports, dispatch, billing |
+| **Office / project planner** | Projects User or Projects Manager | ERPNext's normal access to all tasks and projects |
+
+**Do not give technicians Projects User.** It lets them see, change and delete every task in the company in ERPNext. The app no longer needs it: technicians and field staff get just enough rights from Maintenance User and Employee. Remove Projects User from technicians in *User › Roles*.
+
+## What a technician can do
+
+On jobs **assigned to them or created by them**:
+- open them, start work, put them on hold, and resume;
+- tick checklist steps, answer procedures, add updates, photos and time (timer or forgotten time);
+- request parts, record meter readings and failure codes, and write the customer report;
+- **send the job for review** when it is finished (the same checks as completing: required steps, failure codes, certificate);
+- take back a job they sent for review, if they need to fix something;
+- change the **due date**;
+- **add a helper** from the team.
+
+They can also:
+- see **open jobs nobody is assigned to** (Work orders › *Available*), and **take one**, which assigns it to them;
+- create jobs for themselves, report problems, look up customer equipment, and start investigations.
+
+Technicians **cannot**:
+- complete, reopen or cancel a job, or change its priority;
+- take anyone off a job;
+- open or change other people's jobs;
+- approve parts or requests;
+- see Reports, Dispatch or Billing;
+- **delete** any task.
+
+In ERPNext Desk they see only their own tasks, plus the open jobs nobody has, and can never delete. Field staff likewise see only the projects they are allocated to.
+
+## Review
+
+- A technician's **Send for review** shows the job as **Waiting for review** and tells the managers.
+- Managers find these jobs under Work orders › **To review**. On each one they either:
+  - **Approve & complete**: completes the job; the service report and the customer's rating link go out as usual.
+  - **Send back**, with what still needs doing: the job returns to *In progress*, the reason is posted on the job and sent to the technicians, and it counts as *sent back* on the scorecard.
+- **On hold** (waiting for parts, say) is separate from review. Resuming a job on hold does not count against anyone.
+
+## How it works
+
+- Migrating the app gives the **Maintenance User** and **Employee** roles Task read and write (Maintenance User also create), and Project read. It only ever adds these rights.
+- `projectit/permissions.py` then narrows them to each person's own work, for lists, forms and reports in Desk and in the app.
+- People with Projects User, Projects Manager, Maintenance Manager, HR or System Manager keep ERPNext's normal access.
+- Checking out of a project submits the person's own timesheet for them, so field staff don't need the right to submit timesheets in general.
 
 # Restore missing Techy App access fields
 

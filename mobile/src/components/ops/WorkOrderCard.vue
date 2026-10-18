@@ -6,7 +6,7 @@
     <span class="absolute inset-y-0 left-0 w-1" :class="stripe" aria-hidden="true" />
     <div class="flex items-start gap-2">
       <p class="min-w-0 flex-1 font-semibold leading-snug text-gray-900 group-hover:text-brand-700" :class="done ? 'text-gray-500' : ''">{{ wo.subject }}</p>
-      <StatusPill v-if="showStatus" :status="overdue ? 'Overdue' : wo.status" />
+      <StatusPill v-if="showStatus" :status="overdue ? 'Overdue' : displayStatus(wo)" />
     </div>
     <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-gray-500">
       <PriorityFlag :priority="wo.priority" />
@@ -39,7 +39,7 @@ import PriorityFlag from './PriorityFlag.vue'
 import PromiseBadge from './PromiseBadge.vue'
 import AvatarStack from './AvatarStack.vue'
 import CoverageBadge from './CoverageBadge.vue'
-import { dueIn, fromNow, isOverdue } from '@/data/ops'
+import { displayStatus, dueIn, fromNow, isOverdue } from '@/data/ops'
 
 const props = defineProps({ wo: Object, showStatus: Boolean })
 const done = computed(() => ['Completed', 'Cancelled'].includes(props.wo.status))

@@ -93,8 +93,10 @@ doctype_js = {"Project": "public/js/project.js", "Task": "public/js/task.js",
 # ------------
 
 # before_install = "projectit.install.before_install"
-after_install = ["projectit.setup.ensure_access_fields", "projectit.setup.ensure_ops_defaults"]
-after_migrate = ["projectit.setup.ensure_access_fields", "projectit.setup.ensure_ops_defaults"]
+after_install = ["projectit.setup.ensure_access_fields", "projectit.setup.ensure_ops_defaults",
+    "projectit.setup.ensure_task_permissions"]
+after_migrate = ["projectit.setup.ensure_access_fields", "projectit.setup.ensure_ops_defaults",
+    "projectit.setup.ensure_task_permissions"]
 
 # Uninstallation
 # ------------
@@ -128,12 +130,17 @@ after_migrate = ["projectit.setup.ensure_access_fields", "projectit.setup.ensure
 # -----------
 # Permissions evaluated in scripted ways
 
+# Technicians and field staff see and change only their own tasks (see projectit/permissions.py).
 permission_query_conditions = {
     "Techy Channel": "projectit.chat.permission_query_conditions",
+    "Task": "projectit.permissions.task_query",
+    "Project": "projectit.permissions.project_query",
 }
 
 has_permission = {
     "Techy Channel": "projectit.chat.has_permission",
+    "Task": "projectit.permissions.task_permission",
+    "Project": "projectit.permissions.project_permission",
 }
 
 # DocType Class

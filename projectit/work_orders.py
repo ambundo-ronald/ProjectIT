@@ -9,11 +9,12 @@ import frappe
 from frappe import _
 from frappe.utils import cint, getdate, now_datetime, nowdate
 
-from projectit import billing, equipment as installed, failures, meters, ops, parts, procedures, ratings, service_report, sla, timer
+from projectit import (billing, equipment as installed, failures, meters, ops, parts, permissions, procedures, ratings,
+    service_report, sla, timer)
 
 FIELDS = ["name", "subject", "status", "priority", "exp_end_date", "custom_work_category", "custom_asset",
     "custom_location", "custom_equipment", "custom_customer", "project", "is_group", "progress", "owner", "creation",
-    "modified", "custom_respond_by", "custom_fix_by", "custom_started_at", "custom_completed_at"]
+    "modified", "custom_respond_by", "custom_fix_by", "custom_started_at", "custom_completed_at", "custom_review_requested"]
 STATUSES = ("Open", "Working", "Pending Review", "Completed", "Cancelled")
 PRIORITIES = ("Low", "Medium", "High", "Urgent")
 CATEGORIES = ("Corrective", "Preventive", "Inspection", "Installation", "Safety", "Other")
@@ -36,13 +37,16 @@ def _mine():
 
 
 def _work_order(name, write=False):
+    """A work order the caller may open: managers any; others their own, or (to read) an open unassigned one."""
     ops.system_user()
     doc = frappe.get_doc("Task", name, for_update=write)
-    doc.check_permission("write" if write else "read")
     if not doc.custom_work_order:
         frappe.throw(_("{0} is not a work order.").format(name))
-    if not ops.manager() and doc.owner != frappe.session.user and frappe.session.user not in _assignees([name])[name]:
+    # The app's own rule first, so people get a clear message rather than ERPNext's generic one.
+    if not ops.manager() and doc.owner != frappe.session.user and frappe.session.user not in _assignees([name])[name] \
+            and (write or not permissions.is_available(doc)):
         frappe.throw(_("This work order is not assigned to you."), frappe.PermissionError)
+    doc.check_permission("write" if write else "read")
     return doc
 
 
@@ -64,7 +68,16 @@ def list_work_orders(scope="mine", status=None, asset=None, location=None, searc
         if value:
             filters[field] = value
     or_filters = None
-    if scope != "all" or not ops.manager():
+    if scope == "available":
+        # Open work orders nobody is assigned to: anyone in Techy Ops may pick one up.
+        taken = frappe.get_all("ToDo", filters={"reference_type": "Task", "status": ["!=", "Cancelled"]},
+            pluck="reference_name", distinct=True)
+        filters.update(status=["in", ["Open", "Overdue"]], name=["not in", taken or [""]])
+    elif scope == "review":
+        filters.update(status="Pending Review", custom_review_requested=1)
+        if not ops.manager():
+            or_filters = {"name": ["in", _mine() or [""]], "owner": frappe.session.user}
+    elif scope != "all" or not ops.manager():
         or_filters = {"name": ["in", _mine() or [""]], "owner": frappe.session.user}
     if search:
         filters["subject"] = ["like", f"%{str(search).strip()[:80]}%"]
@@ -117,7 +130,8 @@ def detail(doc):
         "failure": failures.summary(doc, can_write), "rating": ratings.summary(doc),
         "promise": sla.summary(doc),
         "pm_log": doc.custom_asset_maintenance_log, "workflow": _workflow(), "can_write": can_write,
-        "manager": ops.manager()}
+        "manager": ops.manager(), "mine": permissions.is_mine(doc),
+        "can_take": not ops.manager() and permissions.is_available(doc)}
 
 
 def _steps(value):
@@ -202,36 +216,112 @@ def create_work_order(subject, description=None, priority="Medium", category="Co
     return {"name": doc.name}
 
 
+# What technicians may move their own jobs to. Completing (and reopening or cancelling) is for managers: a
+# technician sends a finished job for review instead.
+TECH_STATUSES = ("Open", "Working", "Pending Review")
+
+
+def ready_for_review(doc):
+    """The checks completing a job runs, made when a technician sends it for review."""
+    missing = procedures.missing_required(doc.name)
+    if missing:
+        frappe.throw(_("Finish the procedure first: {0} required step(s) still need an answer.").format(missing))
+    gaps = failures.missing(doc)
+    if gaps:
+        frappe.throw(_("Choose the {0} code before sending this repair for review.").format(
+            " and ".join(_(k).lower() for k in gaps)))
+    if doc.get("custom_asset_maintenance_log") and frappe.db.get_value("Asset Maintenance Log",
+            doc.custom_asset_maintenance_log, "has_certificate") and not ops.files("Task", doc.name):
+        frappe.throw(_("This preventive maintenance task requires a certificate. Attach a photo or file first."))
+
+
 @frappe.whitelist(methods=["POST"])
-def update_work_order(name, modified, status=None, priority=None, due_date=None, assignees=None):
+def update_work_order(name, modified, status=None, priority=None, due_date=None, assignees=None, review=None,
+        reason=None):
+    """Change a job. `review=1` with Pending Review sends it for a manager to check; a manager moving a job under
+    review back to work sends it back (with an optional `reason` for the technician)."""
     from frappe.desk.form.assign_to import add, remove
     doc = _work_order(name, write=True)
+    manager = ops.manager()
     if str(doc.modified) != str(modified):
         frappe.throw(_("This work order changed. Refresh it before saving."))
-    if status and status != doc.status:
+    was_review = cint(doc.get("custom_review_requested"))
+    sent_back = False
+    if status and (status != doc.status or (status == "Pending Review" and cint(review) != was_review)):
         if _workflow():
             frappe.throw(_("Tasks use an ERPNext Workflow. Use its workflow actions in Desk."))
-        if status not in STATUSES or (status == "Cancelled" and not ops.manager()):
-            frappe.throw(_("This status change is not allowed."), frappe.PermissionError)
+        if status not in STATUSES or (not manager and (status not in TECH_STATUSES or doc.status in ("Completed", "Cancelled"))):
+            frappe.throw(_("A manager completes the job. Send it for review when you are done.")
+                if status == "Completed" else _("This status change is not allowed."), frappe.PermissionError)
+        review_now = status == "Pending Review" and cint(review)
+        if review_now and not was_review:
+            ready_for_review(doc)
+        sent_back = bool(was_review and manager and status in ("Open", "Working"))
         doc.status = status
-    if (priority or due_date or assignees is not None) and not ops.manager():
-        frappe.throw(_("Only managers can change priority, due date or assignees."), frappe.PermissionError)
+        doc.custom_review_requested = 1 if review_now else 0
+    if priority and not manager:
+        frappe.throw(_("Only managers can change the priority."), frappe.PermissionError)
     if priority:
         if priority not in PRIORITIES:
             frappe.throw(_("Invalid priority."))
         doc.priority = priority
     if due_date:
         doc.exp_end_date = getdate(due_date)
-    doc.save()  # Native dependency/group validation, progress, audit and ToDo closure.
+    wanted = current = None
     if assignees is not None:
         wanted = set(ops.active_users(assignees))
         current = set(_assignees([doc.name])[doc.name])
+        if not manager and (current - wanted or not wanted - current <= _team()):
+            frappe.throw(_("You can add people from the team to your job. Ask a manager to take someone off it."),
+                frappe.PermissionError)
+    doc.save()  # Native dependency/group validation, progress, audit and ToDo closure.
+    if wanted is not None:
         if wanted - current:
-            add({"doctype": "Task", "name": doc.name, "assign_to": sorted(wanted - current), "description": doc.subject})
+            # The caller's right to add these people was checked above.
+            _assign(doc, sorted(wanted - current))
             ops.notify(wanted - current, _("Work order assigned: {0}").format(doc.subject), "Task", doc.name,
                 "Assignment")
         for user in current - wanted:
             remove("Task", doc.name, user)
+    if doc.custom_review_requested and not was_review:
+        from projectit.meters import _managers
+        ops.notify(_managers(), _("Ready for review: {0}").format(doc.subject), "Task", doc.name)
+        doc.add_comment("Info", escape(_("{0} sent the job for review.").format(frappe.utils.get_fullname())))
+    if sent_back:
+        note = ops.text(reason, "the reason", 1000, required=False)
+        doc.add_comment("Comment", escape(_("Sent back: {0}").format(note) if note else _("Sent back for more work.")))
+        ops.notify(_assignees([doc.name])[doc.name], _("Sent back: {0}").format(doc.subject), "Task", doc.name)
+    return get_work_order(doc.name)
+
+
+def _assign(doc, users):
+    """Assign people to a job the caller was already authorised to change (ERPNext's own check would also ask for
+    share rights, which technicians do not have)."""
+    from frappe.desk.form import assign_to
+    args = {"doctype": "Task", "name": doc.name, "assign_to": list(users), "description": doc.subject}
+    adder = getattr(assign_to, "_add", None)
+    return adder(args, ignore_permissions=True) if adder else assign_to.add(args)
+
+
+def _team():
+    """Active staff who use Techy Ops: the people a technician may add to their job."""
+    from projectit import api
+    users = frappe.get_all("User", filters={"enabled": 1, "user_type": "System User"}, pluck="name")
+    return {u for u in users if u not in ("Administrator", "Guest") and api.has_app("Ops", u)}
+
+
+@frappe.whitelist(methods=["POST"])
+def take_work_order(name):
+    """Pick up an open work order nobody is assigned to."""
+    ops.system_user()
+    doc = frappe.get_doc("Task", name, for_update=True)
+    doc.check_permission("read")
+    if not doc.custom_work_order or not permissions.is_available(doc):
+        frappe.throw(_("Someone has already taken this job, or it is no longer open."))
+    if not frappe.has_permission("Task", "write"):
+        frappe.throw(_("You cannot take jobs."), frappe.PermissionError)
+    _assign(doc, [frappe.session.user])
+    doc.add_comment("Info", escape(_("{0} took the job.").format(frappe.utils.get_fullname())))
     return get_work_order(doc.name)
 
 
@@ -289,13 +379,14 @@ def summary():
     filters = {"custom_work_order": 1, "is_template": 0, "status": ["not in", ["Completed", "Cancelled"]]}
     or_filters = None if ops.manager() else {"name": ["in", _mine() or [""]], "owner": frappe.session.user}
     rows = frappe.get_list("Task", filters=filters, or_filters=or_filters, fields=["status", "priority",
-        "exp_end_date"], limit_page_length=0)
+        "exp_end_date", "custom_review_requested"], limit_page_length=0)
     today = getdate(nowdate())
     return {"open": len(rows),
         "overdue": sum(1 for r in rows if r.status == "Overdue" or (r.exp_end_date and getdate(r.exp_end_date) < today)),
         "due_today": sum(1 for r in rows if r.exp_end_date and getdate(r.exp_end_date) == today),
         "urgent": sum(1 for r in rows if r.priority in ("High", "Urgent")),
-        "by_status": {s: sum(1 for r in rows if r.status == s) for s in ("Open", "Overdue", "Working", "Pending Review")}}
+        "by_status": {s: sum(1 for r in rows if r.status == s) for s in ("Open", "Overdue", "Working", "Pending Review")},
+        "review": sum(1 for r in rows if r.status == "Pending Review" and cint(r.custom_review_requested))}
 
 
 def _announce(doc, verb):
@@ -319,10 +410,14 @@ def _stamp_times(doc):
     if doc.status in ("Working", "Pending Review", "Completed") and not doc.get("custom_started_at"):
         doc.custom_started_at = now_datetime()
     doc.custom_completed_at = now_datetime() if doc.status == "Completed" else None
-    # A job taken back from review or reopened after completion: the technician scorecard counts it.
+    # A job a manager sends back from review, or reopens after completion: the technician scorecard counts it.
+    # A technician resuming their own job on hold, or taking back their own review request, does not.
     before = doc.get_doc_before_save() if callable(getattr(doc, "get_doc_before_save", None)) else None
-    if before and before.status in FINISHED and doc.status not in FINISHED + ("Cancelled",):
+    if before and doc.status not in FINISHED + ("Cancelled",) and (before.status == "Completed"
+            or (before.status == "Pending Review" and cint(before.get("custom_review_requested")) and ops.manager())):
         doc.custom_sent_back = cint(doc.get("custom_sent_back")) + 1
+    if doc.status != "Pending Review":
+        doc.custom_review_requested = 0
 
 
 def validate_task(doc, method=None):

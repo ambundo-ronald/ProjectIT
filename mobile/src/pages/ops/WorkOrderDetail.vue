@@ -23,7 +23,7 @@
           </div>
           <h1 class="mt-2 text-[20px] font-semibold leading-snug tracking-tight md:text-[24px]">{{ wo.subject }}</h1>
           <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-            <StatusPill :status="overdue ? 'Overdue' : wo.status" />
+            <StatusPill :status="overdue ? 'Overdue' : displayStatus(wo)" />
             <PriorityFlag :priority="wo.priority" />
             <PromiseBadge v-if="data.promise" :wo="wo" :contract="data.promise.contract_title" detail />
             <span v-if="wo.exp_end_date" class="inline-flex items-center gap-1 text-[13px]" :class="overdue ? 'font-semibold text-red-600' : 'text-gray-600'"><FeatherIcon name="calendar" class="h-3.5 w-3.5" />Due {{ formatDate(wo.exp_end_date) }}</span>
@@ -32,13 +32,24 @@
             <CoverageBadge v-if="data.equipment" :kind="data.equipment.coverage.kind" :until="data.equipment.coverage.until" />
           </div>
 
+          <!-- Nobody has it yet: a technician can take it -->
+          <div v-if="data.can_take" class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-brand-50 px-3 py-2.5 text-sm text-brand-800">
+            <span>Nobody has this job yet.</span>
+            <button class="btn btn-primary btn-sm" :disabled="busy" @click="take"><FeatherIcon name="user-plus" class="h-4 w-4" />Take this job</button>
+          </div>
+          <p v-if="inReview" class="mt-4 flex items-start gap-2 rounded-lg bg-brand-50 px-3 py-2.5 text-sm text-brand-800" role="status">
+            <FeatherIcon name="check-square" class="mt-0.5 h-4 w-4 shrink-0" />
+            <span v-if="data.manager">Ready for review. Approve it to complete the job, or send it back with what still needs doing.</span>
+            <span v-else>Sent for review. A manager will check it and complete the job.</span>
+          </p>
+
           <!-- Status stepper -->
           <ol v-if="wo.status !== 'Cancelled'" class="mt-5 grid grid-cols-4 gap-1.5" aria-label="Status">
             <li v-for="(step, i) in steps" :key="step.status">
               <button
                 type="button"
                 class="group w-full text-left disabled:cursor-default"
-                :disabled="!canAct || step.status === current || busy"
+                :disabled="!canAct || step.status === current || busy || (step.status === 'Completed' && !data.manager)"
                 :aria-current="step.status === current ? 'step' : undefined"
                 :title="canAct && step.status !== current ? `Move to ${step.label}` : step.label"
                 @click="setStatus(step.status)"
@@ -55,7 +66,7 @@
           </div>
           <!-- Desktop actions -->
           <div v-else-if="canAct" class="mt-5 hidden flex-wrap gap-2 md:flex">
-            <button v-for="a in actions" :key="a.status" class="btn" :class="a.style" :disabled="busy" @click="setStatus(a.status)"><FeatherIcon :name="a.icon" class="h-4 w-4" />{{ a.label }}</button>
+            <button v-for="a in actions" :key="a.label" class="btn" :class="a.style" :disabled="busy" @click="act(a)"><FeatherIcon :name="a.icon" class="h-4 w-4" />{{ a.label }}</button>
             <button v-if="data.manager && !closed" class="btn btn-ghost ml-auto text-gray-500" :disabled="busy" @click="cancel">Cancel work order</button>
           </div>
         </div>
@@ -158,6 +169,7 @@
             <div class="flex items-center justify-between">
               <h3 class="section-label">Assigned to</h3>
               <button v-if="data.manager && !closed" class="text-xs font-medium text-brand-600 hover:underline" @click="editing = !editing">{{ editing ? 'Done' : 'Edit' }}</button>
+              <button v-else-if="data.mine && data.can_write && !closed" class="text-xs font-medium text-brand-600 hover:underline" @click="adding = !adding">{{ adding ? 'Cancel' : 'Add helper' }}</button>
             </div>
             <ul class="mt-2 space-y-2">
               <li v-for="p in data.assignees" :key="p.user" class="flex items-center gap-2"><UserAvatar :name="p.full_name" :image="p.image" size="sm" />{{ p.full_name }}</li>
@@ -167,11 +179,16 @@
               <PeoplePicker v-model="assignees" :initial="data.assignees" />
               <button class="btn btn-primary btn-sm w-full" :disabled="busy" @click="saveAssignees">Save assignees</button>
             </div>
+            <div v-else-if="adding" class="mt-3 space-y-2">
+              <PeoplePicker v-model="helpers" :initial="[]" />
+              <p class="text-xs text-gray-500">They join the job with you. A manager can take people off it.</p>
+              <button class="btn btn-primary btn-sm w-full" :disabled="busy || !helpers.length" @click="addHelpers">Add to the job</button>
+            </div>
           </div>
           <dl class="space-y-3 p-4">
             <div class="flex items-center justify-between gap-3">
               <dt class="text-gray-500">Due date</dt>
-              <dd v-if="data.manager && !closed"><input type="date" :value="wo.exp_end_date || ''" class="input h-8 w-36 px-2 text-[13px]" aria-label="Due date" @change="update({ due_date: $event.target.value })" /></dd>
+              <dd v-if="(data.manager || (data.mine && data.can_write)) && !closed"><input type="date" :value="wo.exp_end_date || ''" class="input h-8 w-36 px-2 text-[13px]" aria-label="Due date" @change="update({ due_date: $event.target.value })" /></dd>
               <dd v-else :class="overdue ? 'font-semibold text-red-600' : ''">{{ wo.exp_end_date ? formatDate(wo.exp_end_date) : '—' }}</dd>
             </div>
             <div class="flex items-center justify-between gap-3">
@@ -213,7 +230,7 @@
 
     <!-- Mobile action bar -->
     <div v-if="actionBar" class="fixed inset-x-0 bottom-16 z-30 flex gap-2 border-t border-gray-200 bg-panel/95 p-3 backdrop-blur md:hidden">
-      <button v-for="a in actions" :key="a.status" class="btn btn-lg flex-1" :class="a.style" :disabled="busy" @click="setStatus(a.status)"><FeatherIcon :name="a.icon" class="h-5 w-5" />{{ a.short || a.label }}</button>
+      <button v-for="a in actions" :key="a.label" class="btn btn-lg flex-1" :class="a.style" :disabled="busy" @click="act(a)"><FeatherIcon :name="a.icon" class="h-5 w-5" />{{ a.short || a.label }}</button>
     </div>
   </section>
 </template>
@@ -242,7 +259,7 @@ import FailureCard from '@/components/ops/FailureCard.vue'
 import PhotoButtons from '@/components/ops/PhotoButtons.vue'
 import ProcedureSelect from '@/components/ops/ProcedureSelect.vue'
 import { ui } from '@/data/apps'
-import { api, loadMe, onRealtime, formatDate, fromNow, isOverdue, safeFile } from '@/data/ops'
+import { api, loadMe, onRealtime, formatDate, fromNow, isOverdue, safeFile, displayStatus } from '@/data/ops'
 
 const route = useRoute()
 const data = ref(null)
@@ -276,13 +293,28 @@ const names = computed(() => Object.fromEntries(mentionable.value.map((p) => [p.
 const START = { status: 'Working', label: 'Start work', short: 'Start', icon: 'play', style: 'btn-warning' }
 const HOLD = { status: 'Pending Review', label: 'Put on hold', short: 'Hold', icon: 'pause', style: 'btn-secondary' }
 const COMPLETE = { status: 'Completed', label: 'Mark complete', short: 'Complete', icon: 'check-circle', style: 'btn-success' }
+const RESUME = { ...START, label: 'Resume work', short: 'Resume' }
+// Technicians send finished work for review; a manager approves it (completes) or sends it back.
+const REVIEW = { status: 'Pending Review', review: 1, label: 'Send for review', short: 'Send for review', icon: 'send', style: 'btn-success' }
+const TAKE_BACK = { status: 'Working', label: 'Take back to work on', short: 'Take back', icon: 'rotate-ccw', style: 'btn-secondary' }
+const APPROVE = { status: 'Completed', label: 'Approve & complete', short: 'Approve', icon: 'check-circle', style: 'btn-success' }
+const SEND_BACK = { status: 'Working', sendBack: true, label: 'Send back', short: 'Send back', icon: 'corner-up-left', style: 'btn-secondary' }
+const inReview = computed(() => displayStatus(wo.value) === 'Review')
 const actions = computed(() => {
   if (!data.value) return []
   const s = wo.value.status
-  if (s === 'Completed' || s === 'Cancelled') return [{ status: 'Open', label: 'Reopen', icon: 'rotate-ccw', style: 'btn-secondary' }]
-  if (s === 'Working') return [HOLD, COMPLETE]
-  if (s === 'Pending Review') return [{ ...START, label: 'Resume work', short: 'Resume' }, COMPLETE]
-  return [START, COMPLETE]
+  if (data.value.manager) {
+    if (s === 'Completed' || s === 'Cancelled') return [{ status: 'Open', label: 'Reopen', icon: 'rotate-ccw', style: 'btn-secondary' }]
+    if (inReview.value) return [SEND_BACK, APPROVE]
+    if (s === 'Working') return [HOLD, COMPLETE]
+    if (s === 'Pending Review') return [RESUME, COMPLETE]
+    return [START, COMPLETE]
+  }
+  if (s === 'Completed' || s === 'Cancelled') return []
+  if (inReview.value) return [TAKE_BACK]
+  if (s === 'Working') return [HOLD, REVIEW]
+  if (s === 'Pending Review') return [RESUME, REVIEW]
+  return [START, REVIEW]
 })
 const actionBar = computed(() => !!data.value && canAct.value && wo.value.status !== 'Cancelled')
 watch(actionBar, (on) => (ui.dockLift = on ? 76 : 0), { immediate: true })
@@ -308,9 +340,18 @@ async function run(work) {
 
 const load = () => run(async () => set(await api('projectit.work_orders.get_work_order', { name: route.params.name }))).catch(() => {})
 const update = (changes) => run(async () => set(await api('projectit.work_orders.update_work_order', { name: wo.value.name, modified: wo.value.modified, ...changes }))).catch(() => {})
-function setStatus(status) {
+function act(a) {
+  if (a.sendBack) {
+    const reason = window.prompt('What still needs doing? The technician sees this.', '')
+    if (reason === null) return
+    return update({ status: a.status, reason })
+  }
+  return setStatus(a.status, a.review ? { review: 1 } : {})
+}
+function setStatus(status, extra = {}) {
   const procedure = data.value.procedure
-  if (status === 'Completed' && procedure?.missing) {
+  const finishing = status === 'Completed' || extra.review
+  if (finishing && procedure?.missing) {
     // Same rule the server enforces; point at the first unanswered required step.
     const first = procedure.steps.find((s) => s.required && !s.value && s.field_type !== 'Heading')
     warn(`Finish the procedure first: ${procedure.missing} required step${procedure.missing === 1 ? '' : 's'} still need${procedure.missing === 1 ? 's' : ''} an answer.`)
@@ -318,15 +359,23 @@ function setStatus(status) {
     document.getElementById(`step-${first?.name}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     return
   }
-  if (status === 'Completed' && data.value.failure?.missing?.length) {
-    warn(`Choose the ${data.value.failure.missing.map((k) => k.toLowerCase()).join(' and ')} code before completing this repair.`)
+  if (finishing && data.value.failure?.missing?.length) {
+    warn(`Choose the ${data.value.failure.missing.map((k) => k.toLowerCase()).join(' and ')} code before ${extra.review ? 'sending this repair for review' : 'completing this repair'}.`)
     document.getElementById('failure')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     return
   }
-  update({ status })
+  update({ status, ...extra })
 }
 const cancel = () => window.confirm('Cancel this work order?') && setStatus('Cancelled')
 const saveAssignees = () => update({ assignees: assignees.value }).then(() => (editing.value = false))
+// Technicians add helpers to their job; only managers take people off.
+const adding = ref(false)
+const helpers = ref([])
+const addHelpers = () => update({ assignees: [...new Set([...data.value.assignees.map((p) => p.user), ...helpers.value])] }).then(() => {
+  adding.value = false
+  helpers.value = []
+})
+const take = () => run(async () => set(await api('projectit.work_orders.take_work_order', { name: wo.value.name }))).catch(() => {})
 const toggle = (step, done) => run(async () => set(await api('projectit.work_orders.toggle_step', { name: wo.value.name, step: step.name, done: done ? 1 : 0 }))).catch(() => load())
 const attachProcedure = () => run(async () => set(await api('projectit.procedures.attach', { work_order: wo.value.name, procedure: picked.value }))).then(() => (picked.value = '')).catch(() => {})
 const detachProcedure = () => window.confirm('Remove this procedure from the work order?') && run(async () => set(await api('projectit.procedures.detach', { work_order: wo.value.name }))).catch(() => {})

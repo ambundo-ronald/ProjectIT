@@ -66,7 +66,7 @@ class AttendanceTests(unittest.TestCase):
     def test_checkout_uses_final_server_time_not_first_segment_end(self):
         self.checkout()
         self.module._punch.assert_called_once_with("EMP-1", "TS-1", "OUT", datetime(2026,9,29,18), 0.0, 0.0)
-        self.doc.check_permission.assert_any_call("submit")
+        self.assertTrue(self.doc.flags.ignore_permissions)  # their own timesheet, checked above
         self.doc.submit.assert_called_once()
         segments = [call.args[1] for call in self.doc.append.call_args_list]
         self.assertEqual([r["activity_type"] for r in segments], ["Overtime","Regular","Overtime"])

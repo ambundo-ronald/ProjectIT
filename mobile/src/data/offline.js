@@ -110,9 +110,12 @@ const WRITES = {
   'projectit.work_orders.update_work_order': {
     job: (a) => a.name,
     apply(d, a) {
-      if (a.status) d.work_order.status = a.status
+      if (a.status) {
+        d.work_order.status = a.status
+        d.work_order.custom_review_requested = a.status === 'Pending Review' && Number(a.review) ? 1 : 0
+      }
     },
-    label: (a) => (a.status ? `Status: ${a.status === 'Working' ? 'In progress' : a.status === 'Pending Review' ? 'On hold' : a.status}` : 'Job update'),
+    label: (a) => (a.status ? `Status: ${a.status === 'Working' ? 'In progress' : a.status === 'Pending Review' ? (Number(a.review) ? 'Sent for review' : 'On hold') : a.status}` : 'Job update'),
   },
   'projectit.work_orders.add_comment': {
     job: (a) => a.name,

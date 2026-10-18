@@ -63,7 +63,8 @@ export const STATUS_LABEL = {
   Open: 'Open',
   Overdue: 'Overdue',
   Working: 'In progress',
-  'Pending Review': 'On hold / review',
+  'Pending Review': 'On hold',
+  Review: 'Waiting for review',
   Completed: 'Done',
   Cancelled: 'Cancelled',
 }
@@ -73,9 +74,13 @@ export const STATUS_STYLE = {
   Overdue: 'bg-red-100 text-red-800',
   Working: 'bg-amber-100 text-amber-800',
   'Pending Review': 'bg-violet-100 text-violet-800',
+  Review: 'bg-brand-100 text-brand-800',
   Completed: 'bg-green-100 text-green-800',
   Cancelled: 'bg-gray-200 text-gray-700',
 }
+
+/** A job sent for review shows as "Waiting for review" (its status is Pending Review with the review flag). */
+export const displayStatus = (wo) => (wo.status === 'Pending Review' && Number(wo.custom_review_requested) ? 'Review' : wo.status)
 
 export const PRIORITY_STYLE = {
   Low: 'text-gray-600',

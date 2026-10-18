@@ -58,6 +58,8 @@ The choice applies to all three apps and is remembered on that device.
 
 ## Work orders
 
+Technicians send a finished job **for review**, and a manager approves it (completing it) or sends it back. See [docs/employee-access.md](employee-access.md) for exactly what technicians and managers can do.
+
 - Create a work order from **Work orders**, from an asset, or by approving a request. Each one has a priority, category, due date, asset or location, assignees, an optional project, an optional procedure from the library (see [Procedures](#procedures)) and an optional quick checklist.
 - The board groups work orders by status: Open (including ERPNext Overdue), In progress (Working), On hold / review (Pending Review) and Done (Completed). The list view adds status filters and search.
 - Technicians see the work orders assigned to them or created by them. They can start, hold, complete and reopen them, tick checklist steps, add photos and post updates. They can create work orders but assign them only to themselves.
@@ -362,7 +364,7 @@ Managers open **Reports** from the sidebar, or from **More** on a phone. Choose 
 - **Technician scorecard:** how much each person did and how well. For jobs they completed in the period:
   - **On time:** finished by the due date (jobs with a due date only).
   - **Fixed first time:** repairs where the same machine needed no other repair opened within 30 days of completion.
-  - **Sent back:** jobs that went back to work after review or completion. Each return is counted on the job (*Times Sent Back* on the Task) from this update on; older jobs count as never sent back.
+  - **Sent back:** jobs a manager sent back from review, or reopened after completion. Each is counted on the job (*Times Sent Back* on the Task). A technician resuming their own job on hold, or taking back their own review request, does not count.
   - **Coded:** repairs with both a problem and a cause code.
   - **Customer rating:** the average of the customers' star ratings (see *Customer ratings*).
   - Average time to finish, hours logged per job (from the job timer; jobs without entries share their typed hours between the assignees), and open jobs with how many are overdue.

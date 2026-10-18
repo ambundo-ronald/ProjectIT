@@ -135,9 +135,10 @@ class WorkOrderTests(OpsTestCase):
 
     def test_unassigned_technician_cannot_open_work_order(self):
         self.frappe.get_all.return_value = []
-        with self.assertRaises(PermissionError):
+        self.doc.status = "Working"  # not an open job anyone may pick up
+        with self.assertRaises(PermissionError) as caught:
             self.wo._work_order("TASK-1")
-        self.doc.check_permission.assert_called_once_with("read")
+        self.assertIn("not assigned to you", str(caught.exception))  # the app's clear message, before ERPNext's
 
     def test_plain_task_is_not_a_work_order(self):
         self.manager()

@@ -170,7 +170,6 @@ def check_out(timesheet, latitude, longitude, photo, filename=None):
     if doc.employee != employee.name:
         frappe.throw(_("You can only check out your own timesheet."), frappe.PermissionError)
     doc.check_permission("write")
-    doc.check_permission("submit")
     punches = frappe.db.sql("""
         SELECT name, log_type, time FROM `tabEmployee Checkin`
         WHERE custom_timesheet = %(timesheet)s AND employee = %(employee)s
@@ -204,6 +203,9 @@ def check_out(timesheet, latitude, longitude, photo, filename=None):
             "activity_type": settings.regular_time_activity_type if regular else settings.over_time_activity_type,
         })
     doc.note = (doc.note or "") + f"<p>Check out at {timestamp}</p>"
+    # Their own open check-in (checked above): field staff submit it here without a general right to submit
+    # timesheets in ERPNext.
+    doc.flags.ignore_permissions = True
     doc.submit()
     _punch(employee.name, doc.name, "OUT", timestamp, latitude, longitude)
     _photo(photo, filename, doc.name)

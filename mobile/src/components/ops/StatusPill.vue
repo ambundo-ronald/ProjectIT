@@ -12,6 +12,7 @@ const STYLES = {
   Overdue: ['bg-red-50 text-red-700', 'bg-red-500'],
   Working: ['bg-amber-50 text-amber-800', 'bg-amber-500'],
   'Pending Review': ['bg-violet-50 text-violet-700', 'bg-violet-500'],
+  Review: ['bg-brand-50 text-brand-700', 'bg-brand-500'],
   Completed: ['bg-green-50 text-green-700', 'bg-green-500'],
   Cancelled: ['bg-gray-100 text-gray-600', 'bg-gray-400'],
   Pending: ['bg-amber-50 text-amber-800', 'bg-amber-500'],
