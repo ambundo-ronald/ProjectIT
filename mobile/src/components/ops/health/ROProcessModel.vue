@@ -103,7 +103,10 @@ function start() {
   }
   const meter = (re) => props.meters.find((m) => re.test(m.meter_name) && m.forecast && m.last)
   const flow = meter(/product|permeate.*flow|flow/i)
-  if (flow && flow.forecast.rate_per_day < 0) {
+  if (props.process.normalised_fouling > 0 && props.process.normalised_fouling < 60) {
+    // Best: the normalised flow trend, with temperature and pressure taken out.
+    use('fouling', Math.round(props.process.normalised_fouling), 'normalised flow trend')
+  } else if (flow && flow.forecast.rate_per_day < 0) {
     const perYear = (-flow.forecast.rate_per_day * 365 * 100) / flow.last
     if (perYear > 0 && perYear < 60) use('fouling', Math.round(perYear), `${flow.meter_name} trend`)
   }

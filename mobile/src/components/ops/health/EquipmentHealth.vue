@@ -88,7 +88,7 @@
             <LineChart v-if="!tables[m.name]" :points="m.points" :forecast="m.forecast?.line" :excluded="m.excluded" :limits="m.limits" :target="m.next_due" :unit="m.unit" :label="`${m.meter_name} readings`" />
             <div v-else class="max-h-[180px] overflow-y-auto">
               <table class="w-full text-sm"><tbody class="divide-y divide-gray-100">
-                <tr v-for="p in [...m.points].reverse()" :key="p.on"><td class="py-1 text-gray-600">{{ formatDate(p.on) }}</td><td class="py-1 text-right tabular-nums" :class="isExcluded(m, p) ? 'text-red-600 line-through' : ''">{{ num(p.value) }} {{ m.unit }}</td></tr>
+                <tr v-for="p in tableRows(m)" :key="p.on"><td class="py-1 text-gray-600">{{ formatDate(p.on) }}</td><td class="py-1 text-right tabular-nums" :class="p.left_out ? 'text-red-600 line-through' : ''" :title="p.left_out ? 'Left out of the trend' : ''">{{ num(p.value) }} {{ m.unit }}</td></tr>
               </tbody></table>
             </div>
             <p class="mt-1 flex flex-wrap gap-x-3 px-2 text-[11px] text-gray-500">
@@ -132,7 +132,8 @@
       </div>
 
       <WhatIfPlanner :planner="h.planner" :manager="h.manager" :money="money" />
-      <ROProcessModel v-if="h.process" :process="h.process" :meters="h.meters" />
+      <ROPerformance v-if="h.ro" :ro="h.ro" :equipment="equipment" :manager="h.manager" @reload="load" />
+      <ROProcessModel v-if="h.process" :key="h.as_of" :process="h.process" :meters="h.meters" />
     </template>
   </div>
 </template>
@@ -143,6 +144,7 @@ import LineChart from '@/components/ops/charts/LineChart.vue'
 import BarChart from '@/components/ops/charts/BarChart.vue'
 import WhatIfPlanner from './WhatIfPlanner.vue'
 import ROProcessModel from './ROProcessModel.vue'
+import ROPerformance from './ROPerformance.vue'
 import { api, formatDate } from '@/data/ops'
 
 const props = defineProps({ equipment: { type: String, required: true } })
@@ -160,7 +162,9 @@ const TRUST = {
   Low: { chip: 'bg-gray-100 text-gray-600', icon: 'help-circle' },
 }
 const ageDays = (on) => Math.max(0, Math.round((new Date() - new Date(String(on).replace(' ', 'T'))) / 86400000))
-const isExcluded = (m, p) => m.excluded.some((e) => e.on === p.on)
+// Every reading, newest first; the ones left out of the trend are struck through.
+const tableRows = (m) => [...m.points, ...m.excluded.map((e) => ({ ...e, left_out: true }))]
+  .sort((a, b) => new Date(String(b.on).replace(' ', 'T')) - new Date(String(a.on).replace(' ', 'T')))
 // A likely range for a date; nothing when it is the same day (a very steady trend).
 const range = (a, b) => (!a || (b && formatDate(a) === formatDate(b)) ? '' : `between ${formatDate(a)} and ${b ? formatDate(b) : 'later than a year'}`)
 const barTone = (share) => (share >= 0.8 ? 'bg-green-500' : share >= 0.5 ? 'bg-amber-400' : 'bg-red-500')
@@ -227,11 +231,12 @@ const dataGaps = computed(() => {
   return gaps
 })
 
-onMounted(async () => {
+async function load() {
   try {
     h.value = await api('projectit.health.machine_health', { equipment: props.equipment })
   } catch (e) {
     error.value = e.message
   }
-})
+}
+onMounted(load)
 </script>

@@ -198,6 +198,27 @@ Each machine has a **Health** tab, next to Overview. It is built from what the a
 
 Name meters clearly (for example *Feed TDS*, *Permeate TDS*, *Feed pressure*, *Product flow*) so the model finds them.
 
+#### RO logging and normalised performance
+
+For reverse-osmosis machines, the Health tab compares the membranes with how they performed at a **baseline**, correcting for temperature and pressure (in the spirit of ASTM D4516). A cold month or a higher feed pressure is then not mistaken for fouling.
+
+- **Set up RO logging** (managers, on the Health tab):
+  - Adds the meters the machine is missing: feed, concentrate and permeate pressure; feed and permeate TDS; product and concentrate flow; water temperature; running hours. Existing meters with similar names are reused.
+  - Creates the **RO log sheet** procedure: each Number step records its reading on the machine's meter, plus leak and antiscalant checks.
+  - Attach the log sheet to the machine's service visits (the contract's visit procedure, or the PM task), so every visit records a full, comparable set of readings.
+- **A log** is the readings taken on one job, or else on one day. Readings marked unusual and not confirmed, or far from a meter's trend, are left out so a typo can't distort a log.
+- **Normalised values:** each log is compared with the baseline as a % change in:
+  - **Permeate flow** (corrected to the baseline's net driving pressure and temperature): falls as membranes foul or scale.
+  - **Salt passage** (corrected to the baseline's net driving pressure): rises with scaling, damage or worn membranes.
+  - **Pressure drop** (feed minus concentrate pressure, corrected to the baseline's flow): rises as the feed channels clog.
+
+  Net driving pressure uses the average of feed and concentrate pressure, the permeate pressure, and osmotic pressure of about 0.7 bar per 1,000 mg/L along the membranes. Anything not recorded is assumed (25 °C, permeate pressure 0, concentrate pressure = feed − 0.7 bar, 75% recovery) and listed on the card.
+- **Cleaning rules** (Techy Ops Settings › RO Membrane Cleaning; defaults: flow down 10%, salt passage up 10%, pressure drop up 15%):
+  - When the latest log breaks one, the card says **Clean the membranes (CIP)** with the reasons.
+  - One **Membrane cleaning (CIP)** job (High priority) is raised and managers are told. No second job is raised while it is open.
+- **Baseline:** the first full log, unless a manager chooses **Use the latest log as the baseline**, for example after new membranes are fitted.
+- The RO process model takes its fouling rate from the normalised flow trend when there is one.
+
 #### How far to trust it
 
 - **Each forecast** shows:

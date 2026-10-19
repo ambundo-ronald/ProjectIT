@@ -23,7 +23,11 @@
   "require_failure_codes",
   "push_section",
   "vapid_public_key",
-  "vapid_private_key"
+  "vapid_private_key",
+  "ro_section",
+  "cip_flow_drop",
+  "cip_salt_rise",
+  "cip_dp_rise"
  ],
  "fields": [
   {
@@ -150,6 +154,30 @@
    "label": "Push Private Key",
    "hidden": 1,
    "length": 1000
+  },
+  {
+   "fieldname": "ro_section",
+   "fieldtype": "Section Break",
+   "label": "RO Membrane Cleaning",
+   "description": "Normalised performance against the baseline log; breaking any rule raises one cleaning (CIP) job."
+  },
+  {
+   "fieldname": "cip_flow_drop",
+   "fieldtype": "Percent",
+   "label": "Clean When Normalised Flow Falls By",
+   "default": "10"
+  },
+  {
+   "fieldname": "cip_salt_rise",
+   "fieldtype": "Percent",
+   "label": "Clean When Normalised Salt Passage Rises By",
+   "default": "10"
+  },
+  {
+   "fieldname": "cip_dp_rise",
+   "fieldtype": "Percent",
+   "label": "Clean When Normalised Pressure Drop Rises By",
+   "default": "15"
   }
  ],
  "index_web_pages_for_search": 0,

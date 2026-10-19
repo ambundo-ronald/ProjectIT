@@ -443,6 +443,17 @@ def machine_health(equipment):
             return round(sum(values) / len(values), 2) if values else None
         planner.update(cost_per_service=avg("Preventive"), cost_per_breakdown=avg("Corrective"), labour_rate=rate)
         forecasts["cost_next_year"] = round(sum(c for _d, c, _j in costs) / year_fraction, 2) if enough else None
+    process = _process_inputs(row, series)
+    ro_perf = None
+    if process:
+        from projectit import ro
+        ro_perf = ro.performance(row.name)
+        # Fouling from normalised flow is the better measure: temperature and pressure are taken out.
+        pts = ro_perf["points"]
+        if len(pts) >= 3:
+            fit = trend([(p["on"], p["flow"]) for p in pts[-12:]])
+            if fit and fit["rate"] < 0:
+                process["normalised_fouling"] = round(-fit["rate"] * 365, 1)
     year_repairs = [j for j in jobs if j.custom_work_category == "Corrective" and get_datetime(j.creation) >= start]
     data = {"meters": len(series), "stale": [s["meter_name"] for s in series if s["stale"] or s["last"] is None],
         "readings_90": sum(1 for s in series for p in s["points"] if _days_between(p["on"], now) <= SCORE_DAYS),
@@ -456,5 +467,5 @@ def machine_health(equipment):
         "labour_rate_set": bool(rate) if manager else None}
     return {"machine": {"name": row.name, "equipment_name": row.equipment_name, "status": row.status}, "data": data,
         "health": {**health, "down_now": down_now}, "meters": series, "months": chart, "failures": failures,
-        "forecasts": forecasts, "planner": planner, "process": _process_inputs(row, series), "manager": manager,
+        "forecasts": forecasts, "planner": planner, "process": process, "ro": ro_perf, "manager": manager,
         "currency": frappe.db.get_default("currency"), "as_of": now}

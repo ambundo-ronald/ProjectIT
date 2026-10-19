@@ -247,6 +247,9 @@ def _record(doc, value, job=None, note=None, reset=False, flagged=False, confirm
     doc.save()
     if raised:
         reading.db_set("triggered_job", raised[0].name)
+    if doc.equipment:
+        from projectit import ro
+        ro.after_reading(doc.equipment)
     return reading, raised
 
 
