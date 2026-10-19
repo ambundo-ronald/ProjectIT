@@ -157,6 +157,41 @@ def _value(value):
     return value
 
 
+CHECK_HISTORY = 12
+
+
+def unusual(doc, value):
+    """Why a new reading looks wrong next to this meter's recent readings, or None when it looks fine.
+
+    Gauges: far from the median of recent readings (five times their usual spread, which is at least 5% of the
+    median). Counters: a rise much bigger than the meter's usual rate over the time since the last reading."""
+    rows = frappe.get_all("Techy Meter Reading", filters={"meter": doc.name, "reset": 0}, fields=["value", "reading_on"],
+        order_by="reading_on desc, creation desc", limit_page_length=CHECK_HISTORY)
+    unit = doc.unit or ""
+    if doc.meter_type == "Gauge":
+        if len(rows) < 4:
+            return None
+        values = sorted(flt(r.value) for r in rows)
+        median = values[len(values) // 2]
+        spread = sorted(abs(v - median) for v in values)[len(values) // 2] * 1.4826
+        spread = max(spread, abs(median) * 0.05, 1e-6)
+        if abs(value - median) > 5 * spread:
+            return _("{0} {1} is far from this meter's usual readings (around {2} {1}).").format(fmt(value), unit, fmt(median))
+        return None
+    if len(rows) < 3 or not doc.last_reading_on:
+        return None
+    days = (get_datetime(rows[0].reading_on) - get_datetime(rows[-1].reading_on)).total_seconds() / 86400
+    rate = (flt(rows[0].value) - flt(rows[-1].value)) / days if days >= 1 else 0
+    if rate <= 0:
+        return None
+    since = max((now_datetime() - get_datetime(doc.last_reading_on)).total_seconds() / 86400, 1)
+    rise = value - flt(doc.last_reading)
+    if rise > max(3 * rate * since, rate * (since + 7)):
+        return _("That is {0} {1} more in {2} day(s); it usually goes up about {3} {1} a day.").format(
+            fmt(rise), unit, int(round(since)), fmt(rate))
+    return None
+
+
 def _job_for_reading(work_order, meter):
     """A reading taken on a job must be for that job's machine, by someone who can see the job."""
     if not work_order:
@@ -169,20 +204,26 @@ def _job_for_reading(work_order, meter):
 
 
 @frappe.whitelist(methods=["POST"])
-def record_reading(meter, value, work_order=None, note=None, reset=0):
+def record_reading(meter, value, work_order=None, note=None, reset=0, confirm=0):
+    """Record a reading. An unusual one is not saved until the person confirms it (`confirm=1`); a reading sent
+    later from a phone that was offline (`confirm=2`) is saved and marked unusual without asking."""
     doc = _meter(meter, for_update=True)
     reset = bool(cint(reset))
     if reset and not ops.manager():
         frappe.throw(_("Only managers can record a replaced or reset meter."), frappe.PermissionError)
     job = _job_for_reading(work_order, doc)
-    reading, raised = _record(doc, value, job, ops.text(note, "a note", 280, required=False), reset)
+    warning = None if reset else unusual(doc, _value(value))
+    if warning and not cint(confirm):
+        return {"needs_confirm": True, "warning": warning}
+    reading, raised = _record(doc, value, job, ops.text(note, "a note", 280, required=False), reset,
+        flagged=bool(warning), confirmed=bool(warning) and cint(confirm) == 1)
     if job:
         frappe.get_doc("Task", job).add_comment("Info", escape(_("{0} recorded {1}: {2} {3}.").format(
             frappe.utils.get_fullname(), doc.meter_name, fmt(reading.value), doc.unit)))
     return {"meter": summary(doc), "raised": [{"name": t.name, "subject": t.subject} for t in raised]}
 
 
-def _record(doc, value, job=None, note=None, reset=False):
+def _record(doc, value, job=None, note=None, reset=False, flagged=False, confirmed=False):
     """Save a reading on a locked meter and run its triggers; returns (reading, jobs raised)."""
     if not cint(doc.active):
         frappe.throw(_("{0} is no longer in use.").format(doc.meter_name))
@@ -194,7 +235,7 @@ def _record(doc, value, job=None, note=None, reset=False):
         frappe.throw(_("A counter reading cannot be negative."))
     reading = frappe.get_doc({"doctype": "Techy Meter Reading", "meter": doc.name, "value": value,
         "reading_on": now_datetime(), "recorded_by": frappe.session.user, "equipment": doc.equipment, "asset": doc.asset,
-        "work_order": job, "reset": int(reset), "note": note})
+        "work_order": job, "reset": int(reset), "note": note, "unusual": int(flagged), "confirmed": int(confirmed)})
     reading.insert(ignore_permissions=True)
     doc.last_reading, doc.last_reading_on, doc.last_reading_by = value, reading.reading_on, frappe.session.user
     if reset:
@@ -220,7 +261,15 @@ def find_meter(meter_name, equipment=None, asset=None):
     return None
 
 
-def record_from_step(task, meter_name, value, label, previous=None):
+def step_warning(task, meter_name, value):
+    """The unusual-reading warning for a procedure Number step saved to a meter, or None."""
+    name = find_meter(meter_name, task.get("custom_equipment"), None if task.get("custom_equipment") else task.get("custom_asset"))
+    if not name or value in (None, ""):
+        return None
+    return unusual(frappe.get_doc("Techy Meter", name), _value(value))
+
+
+def record_from_step(task, meter_name, value, label, previous=None, flagged=False, confirmed=False):
     """A procedure Number step saved to a meter: replace the step's earlier reading, record the new one.
 
     The caller has checked the technician may answer the job. Returns the reading name, or None when the
@@ -234,7 +283,8 @@ def record_from_step(task, meter_name, value, label, previous=None):
         doc = frappe.get_doc("Techy Meter", name, for_update=True)
     if value in (None, ""):
         return None
-    reading, _raised = _record(doc, value, task.name, _("Procedure step: {0}").format(label)[:280])
+    reading, _raised = _record(doc, value, task.name, _("Procedure step: {0}").format(label)[:280], flagged=flagged,
+        confirmed=confirmed)
     return reading.name
 
 

@@ -226,10 +226,7 @@ def ready_for_review(doc):
     missing = procedures.missing_required(doc.name)
     if missing:
         frappe.throw(_("Finish the procedure first: {0} required step(s) still need an answer.").format(missing))
-    gaps = failures.missing(doc)
-    if gaps:
-        frappe.throw(_("Choose the {0} code before sending this repair for review.").format(
-            " and ".join(_(k).lower() for k in gaps)))
+    failures.check_complete(doc, _("sending for review"))
     if doc.get("custom_asset_maintenance_log") and frappe.db.get_value("Asset Maintenance Log",
             doc.custom_asset_maintenance_log, "has_certificate") and not ops.files("Task", doc.name):
         frappe.throw(_("This preventive maintenance task requires a certificate. Attach a photo or file first."))

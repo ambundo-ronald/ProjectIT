@@ -13,6 +13,11 @@
         <text :x="width - pad.r" :y="y(l.value) + (l.type === 'Below' ? 12 : -4)" text-anchor="end" class="fill-red-600 text-[10px] font-semibold">{{ l.type === 'Below' ? 'Min' : 'Max' }} {{ fmt(l.value) }}</text>
       </g>
       <line v-if="target !== null && target !== undefined" :x1="pad.l" :x2="width - pad.r" :y1="y(target)" :y2="y(target)" class="stroke-gray-400" stroke-width="1" stroke-dasharray="2 3" />
+      <!-- readings left out of the trend -->
+      <g v-for="e in excluded" :key="`ex${e.on}`">
+        <circle :cx="x(t(e.on))" :cy="edge(e.value)" r="5" fill="var(--chart-surface)" class="stroke-red-500" stroke-width="2" />
+        <text v-if="edge(e.value) !== y(Number(e.value))" :x="x(t(e.on)) + 8" :y="edge(e.value) + 4" class="fill-red-600 text-[10px] font-semibold">{{ fmt(e.value) }}</text>
+      </g>
       <!-- the readings, then the projection -->
       <path :d="path(points)" fill="none" stroke="var(--series-1)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
       <path v-if="forecast?.length" :d="path(forecast)" fill="none" stroke="var(--series-1)" stroke-width="2" stroke-dasharray="6 5" stroke-linecap="round" opacity="0.8" />
@@ -38,6 +43,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 const props = defineProps({
   points: { type: Array, default: () => [] }, // [{ on, value }]
   forecast: { type: Array, default: null }, // [{ on, value }], drawn dashed
+  excluded: { type: Array, default: () => [] }, // [{ on, value }]: readings left out of the trend, drawn as rings
   limits: { type: Array, default: () => [] }, // [{ type: 'Above' | 'Below', value }]
   target: { type: Number, default: null }, // a quiet reference line (e.g. next service)
   unit: { type: String, default: '' },
@@ -64,6 +70,7 @@ const xDomain = computed(() => {
   return ts.length ? [lo, hi > lo ? hi : lo + 86400000] : [0, 1]
 })
 const yDomain = computed(() => {
+  // Readings left out of the trend do not stretch the scale: a typo of 410 must not flatten readings around 40.
   const vs = [...all.value.map((p) => Number(p.value)), ...props.limits.map((l) => Number(l.value))]
   if (props.target !== null && props.target !== undefined) vs.push(Number(props.target))
   if (!vs.length) return [0, 1]
@@ -75,6 +82,8 @@ const yDomain = computed(() => {
 })
 const x = (ms) => pad.l + ((ms - xDomain.value[0]) / (xDomain.value[1] - xDomain.value[0])) * (width.value - pad.l - pad.r)
 const y = (v) => pad.t + (1 - (v - yDomain.value[0]) / (yDomain.value[1] - yDomain.value[0])) * (props.height - pad.t - pad.b)
+// A left-out reading beyond the scale sits on the plot's edge, with its value written beside it.
+const edge = (v) => Math.min(Math.max(y(Number(v)), pad.t), props.height - pad.b)
 const path = (pts) => pts.map((p, i) => `${i ? 'L' : 'M'}${x(t(p.on)).toFixed(1)},${y(Number(p.value)).toFixed(1)}`).join(' ')
 
 function niceStep(span, count) {

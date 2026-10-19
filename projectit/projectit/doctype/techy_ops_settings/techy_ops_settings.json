@@ -128,8 +128,8 @@
    "fieldname": "require_failure_codes",
    "fieldtype": "Check",
    "default": "0",
-   "label": "Require Problem and Cause Codes to Complete a Repair",
-   "description": "Corrective jobs on a machine (customer equipment or our assets) cannot be completed until the technician chooses a problem and a cause code. Keeps the failure reports complete."
+   "label": "Require Failure Codes and Downtime on Repairs",
+   "description": "Repairs on a machine need a problem and a cause code, and an answer to whether the machine was down, before they are sent for review or completed."
   },
   {
    "fieldname": "push_section",

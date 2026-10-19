@@ -364,6 +364,11 @@ function setStatus(status, extra = {}) {
     document.getElementById('failure')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     return
   }
+  if (finishing && data.value.failure?.downtime_missing) {
+    warn(`Say whether the machine was down before ${extra.review ? 'sending this repair for review' : 'completing this repair'}.`)
+    document.getElementById('failure')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    return
+  }
   update({ status, ...extra })
 }
 const cancel = () => window.confirm('Cancel this work order?') && setStatus('Cancelled')
@@ -396,7 +401,13 @@ function answer(step, payload) {
   saving[step.name] = true
   queue = queue.then(async () => {
     try {
-      set(await api('projectit.procedures.answer', { work_order: wo.value.name, step: step.name, ...payload }))
+      let result = await api('projectit.procedures.answer', { work_order: wo.value.name, step: step.name, ...payload })
+      if (result?.needs_confirm) {
+        // An unusual reading: check with the person before it is saved.
+        if (!window.confirm(`${result.warning}\n\nSave it anyway?`)) return await load()
+        result = await api('projectit.procedures.answer', { work_order: wo.value.name, step: step.name, ...payload, confirm: 1 })
+      }
+      set(result)
     } catch (e) {
       warn(e.message)
       await load()

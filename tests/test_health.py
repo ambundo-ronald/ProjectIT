@@ -6,8 +6,8 @@ from datetime import datetime, timedelta
 from test_ops import Dict, OpsTestCase
 
 
-def series(name, kind, last, limits=(), next_due=None):
-    return {"meter_name": name, "meter_type": kind, "last": last, "unit": "u", "next_due": next_due,
+def series(name, kind, last, limits=(), next_due=None, stale=False):
+    return {"meter_name": name, "meter_type": kind, "last": last, "unit": "u", "next_due": next_due, "stale": stale,
         "limits": [{"type": t, "value": v} for t, v in limits]}
 
 
@@ -32,6 +32,33 @@ class HealthTests(OpsTestCase):
         self.assertEqual(c["share"], 0)
         self.assertIn("above its limit", c["detail"])
         self.assertIsNone(self.health._condition([series("Hours", "Counter", 10), series("TDS", "Gauge", 30)]))
+
+    def test_stale_readings_do_not_count(self):
+        c = self.health._condition([series("TDS", "Gauge", 80, [("Above", 50)], stale=True), series("Flow", "Gauge", 1000, [("Below", 850)])])
+        self.assertEqual(c["share"], 1.0)  # only the fresh, in-range flow reading counts
+        self.assertIn("not counted: TDS", c["detail"])
+        c = self.health._condition([series("TDS", "Gauge", 80, [("Above", 50)], stale=True)])
+        self.assertIsNone(c["share"])
+
+    def test_a_typo_is_left_out_of_the_trend(self):
+        t0 = datetime(2026, 9, 1)
+        points = [(t0 + timedelta(days=d), 20 + 0.5 * d) for d in range(0, 40, 4)]
+        points[5] = (points[5][0], 200)  # a typo: 200 instead of 30
+        fit, out = self.health.robust_trend(points)
+        self.assertEqual(out, [5])
+        self.assertAlmostEqual(fit["rate"], 0.5, places=6)
+        fit, out = self.health.robust_trend(points, keep={5})  # confirmed by the person: it stays
+        self.assertEqual(out, [])
+
+    def test_confidence(self):
+        t0 = datetime(2026, 9, 1)
+        steady = self.health.trend([(t0 + timedelta(days=d), 10 + d) for d in range(0, 40, 4)])
+        self.assertEqual(self.health.confidence(steady, 2, "Gauge")["level"], "High")
+        self.assertEqual(self.health.confidence(steady, 60, "Gauge")["level"], "Low")  # out of date
+        few = self.health.trend([(t0 + timedelta(days=d), 10 + d) for d in (0, 3, 6)])
+        self.assertEqual(self.health.confidence(few, 1, "Gauge")["level"], "Low")
+        noisy = self.health.trend([(t0 + timedelta(days=d), 10 + (d % 8) * 5 + d * 0.1) for d in range(0, 40, 4)])
+        self.assertEqual(self.health.confidence(noisy, 1, "Gauge")["level"], "Medium")
 
     def test_score_scales_to_what_is_measured(self):
         row = Dict(name="EQ-1")

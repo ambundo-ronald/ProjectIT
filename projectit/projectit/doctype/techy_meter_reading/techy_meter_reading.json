@@ -14,7 +14,9 @@
   "work_order",
   "triggered_job",
   "reset",
-  "note"
+  "note",
+  "unusual",
+  "confirmed"
  ],
  "fields": [
   {
@@ -94,11 +96,25 @@
    "fieldtype": "Small Text",
    "label": "Note",
    "read_only": 1
+  },
+  {
+   "fieldname": "unusual",
+   "fieldtype": "Check",
+   "label": "Looked Unusual",
+   "read_only": 1,
+   "description": "Far from this meter's usual readings when it was recorded."
+  },
+  {
+   "fieldname": "confirmed",
+   "fieldtype": "Check",
+   "label": "Confirmed",
+   "read_only": 1,
+   "description": "The person recording it confirmed an unusual reading is right."
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-14 15:00:00.000000",
+ "modified": "2026-10-19 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Techy Meter Reading",

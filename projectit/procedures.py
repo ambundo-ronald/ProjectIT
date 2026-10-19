@@ -284,7 +284,7 @@ def _follow_up(doc, row):
 
 
 @frappe.whitelist(methods=["POST"])
-def answer(work_order, step, value=None, photo=None):
+def answer(work_order, step, value=None, photo=None, confirm=0):
     doc = _work_order(work_order)
     name = _run_name(doc.name)
     if not name:
@@ -294,6 +294,12 @@ def answer(work_order, step, value=None, photo=None):
     if not row:
         frappe.throw(_("This step is not part of the procedure."))
     stored, failed = _value(row, value, photo)
+    warning = None
+    if row.field_type == "Number" and row.get("meter") and stored not in (None, ""):
+        from projectit import meters
+        warning = meters.step_warning(doc, row.meter, stored)
+        if warning and not cint(confirm):
+            return {"needs_confirm": True, "warning": warning}
     if row.field_type in ("Photo", "Signature"):
         if photo:
             prefix = "signature" if row.field_type == "Signature" else "procedure"
@@ -309,7 +315,8 @@ def answer(work_order, step, value=None, photo=None):
     if row.field_type == "Number" and row.get("meter"):
         from projectit import meters
         # The answer is also the machine's meter reading (e.g. commissioning TDS), replacing an earlier answer.
-        row.meter_reading = meters.record_from_step(doc, row.meter, stored, row.label, row.get("meter_reading"))
+        row.meter_reading = meters.record_from_step(doc, row.meter, stored, row.label, row.get("meter_reading"),
+            flagged=bool(warning), confirmed=bool(warning) and cint(confirm) == 1)
     run.save(ignore_permissions=True)
     if stored and doc.status in ("Open", "Overdue"):
         doc.reload()

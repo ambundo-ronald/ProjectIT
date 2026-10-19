@@ -198,6 +198,24 @@ Each machine has a **Health** tab, next to Overview. It is built from what the a
 
 Name meters clearly (for example *Feed TDS*, *Permeate TDS*, *Feed pressure*, *Product flow*) so the model finds them.
 
+#### How far to trust it
+
+- **Each forecast** shows:
+  - its **confidence**: *High*, *Medium* or *Low*, from the number of readings, the time they span, how old the latest one is and (for gauges) how well the readings follow a line;
+  - what it is based on, for example "13 readings over 84 days; the latest is 2 days old";
+  - a **likely range** of dates (about 80% likely), not only one date.
+- **Breakdown forecasts** say how many breakdowns they rest on: 6 or more is *High*, 3 to 5 *Medium*, fewer *Low*.
+- **Readings left out of the trends:** readings far from the trend (a typo, or a one-off) are left out of the trend and the score, and drawn as red rings. Each is listed under its chart with its date. A value off the scale sits on the chart's edge with its value written beside it. A reading the technician confirmed when typing it always counts.
+- **Old readings:** meters not read for **45 days** are marked, and don't count towards the Condition part of the score.
+- **How complete the data is** lists what limits the answers: meters not read recently, readings left out, repairs without a problem code or a downtime answer, and, for managers, a missing labour cost per hour or jobs with no hours.
+
+**Checks when readings are typed:**
+- A reading far from a meter's usual values, or a counter rising much faster than its normal pace, asks "Is this right?" before it is saved. This applies on the machine page and in procedure steps.
+- A confirmed reading is saved as confirmed.
+- A reading typed while offline is saved when the phone reconnects; if it looked unusual, it is marked so and left out of trends unless it fits.
+
+**Require failure codes and downtime on repairs** (Techy Ops Settings): repairs on a machine then need a problem and a cause code, **and** an answer to *Was the machine down?* (*Yes, it was down*, with times, or *No, it kept running*), before they are sent for review or completed. Turn it on so availability, failure and breakdown figures can be trusted.
+
 ## Service contracts
 
 What each contract covers varies per customer, so contracts are kept as **Techy Service Contract** records (**Equipment › Contracts**). Billing stays on the customer's ERPNext **Subscription**.

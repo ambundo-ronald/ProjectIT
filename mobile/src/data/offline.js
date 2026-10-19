@@ -248,6 +248,7 @@ export async function sync() {
     for (const item of rows) {
       const args = { ...item.args }
       try {
+        if (item.method === 'projectit.procedures.answer' && !args.confirm) args.confirm = 2 // nobody to ask any more
         if (item.method === 'projectit.work_orders.update_work_order') {
           // The job may have changed since; the change made on the phone wins.
           args.modified = (await request(DETAIL, { name: args.name })).work_order.modified
