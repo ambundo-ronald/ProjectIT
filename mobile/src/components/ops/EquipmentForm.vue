@@ -55,6 +55,13 @@
         <label class="label" for="eq-contract">Service contract until</label>
         <input id="eq-contract" v-model="form.contract_until" type="date" class="input" />
       </div>
+      <div>
+        <label class="label" for="eq-log">Plant app log schedule</label>
+        <select id="eq-log" v-model="form.log_schedule" class="input">
+          <option v-for="s in LOG_SCHEDULES" :key="s.value" :value="s.value">{{ s.label }}</option>
+        </select>
+        <p class="hint">How often their operators should log in the plant app.</p>
+      </div>
       <div class="sm:col-span-2">
         <label class="label" for="eq-notes">Notes</label>
         <textarea id="eq-notes" v-model="form.notes" rows="2" maxlength="2000" class="input" placeholder="Membrane type, access instructions, gate code…" />
@@ -76,7 +83,13 @@ import { api } from '@/data/ops'
 const props = defineProps({ modelValue: Boolean, equipment: Object })
 const emit = defineEmits(['update:modelValue', 'saved'])
 const statuses = ['Active', 'Awaiting installation', 'Out of service', 'Decommissioned']
-const blank = () => ({ customer: '', customer_name: '', site_address: '', item_code: '', equipment_name: '', tag: '', status: 'Active', installed_on: '', warranty_until: '', contract_until: '', notes: '' })
+const blank = () => ({ customer: '', customer_name: '', site_address: '', item_code: '', equipment_name: '', tag: '', status: 'Active', installed_on: '', warranty_until: '', contract_until: '', notes: '', log_schedule: 'Daily' })
+const LOG_SCHEDULES = [
+  { value: 'Daily', label: 'Once a day' },
+  { value: 'Twice a day', label: 'Twice a day (each shift)' },
+  { value: 'Weekly', label: 'Once a week' },
+  { value: 'Not expected', label: 'Not expected' },
+]
 const form = reactive(blank())
 const customers = ref([])
 const customerQuery = ref('')
@@ -94,6 +107,7 @@ watch(
     customerQuery.value = ''
     customers.value = []
     if (props.equipment) for (const k of Object.keys(form)) form[k] = props.equipment[k] ?? ''
+    form.log_schedule ||= 'Daily'
     try {
       items.value = (await api('projectit.equipment.register_options')).items
       if (form.customer) await loadSites()

@@ -140,7 +140,7 @@ const scroller = ref(null)
 const pulse = ref(false)
 const isPhone = ref(window.innerWidth < 768)
 
-const hidden = computed(() => ['Login', 'PublicRequest'].includes(route.name) || route.path.startsWith('/ops/chat'))
+const hidden = computed(() => ['Login', 'PublicRequest'].includes(route.name) || route.path.startsWith('/ops/chat') || route.path.startsWith('/plant'))
 const visible = computed(() => ready.value && session.isLoggedIn && !hidden.value)
 // On the chat pages the bubble is hidden, but reminders still pop up there.
 const shownPopups = computed(() => (visible.value ? popups.value : popups.value.filter((p) => p.sticky)))

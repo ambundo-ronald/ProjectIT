@@ -27,6 +27,7 @@
   "warranty_until",
   "contract_until",
   "service_contract",
+  "log_schedule",
   "built_section",
   "built_from_work_order",
   "column_break_built",
@@ -219,11 +220,19 @@
    "label": "RO Baseline From",
    "read_only": 1,
    "description": "Normalised RO performance is compared with the first full log from this time (set from the Health tab, e.g. after new membranes)."
+  },
+  {
+   "fieldname": "log_schedule",
+   "fieldtype": "Select",
+   "label": "Customer Log Schedule",
+   "options": "Daily\nTwice a day\nWeekly\nNot expected",
+   "default": "Daily",
+   "description": "How often the customer's operators should log this machine's readings in the plant app."
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-19 15:00:00.000000",
+ "modified": "2026-10-20 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Techy Equipment",

@@ -223,8 +223,13 @@ def record_reading(meter, value, work_order=None, note=None, reset=0, confirm=0)
     return {"meter": summary(doc), "raised": [{"name": t.name, "subject": t.subject} for t in raised]}
 
 
-def _record(doc, value, job=None, note=None, reset=False, flagged=False, confirmed=False):
-    """Save a reading on a locked meter and run its triggers; returns (reading, jobs raised)."""
+def _record(doc, value, job=None, note=None, reset=False, flagged=False, confirmed=False, source=None, plant_log=None,
+        when=None, check_ro=True):
+    """Save a reading on a locked meter and run its triggers; returns (reading, jobs raised).
+
+    A customer's reading (source "Customer", from the plant app) never raises a job: it tells the managers instead,
+    once, when it first sets off a trigger. `when` is the time it was taken (a log sent later from a phone that was
+    offline); `check_ro=False` leaves the RO cleaning check to the caller, who runs it once for a whole log."""
     if not cint(doc.active):
         frappe.throw(_("{0} is no longer in use.").format(doc.meter_name))
     value = _value(value)
@@ -233,21 +238,28 @@ def _record(doc, value, job=None, note=None, reset=False, flagged=False, confirm
             "to record it.").format(doc.meter_name, fmt(doc.last_reading), doc.unit))
     if doc.meter_type == "Counter" and value < 0:
         frappe.throw(_("A counter reading cannot be negative."))
+    previous = flt(doc.last_reading) if doc.last_reading_on else None
     reading = frappe.get_doc({"doctype": "Techy Meter Reading", "meter": doc.name, "value": value,
-        "reading_on": now_datetime(), "recorded_by": frappe.session.user, "equipment": doc.equipment, "asset": doc.asset,
-        "work_order": job, "reset": int(reset), "note": note, "unusual": int(flagged), "confirmed": int(confirmed)})
+        "reading_on": when or now_datetime(), "recorded_by": frappe.session.user, "equipment": doc.equipment,
+        "asset": doc.asset, "work_order": job, "reset": int(reset), "note": note, "unusual": int(flagged),
+        "confirmed": int(confirmed), "source": source or "", "plant_log": plant_log})
     reading.insert(ignore_permissions=True)
-    doc.last_reading, doc.last_reading_on, doc.last_reading_by = value, reading.reading_on, frappe.session.user
+    if not doc.last_reading_on or get_datetime(reading.reading_on) >= get_datetime(doc.last_reading_on):
+        doc.last_reading, doc.last_reading_on, doc.last_reading_by = value, reading.reading_on, frappe.session.user
     if reset:
         for row in doc.triggers:
             if row.trigger_type == "Every":
                 row.next_due = value + flt(row.value)
-    raised = evaluate(doc, reading)
+    if source == "Customer":
+        raised = []
+        customer_alerts(doc, value, previous)
+    else:
+        raised = evaluate(doc, reading)
     doc.flags.ignore_permissions = True
     doc.save()
     if raised:
         reading.db_set("triggered_job", raised[0].name)
-    if doc.equipment:
+    if doc.equipment and check_ro:
         from projectit import ro
         ro.after_reading(doc.equipment)
     return reading, raised
@@ -411,6 +423,23 @@ def evaluate(doc, reading):
         raised.append(job)
         ops.notify(_managers(), _("Meter {0}: {1} – {2}").format(label.lower(), title, machine), "Task", job.name)
     return raised
+
+
+def customer_alerts(doc, value, previous):
+    """A customer's reading that sets off a trigger: tell the managers (the first time it does), raise nothing."""
+    for row in doc.triggers:
+        if not crossed(row, value) or (previous is not None and crossed(row, previous)):
+            continue
+        if is_open(_job(row.open_job)):
+            continue  # a job for it is already open
+        machine = _machine_label(doc)
+        if row.trigger_type == "Every":
+            what = _("{0} reached {1} {2}: service is due (every {3} {2})").format(doc.meter_name, fmt(value), doc.unit, fmt(row.value))
+        else:
+            limit = (_("over {0} {1}") if row.trigger_type == "Above" else _("under {0} {1}")).format(fmt(row.value), doc.unit)
+            what = _("{0} read {1} {2}, {3}").format(doc.meter_name, fmt(value), doc.unit, limit)
+        ops.notify(_managers(), _("Customer log – {0}: {1}. No job was raised; decide what to do.").format(machine, what),
+            "Techy Equipment", doc.equipment)
 
 
 @frappe.whitelist(methods=["POST"])

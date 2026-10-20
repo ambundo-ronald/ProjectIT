@@ -71,7 +71,7 @@
           </li>
           <li v-if="!dataGaps.length" class="flex items-center gap-3 px-5 py-2.5 text-sm text-gray-700"><FeatherIcon name="check-circle" class="h-4 w-4 text-green-600" />Readings are recent, repairs are coded and downtime is recorded.</li>
         </ul>
-        <p class="border-t border-gray-100 px-5 py-2.5 text-xs text-gray-500">{{ h.data.readings_90 }} readings in the last 90 days across {{ h.data.meters }} meter{{ h.data.meters === 1 ? '' : 's' }} · {{ h.data.repairs }} repair{{ h.data.repairs === 1 ? '' : 's' }} in 12 months</p>
+        <p class="border-t border-gray-100 px-5 py-2.5 text-xs text-gray-500">{{ h.data.readings_90 }} readings in the last 90 days across {{ h.data.meters }} meter{{ h.data.meters === 1 ? '' : 's' }} · {{ h.data.repairs }} repair{{ h.data.repairs === 1 ? '' : 's' }} in 12 months<template v-if="h.data.customer"> · {{ h.data.customer.logs }} customer log{{ h.data.customer.logs === 1 ? '' : 's' }} in {{ h.data.customer.days }} days</template></p>
       </div>
 
       <!-- Readings -->
@@ -226,6 +226,8 @@ const dataGaps = computed(() => {
   if (d.left_out) gaps.push({ icon: 'alert-circle', text: `${d.left_out} reading${d.left_out === 1 ? '' : 's'} left out of the trends`, fix: 'Check them on the charts below: correct typos, or confirm them if they were right.' })
   if (d.uncoded) gaps.push({ icon: 'tag', text: `${d.uncoded} of ${d.repairs} repairs have no problem code`, fix: 'Turn on "Require failure codes and downtime on repairs" in Techy Ops Settings.' })
   if (d.downtime_unknown) gaps.push({ icon: 'power', text: `${d.downtime_unknown} completed repair${d.downtime_unknown === 1 ? '' : 's'} without a downtime answer`, fix: 'Availability may look better than it is. The same setting makes technicians say whether the machine was down.' })
+  const c = d.customer
+  if (c && c.expected && c.done < c.expected) gaps.push({ icon: 'edit-3', text: `The customer logged ${c.done} of the expected ${c.expected} ${c.schedule === 'Weekly' ? 'weeks' : 'days'} in the last ${c.days} days`, fix: 'Their operators log in the plant app. Remind them, or change the plant app log schedule (Edit on the Overview tab).' })
   if (h.value.manager && d.labour_rate_set === false) gaps.push({ icon: 'dollar-sign', text: 'Labour cost per hour is not set', fix: 'Costs leave out labour until it is set in Techy Ops Settings.' })
   if (h.value.manager && d.untimed) gaps.push({ icon: 'watch', text: `${d.untimed} completed job${d.untimed === 1 ? '' : 's'} without any hours`, fix: 'Use the job timer, or add the time, so labour cost is counted.' })
   return gaps

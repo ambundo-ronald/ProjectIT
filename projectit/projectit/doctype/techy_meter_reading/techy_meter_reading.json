@@ -8,6 +8,8 @@
   "value",
   "reading_on",
   "recorded_by",
+  "source",
+  "plant_log",
   "column_break_links",
   "equipment",
   "asset",
@@ -110,11 +112,27 @@
    "label": "Confirmed",
    "read_only": 1,
    "description": "The person recording it confirmed an unusual reading is right."
+  },
+  {
+   "fieldname": "source",
+   "fieldtype": "Select",
+   "label": "Source",
+   "options": "\nCustomer",
+   "in_standard_filter": 1,
+   "description": "Customer: logged by the customer's operator in the plant app. Empty: recorded by our staff."
+  },
+  {
+   "fieldname": "plant_log",
+   "fieldtype": "Link",
+   "label": "Plant Log",
+   "options": "Techy Plant Log",
+   "search_index": 1,
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-19 12:00:00.000000",
+ "modified": "2026-10-20 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Techy Meter Reading",

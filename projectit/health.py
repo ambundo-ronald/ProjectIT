@@ -464,8 +464,35 @@ def machine_health(equipment):
             and not cint(j.get("custom_down_answered"))),
         "untimed": sum(1 for j in jobs if j.status == "Completed" and get_datetime(j.creation) >= start
             and not flt(j.custom_labour_hours)) if manager else None,
-        "labour_rate_set": bool(rate) if manager else None}
+        "labour_rate_set": bool(rate) if manager else None,
+        "customer": customer_logging(equipment)}
     return {"machine": {"name": row.name, "equipment_name": row.equipment_name, "status": row.status}, "data": data,
         "health": {**health, "down_now": down_now}, "meters": series, "months": chart, "failures": failures,
         "forecasts": forecasts, "planner": planner, "process": process, "ro": ro_perf, "manager": manager,
         "currency": frappe.db.get_default("currency"), "as_of": now}
+
+
+def customer_logging(equipment, days=30):
+    """The customer's own logs (plant app) over the last month against the machine's schedule, or None when nobody
+    at the customer has the plant app for it."""
+    customer = frappe.db.get_value("Techy Equipment", equipment, "customer")
+    accounts = frappe.get_all("Techy Customer User", filters={"customer": customer, "enabled": 1},
+        fields=["name", "access"]) if customer else []
+    operators = [a.name for a in accounts if a.access == "Operator"]
+    sees = any(a.access == "Customer admin" for a in accounts) or bool(operators and frappe.db.exists(
+        "Techy Customer Machine", {"parent": ["in", operators], "equipment": equipment}))
+    if not sees:
+        return None
+    from projectit.plant import LOG, SCHEDULE
+    schedule = frappe.db.get_value("Techy Equipment", equipment, "log_schedule") or "Daily"
+    window, per = SCHEDULE.get(schedule, (0, 0))
+    since = add_days(getdate(nowdate()), -days)
+    logs = frappe.get_all(LOG, filters={"equipment": equipment, "log_on": [">=", since]}, pluck="log_on")
+    if window == 1:  # daily or twice a day: count the days that got their logs
+        per_day = {}
+        for on in logs:
+            per_day[getdate(on)] = per_day.get(getdate(on), 0) + 1
+        done, expected = sum(1 for n in per_day.values() if n >= per), days
+    else:
+        done, expected = (min(len(logs), days // window), days // window) if window else (len(logs), 0)
+    return {"schedule": schedule, "logs": len(logs), "done": done, "expected": expected, "days": days}

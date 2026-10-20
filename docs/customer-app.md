@@ -1,0 +1,30 @@
+# The plant app (for customers)
+
+The plant app is for the people who run a water-treatment plant we installed. Its address is `/techy-app/plant`, and it can be installed on a phone like any app. Each day, an operator logs the readings from the plant's gauges. We and the customer use those logs to follow how the plant is running and when it needs service.
+
+## Who uses it
+
+| Account | Can do |
+| --- | --- |
+| **Customer admin** | See every machine of their company. Log readings. Invite their own operators, choose which machines each operator looks after, switch operators off and send them a new sign-in link. |
+| **Operator** | See and log only the machines given to them. |
+
+We create the first account (normally the customer admin) when the plant is registered. The person gets an email with a link to choose their password. The link works once. If it has expired, ask us, or your admin, for a new one.
+
+A customer account can only ever see its own company's machines. It cannot open the staff apps, ERPNext, prices or anything internal.
+
+## Logging readings
+
+Open **Log**, read the gauges, and type each number in. The form lists the machine's readings in the order you walk the plant: feed and concentrate pressure, then water quality (TDS), flows and temperature. Readings marked *(optional)* can be left empty. The last value of each reading is shown beside it as a guide.
+
+- **Unusual numbers.** If a number is far from the usual for that gauge (often a typo, such as an extra zero), the app asks you to check it. Correct it, or save it as it is if the gauge really reads that.
+- **Counters only go up.** Running hours cannot be lower than last time. If a meter was replaced, tell us.
+- **Note and photo.** Add a note about anything unusual (a leak, a noise, an alarm, filters changed) and, if you like, a photo of the gauges.
+- **No signal?** Save the log anyway. It waits on the phone ("1 log waiting to send") and sends by itself when the phone is back online, with the time it was taken.
+- **Typos afterwards.** Under **Recent logs**, **Correct a typo** fixes your own log for a day after saving it. We can see that it was corrected.
+
+The top of the Log page shows whether today's log is done. Each machine is logged once a day unless we agreed otherwise (twice a day, once a week, or not at all).
+
+## Account
+
+**Account** shows your machines, light or dark appearance, and how to reach us. A customer admin also sees **People**, where they invite and manage operators.

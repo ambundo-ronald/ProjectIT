@@ -237,6 +237,27 @@ For reverse-osmosis machines, the Health tab compares the membranes with how the
 
 **Require failure codes and downtime on repairs** (Techy Ops Settings): repairs on a machine then need a problem and a cause code, **and** an answer to *Was the machine down?* (*Yes, it was down*, with times, or *No, it kept running*), before they are sent for review or completed. Turn it on so availability, failure and breakdown figures can be trusted.
 
+## The customer plant app
+
+Customers whose plant we installed can have their own simple app at `/techy-app/plant`, to log their readings every day. See [docs/customer-app.md](customer-app.md) for what they see.
+
+**Giving a customer access.** On the machine page (Overview), managers see **Customer app access**.
+1. Press **Invite someone** and enter the name and email.
+2. Choose **Operator** (only the machines ticked) or **Customer admin** (every machine of the customer; can invite their own operators).
+3. The person is emailed a link to set their password. The link is also shown, with **Copy**, to send by WhatsApp or SMS if email is not set up or does not arrive. **New link** makes a fresh one. **Switch off** stops the person signing in; their logs are kept.
+
+Each person belongs to one customer. A staff email cannot be used for a customer account. Accounts are listed in Desk under **Techy Customer User**.
+
+**How often to log.** Set **Plant app log schedule** on the machine (Edit): once a day (the default), twice a day, once a week, or not expected.
+
+**What their logs do.**
+- Each log is a **Techy Plant Log** with its readings saved as ordinary meter readings marked *Source: Customer*. They appear on the meters, the Health tab and the RO charts like any other reading, and each log counts as one RO log.
+- Unusual values are checked as they are typed. A log sent later from a phone that was offline is saved with any unusual readings marked, so the Health tab leaves them out until someone checks them.
+- A customer's reading **never raises a job**. If it sets off a meter trigger (service due, or a limit crossed) or breaks an RO cleaning rule, managers get a notification starting "Customer log". Decide whether to send someone. Cleaning alerts repeat at most once a week while the rule stays broken.
+- The Health tab's **How complete the data is** card shows how many of the expected days the customer logged in the last 30 days.
+
+**What customers never see:** costs, labour, internal notes, investigations, chat, other customers, ERPNext or the staff apps. Customer accounts have no rights on any DocType. Every request they make is checked on the server, and anything outside the plant app is refused.
+
 ## Service contracts
 
 What each contract covers varies per customer, so contracts are kept as **Techy Service Contract** records (**Equipment › Contracts**). Billing stays on the customer's ERPNext **Subscription**.

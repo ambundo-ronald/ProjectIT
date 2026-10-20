@@ -119,6 +119,8 @@
 
         <InvestigationsCard :key="data.equipment.name" :equipment="data.equipment.name" />
 
+        <CustomerAccessCard v-if="data.manager && eq.customer" :key="`access-${eq.name}`" :equipment="eq.name" />
+
         <div v-if="data.parts?.length" class="card overflow-hidden">
           <div class="card-header"><h2 class="card-title">Parts fitted</h2><span class="text-xs text-gray-500">{{ data.parts.length }}</span></div>
           <ul class="divide-y divide-gray-100">
@@ -190,6 +192,7 @@ import ContractTerms from '@/components/ops/ContractTerms.vue'
 import MetersCard from '@/components/ops/MetersCard.vue'
 import EquipmentHealth from '@/components/ops/health/EquipmentHealth.vue'
 import InvestigationsCard from '@/components/ops/InvestigationsCard.vue'
+import CustomerAccessCard from '@/components/ops/CustomerAccessCard.vue'
 import { api, me, formatDate, fromNow } from '@/data/ops'
 import { EQUIPMENT_STATUS, mapLink } from '@/data/equipment'
 

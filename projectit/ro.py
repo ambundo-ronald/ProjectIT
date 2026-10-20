@@ -104,13 +104,13 @@ def compute(log):
 
 
 def logs(equipment, found=None):
-    """Readings of the RO meters grouped into logs (by job, else by day), oldest first."""
+    """Readings of the RO meters grouped into logs (a plant log, else a job, else a day), oldest first."""
     found = found or roles(equipment)
     by_meter = {m.name: role for role, m in found.items()}
     if not by_meter:
         return []
     rows = frappe.get_all("Techy Meter Reading", filters={"meter": ["in", list(by_meter)], "reset": 0},
-        fields=["meter", "value", "reading_on", "work_order", "unusual", "confirmed"], order_by="reading_on asc",
+        fields=["meter", "value", "reading_on", "work_order", "plant_log", "unusual", "confirmed"], order_by="reading_on asc",
         limit_page_length=5000)
     # Leave out readings that would throw a whole log: unusual and unconfirmed, or far from the meter's trend
     # (the same check as the Health tab's charts).
@@ -127,7 +127,8 @@ def logs(equipment, found=None):
     for i, r in enumerate(rows):
         if i in drop:
             continue
-        key = ("job", r.work_order) if r.work_order else ("day", getdate(r.reading_on))
+        # One log: a customer's log entry, else a job's readings, else one day's readings.
+        key = ("log", r.plant_log) if r.plant_log else ("job", r.work_order) if r.work_order else ("day", getdate(r.reading_on))
         g = groups.setdefault(key, {"on": r.reading_on, "job": r.work_order})
         g[by_meter[r.meter]] = flt(r.value)
         g["on"] = max(get_datetime(g["on"]), get_datetime(r.reading_on))
@@ -183,8 +184,13 @@ def open_cip(equipment):
         "subject": ["like", f"{CIP_SUBJECT}%"], "status": ["not in", ["Completed", "Cancelled"]]}, ["name", "subject"], as_dict=True)
 
 
-def after_reading(equipment):
-    """After a reading on an RO machine: raise one cleaning job when the latest log breaks a cleaning rule."""
+ALERT_DAYS = 7  # a customer's logs repeat the same cleaning alert at most once a week
+
+
+def after_reading(equipment, from_customer=False):
+    """After a reading on an RO machine: raise one cleaning job when the latest log breaks a cleaning rule.
+
+    A customer's log raises nothing: the managers are told (at most once a week while it stays broken) and decide."""
     if not equipment:
         return
     try:
@@ -194,6 +200,15 @@ def after_reading(equipment):
         from projectit import work_orders
         from projectit.meters import _managers
         reason = "; ".join(perf["breaches"])
+        if from_customer:
+            key = f"techy_cip_alert:{equipment}"
+            if frappe.cache().get_value(key):
+                return
+            frappe.cache().set_value(key, 1, expires_in_sec=ALERT_DAYS * 86400)
+            name = frappe.db.get_value("Techy Equipment", equipment, "equipment_name") or equipment
+            ops.notify(_managers(), _("Customer log – {0}: membranes may need cleaning ({1}). No job was raised; decide "
+                "what to do.").format(name, reason), "Techy Equipment", equipment)
+            return
         # Raised by the cleaning rule, whoever recorded the reading.
         task = work_orders.create(f"{CIP_SUBJECT}: {reason}"[:140],
             _("The latest RO log shows {0}. Clean the membranes (CIP) and record a full RO log afterwards.").format(reason),

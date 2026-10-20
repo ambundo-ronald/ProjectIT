@@ -60,6 +60,17 @@ const routes = [
     ],
   },
   {
+    // The customer app: customers' admins and operators (see projectit/plant.py).
+    path: '/plant',
+    component: () => import('@/pages/plant/PlantLayout.vue'),
+    children: [
+      { path: '', name: 'PlantHome', component: () => import('@/pages/plant/PlantHome.vue') },
+      { path: 'log', name: 'PlantLog', component: () => import('@/pages/plant/PlantLog.vue') },
+      { path: 'service', name: 'PlantService', component: () => import('@/pages/plant/PlantService.vue') },
+      { path: 'account', name: 'PlantAccount', component: () => import('@/pages/plant/PlantAccount.vue') },
+    ],
+  },
+  {
     // Customers rate a completed visit from the link in their service report email (no sign-in).
     path: '/rate',
     name: 'Rate',
@@ -112,7 +123,9 @@ router.beforeEach(async (to, from, next) => {
   }
   // An app opens everything under its address (/ops, /workit, /manageit); pages marked `only` must be listed.
   const allowed = to.meta.only ? modules.includes(to.meta.only) : modules.some((m) => to.path === `/${m}` || to.path.startsWith(`/${m}/`))
-  next(allowed ? undefined : { name: 'Home' })
+  // Customers have no Home (their plant app is all they have): send them to the first app they may open.
+  const fallback = modules.includes('home') || !modules.length ? { name: 'Home' } : `/${modules[0]}`
+  next(allowed ? undefined : fallback)
 })
 
 export default router

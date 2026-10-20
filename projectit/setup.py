@@ -78,3 +78,14 @@ def ensure_task_permissions():
             for right in rights:
                 if not row.get(right):
                     update_permission_property(doctype, role, 0, right, 1)
+
+
+def ensure_customer_roles():
+    """Roles for customer accounts (see projectit.customer_accounts): no Desk, and signing in opens the plant app."""
+    from projectit.customer_accounts import ACCESS, HOME
+    for role in ACCESS.values():
+        if frappe.db.exists("Role", role):
+            frappe.db.set_value("Role", role, {"desk_access": 0, "home_page": HOME})
+        else:
+            frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": 0, "home_page": HOME}).insert(
+                ignore_permissions=True)

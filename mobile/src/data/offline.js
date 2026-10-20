@@ -327,7 +327,8 @@ export async function api(method, args = {}) {
 
 /** Save my open jobs on the phone, so they can be opened without a connection. */
 export async function prefetch() {
-  if (!navigator.onLine) return
+  // Staff work orders only; the customer app (/plant) keeps its own logs (data/plant.js).
+  if (!navigator.onLine || location.pathname.includes('/plant')) return
   try {
     const list = await api('projectit.work_orders.list_work_orders', { scope: 'mine', status: 'Active', page_length: 100 })
     for (const row of list.work_orders.slice(0, 40)) await api(DETAIL, { name: row.name })

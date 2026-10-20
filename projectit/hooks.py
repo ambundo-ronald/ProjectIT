@@ -94,9 +94,9 @@ doctype_js = {"Project": "public/js/project.js", "Task": "public/js/task.js",
 
 # before_install = "projectit.install.before_install"
 after_install = ["projectit.setup.ensure_access_fields", "projectit.setup.ensure_ops_defaults",
-    "projectit.setup.ensure_task_permissions"]
+    "projectit.setup.ensure_task_permissions", "projectit.setup.ensure_customer_roles"]
 after_migrate = ["projectit.setup.ensure_access_fields", "projectit.setup.ensure_ops_defaults",
-    "projectit.setup.ensure_task_permissions"]
+    "projectit.setup.ensure_task_permissions", "projectit.setup.ensure_customer_roles"]
 
 # Uninstallation
 # ------------
@@ -136,6 +136,9 @@ permission_query_conditions = {
     "Task": "projectit.permissions.task_query",
     "Project": "projectit.permissions.project_query",
 }
+
+# Customer accounts reach only the customer app's endpoints (projectit.customer_accounts.guard).
+auth_hooks = ["projectit.customer_accounts.guard"]
 
 has_permission = {
     "Techy Channel": "projectit.chat.has_permission",
