@@ -5,6 +5,8 @@ directly, so customers never need role rights on any DocType. Only customer-safe
 labour, internal notes, investigations or technician chat.
 """
 import base64
+import re
+from datetime import timedelta
 
 import frappe
 from frappe import _
@@ -211,3 +213,128 @@ def log_photo(log):
     f = frappe.get_doc("File", name)
     kind = "png" if f.file_name.lower().endswith(".png") else "jpeg"
     return f"data:image/{kind};base64," + base64.b64encode(f.get_content()).decode()
+
+
+# The dashboard ---------------------------------------------------------------------------------------------------
+
+KEY_ROLES = (("perm_q", "Water produced"), ("perm_c", "Water quality (TDS)"), ("feed_p", "Feed pressure"))
+HOURS = re.compile(r"hour|hrs|\bh\b", re.I)
+
+
+def _week_change(points, value):
+    """The change from about a week ago (the reading nearest 7 days back, at least 4 days old)."""
+    if value is None or not points:
+        return None
+    now = now_datetime()
+    older = [p for p in points if get_datetime(p["on"]) <= now - timedelta(days=4)]
+    if not older:
+        return None
+    target = now - timedelta(days=7)
+    then = min(older, key=lambda p: abs((get_datetime(p["on"]) - target).total_seconds()))
+    return {"from": then["value"], "on": then["on"], "change": round(flt(value) - flt(then["value"]), 2)}
+
+
+def _status(h, ro_perf, overdue_log):
+    """Running well / Needs attention / Action needed, with the reasons in plain words."""
+    act, watch = [], []
+    if h["health"].get("down_now"):
+        act.append(_("The machine is reported as not working."))
+    if ro_perf and ro_perf["breaches"]:
+        act.append(_("The membranes need cleaning: they make less water or let more salt through than when they were clean."))
+    if h["health"].get("grade") == "At risk":
+        act.append(_("Several things need looking at (readings, service or repairs)."))
+    elif h["health"].get("grade") == "Watch":
+        watch.append(_("Some readings or services need watching."))
+    if overdue_log:
+        watch.append(_("No log for a while: the latest readings help us spot problems early."))
+    if h["data"]["stale"]:
+        watch.append(_("Not read recently: {0}.").format(", ".join(h["data"]["stale"][:3])))
+    return {"level": "action" if act else "watch" if watch else "good", "reasons": act + watch}
+
+
+def _fmt(value):
+    from projectit.meters import fmt
+    return fmt(value)
+
+
+@frappe.whitelist()
+def dashboard(equipment, days=90):
+    """The plant at a glance for the customer: status, key numbers, charts, what is next and how logging is going.
+    Built from the same numbers as our Health tab, passing on only what a customer should see."""
+    from projectit import health, ro
+    customer_accounts.require_machine(equipment)
+    days = 30 if cint(days) == 30 else 90
+    h = health.compute_health(equipment, manager=False)
+    row = frappe.db.get_value("Techy Equipment", equipment, ["name", "equipment_name", "status", "warranty_until",
+        "contract_until", "service_contract"], as_dict=True)
+    now = now_datetime()
+    since = now - timedelta(days=days)
+    found = ro.roles(equipment)
+    by_name = {s["name"]: s for s in h["meters"]}
+
+    def series(meter):
+        s = by_name.get(meter)
+        if not s:
+            return None
+        return {"meter": s["meter_name"], "unit": s["unit"], "last": s["last"], "last_on": s["last_on"],
+            "points": [p for p in s["points"] if get_datetime(p["on"]) >= since], "limits": s["limits"],
+            "week": _week_change(s["points"], s["last"])}
+
+    charts = []
+    for role, label in KEY_ROLES:
+        s = series(found[role].name) if role in found else None
+        if s:
+            charts.append({**s, "key": role, "label": _(label)})
+    numbers = [{"key": c["key"], "label": c["label"], "value": c["last"], "unit": c["unit"], "on": c["last_on"],
+        "week": c["week"]} for c in charts[:2]]
+    ro_perf = h["ro"]
+    if ro_perf and ro_perf["latest"]:
+        numbers.append({"key": "recovery", "label": _("Recovery"), "value": ro_perf["latest"]["recovery"], "unit": "%",
+            "on": ro_perf["latest"]["on"], "help": _("Share of the feed water that becomes clean water."),
+            "week": _week_change([{"on": p["on"], "value": p["recovery"]} for p in ro_perf["points"]], ro_perf["latest"]["recovery"])})
+    hours = next((s for s in h["meters"] if s["meter_type"] == "Counter" and HOURS.search(f"{s['meter_name']} {s['unit']}")), None)
+    if hours:
+        numbers.append({"key": "hours", "label": hours["meter_name"], "value": hours["last"], "unit": hours["unit"],
+            "on": hours["last_on"], "week": _week_change(hours["points"], hours["last"])})
+
+    membranes = None
+    if ro_perf and ro_perf["points"]:
+        pts = [p for p in ro_perf["points"] if get_datetime(p["on"]) >= since] or ro_perf["points"][-1:]
+        rules = ro_perf["rules"]
+        membranes = {"since": ro_perf["baseline"]["on"], "latest": {k: ro_perf["latest"].get(k) for k in ("on", "flow", "salt")},
+            "flow": [{"on": p["on"], "value": p["flow"]} for p in pts],
+            "salt": [{"on": p["on"], "value": p["salt"]} for p in pts if p["salt"] is not None],
+            "clean_at": {"flow": -rules["cip_flow_drop"], "salt": rules["cip_salt_rise"]},
+            "needs_cleaning": bool(ro_perf["breaches"]), "cleaning_planned": bool(ro_perf["cip_job"])}
+
+    # What is next: a planned visit (its date and kind only), service due by running hours, cover end dates.
+    today = getdate(nowdate())
+    upcoming = frappe.get_all("Task", filters={"custom_work_order": 1, "custom_equipment": equipment,
+        "parent_task": ["is", "not set"], "is_template": 0, "status": ["not in", ["Completed", "Cancelled"]],
+        "exp_start_date": [">=", today]}, fields=["exp_start_date", "custom_work_category"],
+        order_by="exp_start_date asc", limit_page_length=1)
+    contract_visit = frappe.db.get_value("Techy Contract Equipment", {"parent": row.service_contract, "parenttype":
+        "Techy Service Contract", "equipment": equipment}, "next_visit") if row.service_contract else None
+    kinds = {"Preventive": _("Service visit"), "Corrective": _("Repair visit"), "Inspection": _("Inspection visit"),
+        "Installation": _("Installation")}
+    nxt = []
+    if upcoming:
+        nxt.append({"kind": "visit", "label": kinds.get(upcoming[0].custom_work_category, _("Visit")), "on": upcoming[0].exp_start_date})
+    elif contract_visit and getdate(contract_visit) >= today:
+        nxt.append({"kind": "visit", "label": _("Service visit (contract)"), "on": contract_visit})
+    service = next((f for f in h["forecasts"]["meters"] if f.get("kind") == "service"), None)
+    if service:
+        nxt.append({"kind": "service", "label": _("Service due at {0} {1}").format(_fmt(service["target"]), service.get("unit") or ""),
+            "on": service["on"], "estimate": True, "confidence": (service.get("confidence") or {}).get("level")})
+    for field, label in (("warranty_until", _("Warranty ends")), ("contract_until", _("Service contract ends"))):
+        if row.get(field):
+            nxt.append({"kind": field, "label": label, "on": row.get(field), "past": getdate(row.get(field)) < today})
+
+    logging = health.customer_logging(equipment) or {"schedule": "Daily", "logs": 0, "done": 0, "expected": 0, "days": 30}
+    today_log = log_status(equipment)
+    window = SCHEDULE.get(today_log["schedule"], (0, 0))[0]
+    overdue_log = bool(window) and (not today_log["last_on"] or
+        get_datetime(today_log["last_on"]) < now - timedelta(days=2 * window + 1))
+    return {"machine": {"name": row.name, "equipment_name": row.equipment_name, "status": row.status},
+        "status": _status(h, ro_perf, overdue_log), "numbers": numbers, "charts": charts, "membranes": membranes,
+        "next": nxt, "logging": {**logging, "today": today_log}, "days": days, "as_of": now}

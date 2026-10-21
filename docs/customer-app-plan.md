@@ -63,12 +63,12 @@ These are my recommendations. Change any you disagree with.
 
 ## Phase 4: Customer dashboard
 
-- [ ] **4.1 Plant status at a glance**: a simple status (Good / Needs attention / Action needed) from the health score and the RO cleaning rules, in plain words, with icon and label (never colour alone).
-- [ ] **4.2 Key numbers**: today's permeate flow, permeate TDS (water quality), recovery and running hours, each with the change from last week.
-- [ ] **4.3 Charts**: permeate flow, TDS and pressures over 30 or 90 days, plus the normalised RO performance (flow, salt passage, pressure drop) in simplified wording. Same chart components, hover and table view.
-- [ ] **4.4 What's next**: the next service visit, warranty and contract end dates, and "membranes may need cleaning soon" when forecast.
-- [ ] **4.5 Logging streak**: "Logged 26 of the last 30 days", so the customer admin can see whether operators are logging.
-- [ ] **4.6 Hide the internals**: no costs, no MTBF or availability jargon, no technician names beyond the visit's lead technician.
+- [x] **4.1 Plant status at a glance**: a simple status (Good / Needs attention / Action needed) from the health score and the RO cleaning rules, in plain words, with icon and label (never colour alone).
+- [x] **4.2 Key numbers**: today's permeate flow, permeate TDS (water quality), recovery and running hours, each with the change from last week.
+- [x] **4.3 Charts**: permeate flow, TDS and pressures over 30 or 90 days, plus the normalised RO performance (flow, salt passage, pressure drop) in simplified wording. Same chart components, hover and table view.
+- [x] **4.4 What's next**: the next service visit, warranty and contract end dates, and "membranes may need cleaning soon" when forecast.
+- [x] **4.5 Logging streak**: "Logged 26 of the last 30 days", so the customer admin can see whether operators are logging.
+- [x] **4.6 Hide the internals**: no costs, no MTBF or availability jargon, no technician names beyond the visit's lead technician.
 
 ## Phase 5: Service
 

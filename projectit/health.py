@@ -373,11 +373,15 @@ def _process_inputs(row, series):
 def machine_health(equipment):
     """Everything the Health tab shows for one machine."""
     ops.system_user()
+    return compute_health(equipment, ops.manager())
+
+
+def compute_health(equipment, manager=False):
+    """The Health tab's numbers for one machine. Callers check access; costs only when `manager`."""
     row = frappe.db.get_value("Techy Equipment", equipment, ["name", "equipment_name", "item_code", "status",
         "installed_on", "delivered_on", "service_contract", "warranty_until"], as_dict=True)
     if not row:
         frappe.throw(_("Equipment {0} was not found.").format(equipment), frappe.DoesNotExistError)
-    manager = ops.manager()
     now = now_datetime()
     start = get_datetime(add_months(getdate(nowdate()).replace(day=1), -11))
     meters = [frappe.get_doc("Techy Meter", n) for n in frappe.get_all("Techy Meter", filters={"equipment": row.name,

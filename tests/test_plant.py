@@ -138,5 +138,34 @@ class CustomerCleaningAlertTests(OpsTestCase):
         self.wo.create.assert_called_once()
 
 
+class DashboardTests(OpsTestCase):
+    def setUp(self):
+        super().setUp()
+        self.frappe.utils.escape_html = lambda v: v
+        self.plant = importlib.import_module("projectit.plant")
+        self.plant.now_datetime = lambda: NOW
+
+    def health(self, grade="Good", down=False, stale=()):
+        return {"health": {"grade": grade, "down_now": down}, "data": {"stale": list(stale)}}
+
+    def test_status_in_plain_words(self):
+        self.assertEqual(self.plant._status(self.health(), None, False), {"level": "good", "reasons": []})
+        watch = self.plant._status(self.health("Watch", stale=["Feed TDS"]), None, True)
+        self.assertEqual(watch["level"], "watch")
+        self.assertEqual(len(watch["reasons"]), 3)
+        dirty = self.plant._status(self.health(), {"breaches": ["normalised flow is down 12%"]}, False)
+        self.assertEqual(dirty["level"], "action")
+        self.assertIn("membranes need cleaning", dirty["reasons"][0])
+        self.assertNotIn("normalised", " ".join(dirty["reasons"]))  # no jargon for customers
+        self.assertEqual(self.plant._status(self.health(down=True), None, False)["level"], "action")
+
+    def test_change_from_about_a_week_ago(self):
+        pts = [{"on": NOW - timedelta(days=d), "value": v} for d, v in ((14, 900), (8, 950), (6, 960), (1, 990))]
+        week = self.plant._week_change(pts, 1000)
+        self.assertEqual((week["from"], week["change"]), (950, 50))
+        self.assertIsNone(self.plant._week_change([{"on": NOW - timedelta(days=1), "value": 5}], 6))  # nothing old enough
+        self.assertIsNone(self.plant._week_change(pts, None))
+
+
 if __name__ == "__main__":
     unittest.main()

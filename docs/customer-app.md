@@ -13,6 +13,14 @@ We create the first account (normally the customer admin) when the plant is regi
 
 A customer account can only ever see its own company's machines. It cannot open the staff apps, ERPNext, prices or anything internal.
 
+## Home: your plant at a glance
+
+- **Status** in plain words: *Running well*, *Needs attention* or *Action needed*, with the reasons. Examples: the membranes need cleaning, the machine is reported as not working, or no log for a while.
+- **Key numbers**: water produced, water quality (TDS of the clean water), recovery (the share of feed water that becomes clean water) and running hours. Each shows how it changed since last week.
+- **Trends** over 30 or 90 days. **Membrane condition** compares water output and salt let through with the last time the membranes were clean, corrected for water temperature and pressure. The red line is where they need cleaning. Every chart has a **Table** view.
+- **What's next**: the next planned visit, when service is due by running hours (an estimate), and when the warranty and service contract end.
+- **Your logs**: how many of the last 30 days were logged.
+
 ## Logging readings
 
 Open **Log**, read the gauges, and type each number in. The form lists the machine's readings in the order you walk the plant: feed and concentrate pressure, then water quality (TDS), flows and temperature. Readings marked *(optional)* can be left empty. The last value of each reading is shown beside it as a guide.
