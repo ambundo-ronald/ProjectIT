@@ -103,6 +103,10 @@
     <template v-else>
       <div v-if="!people" class="h-48 animate-pulse rounded-2xl bg-gray-200/70" />
       <div v-else class="card overflow-hidden">
+        <div v-if="people.whatsapp" class="flex flex-wrap items-center gap-2 border-b border-gray-100 bg-green-50/60 px-5 py-2 text-xs text-green-800">
+          <FeatherIcon name="message-circle" class="h-3.5 w-3.5" />WhatsApp is on: {{ people.whatsapp_on }} {{ people.whatsapp_on === 1 ? 'person gets' : 'people get' }} messages there.
+          <button class="link ml-auto" @click="testWhatsapp">Send a test message</button>
+        </div>
         <div class="card-header"><h2 class="card-title">Accounts</h2><span class="text-xs text-gray-500">{{ people.accounts.length }} people · {{ people.customers }} customers · {{ people.waiting }} not signed in yet · {{ people.off }} switched off</span></div>
         <ul v-if="people.accounts.length" class="divide-y divide-gray-100">
           <li v-for="a in people.accounts" :key="a.user" class="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
@@ -218,6 +222,16 @@ async function toggle(a) {
     error.value = e.message
   } finally {
     busy.value = ''
+  }
+}
+async function testWhatsapp() {
+  const number = window.prompt('Send a test WhatsApp message to which number? (with country code)', '+254')
+  if (!number) return
+  try {
+    await request('projectit.whatsapp.test', { number })
+    toast({ title: 'Test message queued. Check the phone, and Techy WhatsApp Message in Desk for its status.', icon: 'message-circle', iconClasses: 'text-green-600', position: 'top-center' })
+  } catch (e) {
+    error.value = e.message
   }
 }
 const copy = (text) => navigator.clipboard?.writeText(text).then(() => toast({ title: 'Link copied', icon: 'check', iconClasses: 'text-green-600', position: 'top-center' }))

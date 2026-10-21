@@ -12,13 +12,14 @@
     <div class="card overflow-hidden">
       <div class="card-header"><h2 class="card-title">Your machines</h2><span class="text-xs text-gray-500">{{ plant.me.machines.length }}</span></div>
       <ul v-if="plant.me.machines.length" class="divide-y divide-gray-100">
-        <li v-for="m in plant.me.machines" :key="m.name" class="flex items-center gap-3 px-5 py-3 text-sm">
+        <li v-for="m in allMachines ? plant.me.machines : plant.me.machines.slice(0, 5)" :key="m.name" class="flex items-center gap-3 px-5 py-3 text-sm">
           <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700"><FeatherIcon name="droplet" class="h-4 w-4" /></span>
           <span class="min-w-0 flex-1"><span class="block truncate font-medium text-gray-900">{{ m.equipment_name }}</span><span class="block truncate text-xs text-gray-500">{{ [m.site, m.tag].filter(Boolean).join(' · ') || m.name }}</span></span>
           <span v-if="m.status !== 'Active'" class="shrink-0 rounded bg-gray-100 px-1.5 text-[11px] font-semibold text-gray-600">{{ m.status }}</span>
         </li>
       </ul>
       <p v-else class="px-5 py-4 text-sm text-gray-500">None yet.</p>
+      <button v-if="plant.me.machines.length > 5" class="w-full border-t border-gray-100 px-5 py-2.5 text-left text-sm font-medium text-brand-700 hover:bg-gray-50" :aria-expanded="allMachines" @click="allMachines = !allMachines">{{ allMachines ? 'Show fewer' : `Show all ${plant.me.machines.length}` }}</button>
     </div>
 
     <!-- A customer admin manages their own operators -->
@@ -40,6 +41,20 @@
           <FeatherIcon :name="c.icon" class="h-4 w-4 shrink-0 text-gray-500" />
           <span class="min-w-0 flex-1 text-sm"><span class="block font-medium text-gray-900">{{ c.label }}</span><span class="block text-xs text-gray-500">{{ c.help }}</span></span>
           <Toggle :on="!!plant.me.notify?.[c.key]" :label="c.label" :disabled="busy" @change="(v) => setChoice(c.key, v)" />
+        </div>
+        <!-- WhatsApp: they give the number and agree, or switch it off -->
+        <div v-if="plant.me.whatsapp?.available" class="px-5 py-3">
+          <div class="flex items-center gap-3">
+            <FeatherIcon name="message-circle" class="h-4 w-4 shrink-0 text-gray-500" />
+            <span class="min-w-0 flex-1 text-sm"><span class="block font-medium text-gray-900">WhatsApp</span>
+              <span class="block text-xs text-gray-500">{{ plant.me.whatsapp.on ? `Messages go to ${plant.me.whatsapp.number}. Reply STOP to stop them.` : 'Get these notifications on WhatsApp too.' }}</span></span>
+            <Toggle :on="plant.me.whatsapp.on" label="WhatsApp messages" :disabled="busy || (!plant.me.whatsapp.on && !waNumber.trim())" @change="setWhatsapp" />
+          </div>
+          <div v-if="!plant.me.whatsapp.on" class="mt-2 pl-7">
+            <label class="label" for="wa-number">Your WhatsApp number</label>
+            <input id="wa-number" v-model="waNumber" type="tel" class="input" placeholder="+254 712 345 678" autocomplete="tel" />
+            <p class="hint">By turning it on you agree to get plant app messages from {{ plant.me.company || 'us' }} on WhatsApp.</p>
+          </div>
         </div>
         <div v-if="push.subscribed" class="px-5 py-3">
           <button class="btn btn-ghost btn-sm" :disabled="busy" @click="sendTest"><FeatherIcon :name="tested ? 'check' : 'send'" class="h-4 w-4" />{{ tested ? 'Sent: check your notifications' : 'Send a test notification' }}</button>
@@ -87,6 +102,19 @@ const CHOICES = [
 ]
 const busy = ref(false)
 const tested = ref(false)
+const allMachines = ref(false)
+const waNumber = ref(plant.me?.whatsapp?.number || '')
+async function setWhatsapp(on) {
+  busy.value = true
+  try {
+    plant.me.whatsapp = await request('projectit.plant.set_whatsapp', { on: on ? 1 : 0, number: on ? waNumber.value : null })
+    toast({ title: on ? 'WhatsApp messages are on' : 'WhatsApp messages are off', icon: 'message-circle', iconClasses: 'text-green-600', position: 'top-center' })
+  } catch (e) {
+    toast({ title: e.message, icon: 'alert-circle', iconClasses: 'text-red-600', position: 'top-center' })
+  } finally {
+    busy.value = false
+  }
+}
 const phoneHint = computed(() => {
   if (!push.supported) return /iPhone|iPad/.test(navigator.userAgent) ? 'On an iPhone, add this app to the home screen first (Share, then Add to Home Screen).' : 'This browser cannot show notifications.'
   if (push.permission === 'denied') return "Blocked in this phone's settings for this site."

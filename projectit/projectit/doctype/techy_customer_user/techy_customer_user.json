@@ -17,6 +17,9 @@
   "notify_visits",
   "notify_reminders",
   "notify_reports",
+  "whatsapp_number",
+  "whatsapp_on",
+  "whatsapp_opt_in_on",
   "machines_section",
   "machines"
  ],
@@ -131,11 +134,29 @@
    "label": "Monthly Report by Email",
    "default": "1",
    "description": "Customer admins: last month's plant report on the 1st of each month."
+  },
+  {
+   "fieldname": "whatsapp_number",
+   "fieldtype": "Data",
+   "label": "WhatsApp Number",
+   "options": "Phone"
+  },
+  {
+   "fieldname": "whatsapp_on",
+   "fieldtype": "Check",
+   "label": "WhatsApp Messages",
+   "description": "They agreed to get invitations and plant app notifications on WhatsApp."
+  },
+  {
+   "fieldname": "whatsapp_opt_in_on",
+   "fieldtype": "Datetime",
+   "label": "WhatsApp Agreed On",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-21 18:00:00.000000",
+ "modified": "2026-10-22 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Techy Customer User",

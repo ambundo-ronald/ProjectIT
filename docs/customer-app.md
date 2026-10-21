@@ -59,6 +59,8 @@ Turn on **Notifications → On this phone** in **Account** to get alerts even wh
 - **Log reminders:** once a day, after 10:00, while a machine's log is due. Someone with several machines gets one reminder listing them. Reminders go to the machine's operators, or to the admin when it has none.
 - **Replies to your requests** always arrive.
 
+**WhatsApp** (when we have it set up): enter your WhatsApp number and switch it on to get these notifications on WhatsApp too. Reply **STOP** to any of them to stop.
+
 Each person can switch *Visits and reports* and *Log reminders* off. Tapping a notification opens the right page in the plant app.
 
 ## Account

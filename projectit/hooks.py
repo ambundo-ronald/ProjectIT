@@ -96,7 +96,7 @@ doctype_js = {"Project": "public/js/project.js", "Task": "public/js/task.js",
 after_install = ["projectit.setup.ensure_access_fields", "projectit.setup.ensure_ops_defaults",
     "projectit.setup.ensure_task_permissions", "projectit.setup.ensure_customer_roles"]
 after_migrate = ["projectit.setup.ensure_access_fields", "projectit.setup.ensure_ops_defaults",
-    "projectit.setup.ensure_task_permissions", "projectit.setup.ensure_customer_roles"]
+    "projectit.setup.ensure_task_permissions", "projectit.setup.ensure_customer_roles", "projectit.whatsapp.ensure_verify_token"]
 
 # Uninstallation
 # ------------
@@ -190,7 +190,7 @@ doc_events = {
         "on_trash": "projectit.billing.release_jobs",
     },
     "Notification Log": {
-        "after_insert": "projectit.push.on_notification",
+        "after_insert": ["projectit.push.on_notification", "projectit.whatsapp.on_notification"],
     },
     "Techy Service Contract": {
         "validate": "projectit.contracts.validate",

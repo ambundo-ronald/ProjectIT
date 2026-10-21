@@ -42,7 +42,24 @@ def me():
         "machines": _machine_rows(customer_accounts.machines(acc)),
         "company": frappe.db.get_single_value("Global Defaults", "default_company"),
         "support_phone": settings.get("support_phone"), "support_email": settings.get("support_email"),
-        "notify": customer_notify.preferences(acc)}
+        "notify": customer_notify.preferences(acc), "whatsapp": _whatsapp(acc)}
+
+
+def _whatsapp(acc):
+    from projectit import whatsapp as wa
+    row = frappe.db.get_value("Techy Customer User", acc.name, ["whatsapp_number", "whatsapp_on"], as_dict=True) if acc.name else None
+    return {"available": wa.available(), "number": (row or {}).get("whatsapp_number") or "", "on": bool((row or {}).get("whatsapp_on"))}
+
+
+@frappe.whitelist(methods=["POST"])
+def set_whatsapp(on, number=None):
+    """Turn WhatsApp messages on (with my number: I agree to get them) or off."""
+    from projectit import whatsapp as wa
+    acc = customer_accounts.writable()
+    if cint(on) and not wa.available():
+        frappe.throw(_("WhatsApp is not available yet."))
+    wa.set_number(acc.name, number, bool(cint(on)))
+    return _whatsapp(acc)
 
 
 @frappe.whitelist(methods=["POST"])

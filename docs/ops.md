@@ -274,6 +274,8 @@ Each person belongs to one customer. A staff email cannot be used for a customer
 
 **See it as the customer.** On a machine's **Customer app access** card, or **Preview** in the Logging tab, opens the plant app as that customer's admin sees it. A banner shows it is a preview. Nothing can be saved, and **Leave preview** returns to the machine.
 
+**WhatsApp.** Customers can get their notifications, and new people their invitation, on WhatsApp. See [docs/whatsapp.md](whatsapp.md) for the Meta set-up and the two templates.
+
 **What customers never see:** costs, labour, internal notes, investigations, chat, other customers, ERPNext or the staff apps. Customer accounts have no rights on any DocType. Every request they make is checked on the server, and anything outside the plant app is refused.
 
 ## Service contracts

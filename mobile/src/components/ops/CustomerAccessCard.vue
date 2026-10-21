@@ -21,6 +21,7 @@
             <span class="font-medium" :class="a.enabled ? 'text-gray-900' : 'text-gray-500 line-through'">{{ a.full_name }}</span>
             <span class="rounded px-1.5 text-[11px] font-semibold" :class="a.access === 'Customer admin' ? 'bg-brand-50 text-brand-700' : 'bg-gray-100 text-gray-600'">{{ a.access === 'Customer admin' ? 'Admin' : 'Operator' }}</span>
             <span v-if="a.me" class="text-[11px] text-gray-500">(you)</span>
+            <span v-if="a.whatsapp" class="inline-flex items-center gap-1 rounded bg-green-50 px-1.5 text-[11px] font-semibold text-green-700" title="Gets messages on WhatsApp"><FeatherIcon name="message-circle" class="h-3 w-3" />WhatsApp</span>
           </span>
           <span class="block truncate text-xs text-gray-500">{{ a.user }}</span>
           <span class="block text-xs" :class="!a.enabled ? 'text-gray-500' : a.joined ? 'text-gray-500' : 'text-amber-700'">
@@ -64,6 +65,10 @@
           </div>
           <p class="hint">{{ ACCESS.find((o) => o.value === form.access).help }}</p>
         </div>
+        <label v-if="data.whatsapp" class="flex items-start gap-3 rounded-lg border border-gray-200 px-3 py-2.5 text-sm">
+          <input v-model="form.whatsapp" type="checkbox" class="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-600" />
+          <span><span class="block font-medium text-gray-900">Also send it by WhatsApp</span><span class="block text-xs text-gray-500">Only if they agreed to get WhatsApp messages from us. Their visits, reminders and replies then come on WhatsApp too; they can reply STOP.</span></span>
+        </label>
         <fieldset v-if="form.access === 'Operator'">
           <legend class="label">Machines they can log</legend>
           <MachineChecks v-model="form.machines" :machines="data.machines" />
@@ -116,7 +121,7 @@ const formError = ref('')
 const sent = ref(null)
 const resent = ref(null)
 const editing = ref(null)
-const form = reactive({ full_name: '', email: '', phone: '', access: 'Operator', machines: [] })
+const form = reactive({ full_name: '', email: '', phone: '', access: 'Operator', machines: [], whatsapp: false })
 
 const initials = (name) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('')
 // Staff change anyone; a customer admin changes their operators, not other admins or themselves.
@@ -146,7 +151,7 @@ async function emailReport() {
   }
 }
 function openInvite() {
-  Object.assign(form, { full_name: '', email: '', phone: '', access: 'Operator', machines: props.equipment ? [props.equipment] : data.value.machines.length === 1 ? [data.value.machines[0].name] : [] })
+  Object.assign(form, { full_name: '', email: '', phone: '', access: 'Operator', whatsapp: false, machines: props.equipment ? [props.equipment] : data.value.machines.length === 1 ? [data.value.machines[0].name] : [] })
   formError.value = ''
   sent.value = null
   inviting.value = true
@@ -155,8 +160,8 @@ async function invite() {
   saving.value = true
   formError.value = ''
   try {
-    const r = await api('projectit.customer_accounts.invite', { ...scope(), full_name: form.full_name, email: form.email, phone: form.phone || null, access: form.access, machines: JSON.stringify(form.machines) })
-    sent.value = { name: form.full_name, email: form.email, link: r.link, emailed: r.emailed }
+    const r = await api('projectit.customer_accounts.invite', { ...scope(), full_name: form.full_name, email: form.email, phone: form.phone || null, access: form.access, machines: JSON.stringify(form.machines), whatsapp: form.whatsapp ? 1 : 0 })
+    sent.value = { name: form.full_name, email: form.email, link: r.link, emailed: r.emailed, whatsapped: r.whatsapped }
     load()
   } catch (e) {
     formError.value = e.message
@@ -169,7 +174,7 @@ async function resend(a) {
   error.value = ''
   try {
     const r = await api('projectit.customer_accounts.resend_invite', { ...scope(), user: a.user })
-    resent.value = { name: a.full_name, email: a.user, link: r.link, emailed: r.emailed }
+    resent.value = { name: a.full_name, email: a.user, link: r.link, emailed: r.emailed, whatsapped: r.whatsapped }
   } catch (e) {
     error.value = e.message
   } finally {
@@ -223,7 +228,7 @@ const SentLink = (p) =>
   h('div', { class: 'space-y-3 text-sm' }, [
     h('p', { class: 'flex items-start gap-2 ' + (p.sent.emailed ? 'text-green-700' : 'text-amber-800') }, [
       h(FeatherIcon, { name: p.sent.emailed ? 'check-circle' : 'alert-triangle', class: 'mt-0.5 h-4 w-4 shrink-0' }),
-      p.sent.emailed ? `We emailed ${p.sent.email} a link to set their password.` : `The email could not be sent from this site. Share this link with ${p.sent.name} another way.`,
+      (p.sent.emailed ? `We emailed ${p.sent.email} a link to set their password.` : `The email could not be sent from this site. Share this link with ${p.sent.name} another way.`) + (p.sent.whatsapped ? ' It is also on its way by WhatsApp.' : ''),
     ]),
     h('div', { class: 'flex gap-2' }, [
       h('input', { class: 'input font-mono text-xs', readonly: true, value: p.sent.link, 'aria-label': 'Sign-in link', onFocus: (e) => e.target.select() }),

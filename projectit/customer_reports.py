@@ -81,7 +81,9 @@ def accounts(search=None):
         row.update(customer=doc.customer, customer_name=doc.customer_name or doc.customer, me=False,
             last_log=frappe.db.get_value(LOG, {"logged_by": doc.user}, "log_on", order_by="log_on desc"))
         rows.append(row)
-    return {"accounts": rows, "customers": len({r["customer"] for r in rows}),
+    from projectit import whatsapp as wa
+    return {"whatsapp": wa.available(), "whatsapp_on": sum(1 for r in rows if r["whatsapp"]),
+        "accounts": rows, "customers": len({r["customer"] for r in rows}),
         "joined": sum(1 for r in rows if r["joined"] and r["enabled"]), "waiting": sum(1 for r in rows if not r["joined"] and r["enabled"]),
         "off": sum(1 for r in rows if not r["enabled"])}
 

@@ -180,7 +180,8 @@ def _row(doc):
     return {"user": doc.user, "full_name": doc.full_name or doc.user, "access": doc.access,
         "enabled": bool(doc.enabled and user.get("enabled")), "machines": [m.equipment for m in doc.machines],
         "machine_names": [m.equipment_name or m.equipment for m in doc.machines], "invited_on": doc.invited_on,
-        "last_login": user.get("last_login"), "joined": bool(user.get("last_login")), "me": doc.user == frappe.session.user}
+        "last_login": user.get("last_login"), "joined": bool(user.get("last_login")), "me": doc.user == frappe.session.user,
+        "whatsapp": bool(doc.get("whatsapp_on") and doc.get("whatsapp_number"))}
 
 
 @frappe.whitelist()
@@ -194,8 +195,9 @@ def list_accounts(customer=None, equipment=None):
         rows = [r for r in rows if r["access"] == "Customer admin" or equipment in r["machines"]]
     options = frappe.get_all("Techy Equipment", filters={"customer": customer, "status": ["!=", "Cancelled"]},
         fields=["name", "equipment_name", "site"], order_by="equipment_name asc")
+    from projectit import whatsapp as wa
     return {"customer": customer, "customer_name": frappe.db.get_value("Customer", customer, "customer_name"),
-        "accounts": rows, "machines": options, "staff": staff}
+        "accounts": rows, "machines": options, "staff": staff, "whatsapp": wa.available()}
 
 
 def _contact(user, full_name, email, customer, phone=None):
@@ -237,7 +239,7 @@ def _send(user, full_name, link, customer_name):
 
 
 @frappe.whitelist(methods=["POST"])
-def invite(full_name, email, access="Operator", customer=None, equipment=None, machines=None, phone=None):
+def invite(full_name, email, access="Operator", customer=None, equipment=None, machines=None, phone=None, whatsapp=0):
     """Create a customer account and invite the person by email. Also returns the link, to share another way."""
     customer, staff = _scope(customer, equipment)
     full_name = ops.text(full_name, "the person's name", 140)
@@ -278,7 +280,16 @@ def invite(full_name, email, access="Operator", customer=None, equipment=None, m
     doc.insert(ignore_permissions=True)
     link = _invite_link(email)
     customer_name = frappe.db.get_value("Customer", customer, "customer_name")
-    return {"account": _row(doc), "link": link, "emailed": _send(email, full_name, link, customer_name)}
+    whatsapped = False
+    if frappe.utils.cint(whatsapp):
+        # Staff tick this only when the person agreed to WhatsApp messages.
+        from projectit import whatsapp as wa
+        if not phone:
+            frappe.throw(_("Enter their phone number to send the invitation by WhatsApp."))
+        wa.set_number(doc.name, phone, True)
+        whatsapped = wa.invite(email, full_name, link, customer_name)
+    return {"account": _row(frappe.get_doc(DOCTYPE, doc.name)), "link": link,
+        "emailed": _send(email, full_name, link, customer_name), "whatsapped": whatsapped}
 
 
 @frappe.whitelist(methods=["POST"])
@@ -318,4 +329,6 @@ def resend_invite(user, customer=None, equipment=None):
     if not staff and doc.access == "Customer admin":
         frappe.throw(_("Ask us to send a customer admin a new link."), frappe.PermissionError)
     link = _invite_link(doc.user)
-    return {"link": link, "emailed": _send(doc.user, doc.full_name or doc.user, link, doc.customer_name)}
+    from projectit import whatsapp as wa
+    return {"link": link, "emailed": _send(doc.user, doc.full_name or doc.user, link, doc.customer_name),
+        "whatsapped": wa.invite(doc.user, doc.full_name, link, doc.customer_name)}

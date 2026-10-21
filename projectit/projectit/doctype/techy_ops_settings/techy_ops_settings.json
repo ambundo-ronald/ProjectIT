@@ -32,7 +32,19 @@
   "support_phone",
   "support_email",
   "log_reminder_time",
-  "log_missing_days"
+  "log_missing_days",
+  "whatsapp_section",
+  "whatsapp_enabled",
+  "whatsapp_phone_number_id",
+  "whatsapp_token",
+  "whatsapp_app_secret",
+  "whatsapp_verify_token",
+  "whatsapp_column",
+  "whatsapp_template_update",
+  "whatsapp_template_invite",
+  "whatsapp_language",
+  "whatsapp_country_code",
+  "whatsapp_api_base"
  ],
  "fields": [
   {
@@ -214,12 +226,83 @@
    "fieldtype": "Int",
    "label": "Tell Managers After (Days Without a Log)",
    "default": "3"
+  },
+  {
+   "fieldname": "whatsapp_section",
+   "fieldtype": "Section Break",
+   "label": "WhatsApp (Customer App)",
+   "description": "Meta's WhatsApp Cloud API: invitations and plant app notifications to customers who turn WhatsApp on. See docs/whatsapp.md for the set-up and the two message templates to have approved."
+  },
+  {
+   "fieldname": "whatsapp_enabled",
+   "fieldtype": "Check",
+   "label": "Send WhatsApp Messages"
+  },
+  {
+   "fieldname": "whatsapp_phone_number_id",
+   "fieldtype": "Data",
+   "label": "Phone Number ID",
+   "description": "WhatsApp Manager > API Setup: the ID of the business number (not the number itself)."
+  },
+  {
+   "fieldname": "whatsapp_token",
+   "fieldtype": "Password",
+   "label": "Access Token",
+   "description": "A permanent token of a System User with whatsapp_business_messaging permission."
+  },
+  {
+   "fieldname": "whatsapp_app_secret",
+   "fieldtype": "Password",
+   "label": "App Secret",
+   "description": "To check that delivery updates really come from Meta (App settings > Basic)."
+  },
+  {
+   "fieldname": "whatsapp_verify_token",
+   "fieldtype": "Data",
+   "label": "Webhook Verify Token",
+   "read_only": 1,
+   "description": "Paste into the webhook set-up with the callback URL /api/method/projectit.whatsapp.webhook"
+  },
+  {
+   "fieldname": "whatsapp_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "whatsapp_template_update",
+   "fieldtype": "Data",
+   "label": "Update Template",
+   "default": "plant_update"
+  },
+  {
+   "fieldname": "whatsapp_template_invite",
+   "fieldtype": "Data",
+   "label": "Invitation Template",
+   "default": "plant_invite"
+  },
+  {
+   "fieldname": "whatsapp_language",
+   "fieldtype": "Data",
+   "label": "Template Language",
+   "default": "en"
+  },
+  {
+   "fieldname": "whatsapp_country_code",
+   "fieldtype": "Data",
+   "label": "Default Country Code",
+   "default": "254",
+   "description": "For numbers typed without it (0712 345 678 becomes 254712345678)."
+  },
+  {
+   "fieldname": "whatsapp_api_base",
+   "fieldtype": "Data",
+   "label": "API Address",
+   "default": "https://graph.facebook.com/v21.0"
   }
  ],
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-21 09:00:00.000000",
+ "modified": "2026-10-22 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Techy Ops Settings",
