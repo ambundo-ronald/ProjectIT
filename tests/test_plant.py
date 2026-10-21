@@ -49,7 +49,7 @@ class PlantLogTests(OpsTestCase):
         self.frappe.get_doc = MagicMock(return_value=meter)
         self.frappe.db.get_value = MagicMock(return_value=None)
         meters = [{"name": "M-FEED"}]
-        return [patch.object(self.ca, "require_machine"), patch.object(self.plant, "_meters", return_value=meters),
+        return [patch.object(self.ca, "require_machine", return_value=Dict(name="otieno@c.test", customer="CUST-A")), patch.object(self.plant, "_meters", return_value=meters),
             patch.object(self.meters, "unusual", return_value=unusual), patch.object(self.meters, "_record")]
 
     def test_unusual_reading_is_asked_about_and_nothing_saved(self):
@@ -192,6 +192,17 @@ class RequestStateTests(OpsTestCase):
         self.frappe.db.get_value = MagicMock(return_value=Dict(name="T2", custom_work_order=0, custom_equipment="EQ-1"))
         with self.assertRaises(PermissionError):
             self.plant._visit("T2")  # a plain task, not a visit
+
+
+    def test_on_the_way_shows_until_work_starts(self):
+        self.plant.now_datetime = lambda: NOW
+        job = Dict(status="Open", custom_on_way_at=NOW - timedelta(minutes=20), custom_eta_minutes=30)
+        state = self.plant._request_state(Dict(status="Open", custom_work_order="T1"), job)
+        self.assertEqual((state["key"], state["note"]), ("onway", "Our technician is on the way: about 30 min."))
+        job.status = "Working"
+        self.assertEqual(self.plant._request_state(Dict(status="Open", custom_work_order="T1"), job)["key"], "working")
+        old = Dict(status="Open", custom_on_way_at=NOW - timedelta(hours=13))
+        self.assertFalse(self.plant.on_the_way(old))  # yesterday's trip
 
 
 if __name__ == "__main__":

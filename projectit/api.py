@@ -73,7 +73,8 @@ def get_modules_for_router(user_id=None):
     if billing.can_invoice():
         modules.append("ops/billing")
     if ops.manager():
-        modules += ["ops/reports", "ops/dispatch"]
+        # Managers may also preview the customer plant app (read-only, see customer_accounts.preview).
+        modules += ["ops/reports", "ops/dispatch", "ops/customer-app", "plant"]
     return modules
 
 

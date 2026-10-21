@@ -131,5 +131,38 @@ class CustomerAccountTests(OpsTestCase):
         self.guard("/api/method/projectit.work_orders.list_work_orders")
 
 
+class PreviewTests(OpsTestCase):
+    def setUp(self):
+        super().setUp()
+        self.ca = importlib.import_module("projectit.customer_accounts")
+        self.frappe.local.request = SimpleNamespace(path="/api/method/projectit.plant.me")
+        self.frappe.session.user = "boss@x.test"
+        self.frappe.utils.get_fullname = lambda user=None: "Boss"
+        self.header = "EQ-1"
+        self.frappe.get_request_header = lambda name, default=None: self.header if name == "X-Techy-Preview" else default
+        self.frappe.db.get_value = MagicMock(side_effect=lambda dt, *a, **k: None if dt == "Techy Customer User"
+            else Dict(customer="CUST-A", customer_name="Customer A"))
+
+    def test_manager_previews_as_the_customers_admin(self):
+        self.frappe.get_roles.return_value = ["Maintenance Manager"]
+        acc = self.ca.account()
+        self.assertEqual((acc.customer, acc.access, acc.preview), ("CUST-A", "Customer admin", True))
+        with self.assertRaises(PermissionError):
+            self.ca.writable(acc)  # nothing is saved in a preview
+
+    def test_no_preview_for_others_or_without_the_header(self):
+        self.frappe.get_roles.return_value = ["Maintenance User"]
+        self.assertIsNone(self.ca.account())
+        self.frappe.get_roles.return_value = ["Maintenance Manager"]
+        self.header = None
+        self.assertIsNone(self.ca.account())
+
+    def test_preview_cannot_manage_accounts(self):
+        self.frappe.get_roles.return_value = ["Maintenance Manager"]
+        self.assertEqual(self.ca._scope(write=False), ("CUST-A", False))
+        with self.assertRaises(PermissionError):
+            self.ca._scope()
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -7,14 +7,17 @@ from html import escape
 
 import frappe
 from frappe import _
-from frappe.utils import cint, getdate, now_datetime, nowdate
+from frappe.utils import cint, get_datetime, getdate, now_datetime, nowdate
 
 from projectit import (billing, equipment as installed, failures, meters, ops, parts, permissions, procedures, ratings,
     service_report, sla, timer)
 
 FIELDS = ["name", "subject", "status", "priority", "exp_end_date", "custom_work_category", "custom_asset",
     "custom_location", "custom_equipment", "custom_customer", "project", "is_group", "progress", "owner", "creation",
-    "modified", "custom_respond_by", "custom_fix_by", "custom_started_at", "custom_completed_at", "custom_review_requested"]
+    "modified", "custom_respond_by", "custom_fix_by", "custom_started_at", "custom_completed_at", "custom_review_requested",
+    "custom_on_way_at", "custom_on_way_by", "custom_eta_minutes"]
+ON_WAY_HOURS = 12  # "On my way" again after this long is a new trip
+ETA_CHOICES = (15, 30, 60, 120)
 STATUSES = ("Open", "Working", "Pending Review", "Completed", "Cancelled")
 PRIORITIES = ("Low", "Medium", "High", "Urgent")
 CATEGORIES = ("Corrective", "Preventive", "Inspection", "Installation", "Safety", "Other")
@@ -131,7 +134,40 @@ def detail(doc):
         "promise": sla.summary(doc),
         "pm_log": doc.custom_asset_maintenance_log, "workflow": _workflow(), "can_write": can_write,
         "manager": ops.manager(), "mine": permissions.is_mine(doc),
-        "can_take": not ops.manager() and permissions.is_available(doc)}
+        "can_take": not ops.manager() and permissions.is_available(doc), "on_way": on_way(doc)}
+
+
+def on_way(doc):
+    """The technician's trip to the customer: shown on the job, and whether "On my way" can be pressed now."""
+    if not doc.get("custom_equipment") or not doc.get("custom_customer"):
+        return None
+    at = doc.get("custom_on_way_at")
+    recent = bool(at) and (now_datetime() - get_datetime(at)).total_seconds() < ON_WAY_HOURS * 3600
+    me = frappe.session.user
+    going = doc.status in ("Open", "Overdue") and (me in _assignees([doc.name])[doc.name] or ops.manager())
+    return {"at": at if recent else None, "by": frappe.utils.get_fullname(doc.custom_on_way_by) if recent and doc.get("custom_on_way_by") else None,
+        "minutes": cint(doc.get("custom_eta_minutes")) or None if recent else None, "can_go": going and not recent,
+        "choices": ETA_CHOICES}
+
+
+@frappe.whitelist(methods=["POST"])
+def on_my_way(name, minutes=None):
+    """The technician sets off to the customer: the job records it and the customer's people are told."""
+    doc = _work_order(name, write=True)
+    if doc.status not in ("Open", "Overdue"):
+        frappe.throw(_("On my way is for a job that has not started yet."))
+    if not doc.get("custom_equipment") or not doc.get("custom_customer"):
+        frappe.throw(_("On my way is for jobs at a customer's machine."))
+    if frappe.session.user not in _assignees([doc.name])[doc.name] and not ops.manager():
+        frappe.throw(_("Only someone on this job can say they are on the way."), frappe.PermissionError)
+    minutes = cint(minutes) if cint(minutes) in ETA_CHOICES else None
+    doc.db_set({"custom_on_way_at": now_datetime(), "custom_on_way_by": frappe.session.user, "custom_eta_minutes": minutes})
+    who = frappe.utils.get_fullname()
+    doc.add_comment("Info", escape(_("{0} is on the way{1}.").format(who,
+        _(" (about {0} min)").format(minutes) if minutes else "")))
+    from projectit import customer_notify
+    customer_notify.on_the_way(doc, who.split(" ")[0], minutes)
+    return get_work_order(doc.name)
 
 
 def _steps(value):

@@ -36,7 +36,7 @@ def me():
     """Who I am in the customer app, and the machines I may see."""
     acc = customer_accounts.require_account()
     settings = frappe.get_cached_doc("Techy Ops Settings")
-    return {"user": acc.user, "full_name": acc.full_name, "access": acc.access, "admin": acc.access == "Customer admin",
+    return {"preview": bool(acc.get("preview")), "user": acc.user, "full_name": acc.full_name, "access": acc.access, "admin": acc.access == "Customer admin",
         "customer": acc.customer, "customer_name": acc.customer_name or acc.customer,
         "machines": _machine_rows(customer_accounts.machines(acc)),
         "company": frappe.db.get_single_value("Global Defaults", "default_company"),
@@ -47,7 +47,7 @@ def me():
 @frappe.whitelist(methods=["POST"])
 def set_notifications(visits=None, reminders=None):
     """My choices: visit news, and log reminders."""
-    acc = customer_accounts.require_account()
+    acc = customer_accounts.writable()
     values = {}
     if visits is not None:
         values[customer_notify.VISITS] = 1 if cint(visits) else 0
@@ -137,7 +137,7 @@ def save_log(equipment, values, note=None, photo=None, confirm=0, taken_on=None,
     """Save one log: a reading for each meter filled in. Unusual readings are not saved until the operator confirms
     them (`confirm=1`); a log sent later from a phone that was offline (`confirm=2`) is saved with them marked."""
     from projectit import meters, ops, ro
-    customer_accounts.require_machine(equipment)
+    customer_accounts.writable(customer_accounts.require_machine(equipment))
     client_id = str(client_id or "")[:64] or None
     if client_id:
         done = frappe.db.get_value(LOG, {"client_id": client_id}, LOG_FIELDS + ["equipment"], as_dict=True)
@@ -188,6 +188,7 @@ def fix_log(log, values):
     """Correct a typo in my own log, within a day of saving it. The change is recorded on the log."""
     from projectit import meters, ro
     log = _visible_log(log)
+    customer_accounts.writable()
     if not can_fix(log):
         frappe.throw(_("Only the person who saved a log can correct it, within {0} hours. Ask us to correct it.").format(
             FIX_HOURS), frappe.PermissionError)
@@ -333,6 +334,12 @@ def dashboard(equipment, days=90):
     kinds = {"Preventive": _("Service visit"), "Corrective": _("Repair visit"), "Inspection": _("Inspection visit"),
         "Installation": _("Installation")}
     nxt = []
+    going = frappe.get_all("Task", filters={"custom_work_order": 1, "custom_equipment": equipment, "parent_task": ["is", "not set"],
+        "status": ["in", ["Open", "Overdue"]], "custom_on_way_at": ["is", "set"]}, fields=["status", "custom_on_way_at",
+        "custom_eta_minutes"], order_by="custom_on_way_at desc", limit_page_length=1)
+    if going and on_the_way(going[0]):
+        nxt.append({"kind": "onway", "label": _("Our technician is on the way"), "on": going[0].custom_on_way_at,
+            "minutes": cint(going[0].custom_eta_minutes) or None})
     if upcoming:
         nxt.append({"kind": "visit", "label": kinds.get(upcoming[0].custom_work_category, _("Visit")), "on": upcoming[0].exp_start_date})
     elif contract_visit and getdate(contract_visit) >= today:
@@ -365,6 +372,13 @@ JOB_FIELDS = ["name", "subject", "status", "custom_work_category", "custom_compl
 DECLINED = "Declined:"
 
 
+def on_the_way(job):
+    """Our technician pressed On my way for this not-yet-started visit in the last few hours."""
+    from projectit.work_orders import ON_WAY_HOURS
+    at = job.get("custom_on_way_at")
+    return bool(at) and job.get("status") in ("Open", "Overdue") and         (now_datetime() - get_datetime(at)).total_seconds() < ON_WAY_HOURS * 3600
+
+
 def _request_state(issue, job):
     """What the customer sees of a request, in plain words."""
     if issue.status in ("Resolved", "Closed") and not issue.custom_work_order:
@@ -375,6 +389,9 @@ def _request_state(issue, job):
         return {"key": "done", "label": _("Done")}
     if job.status in ("Working", "Pending Review"):
         return {"key": "working", "label": _("In progress")}
+    if on_the_way(job):
+        return {"key": "onway", "label": _("On the way"), "note": _("Our technician is on the way{0}.").format(
+            _(": about {0} min").format(job.custom_eta_minutes) if cint(job.custom_eta_minutes) else "")}
     if job.exp_start_date:
         return {"key": "scheduled", "label": _("Scheduled"), "on": job.exp_start_date}
     return {"key": "accepted", "label": _("Accepted"), "note": _("We will schedule a visit and tell you the date.")}
@@ -389,7 +406,7 @@ def _requests(equipment, customer):
         "custom_work_order", "priority"], order_by="creation desc", limit_page_length=30)
     linked = [r.custom_work_order for r in rows if r.custom_work_order]
     jobs = {j.name: j for j in frappe.get_all("Task", filters={"name": ["in", linked or [""]]},
-        fields=["name", "status", "exp_start_date"])}
+        fields=["name", "status", "exp_start_date", "custom_on_way_at", "custom_eta_minutes"])}
     out = []
     for r in rows:
         state = _request_state(r, jobs.get(r.custom_work_order))
@@ -461,7 +478,7 @@ def service(equipment):
 def request_service(equipment, subject, description=None, urgent=0, photo=None):
     """Ask us for service on a machine. It arrives in our Requests inbox like any other work request."""
     from projectit import ops, work_requests
-    acc = customer_accounts.require_machine(equipment)
+    acc = customer_accounts.writable(customer_accounts.require_machine(equipment))
     doc = work_requests._issue(subject, description, None, None, frappe.session.user,
         priority="High" if cint(urgent) else None, equipment=equipment)
     if photo:
@@ -497,6 +514,7 @@ def rate_visit(job, rating, comment=None):
     from projectit import ratings
     from projectit.work_orders import _assignees
     row = _visit(job)
+    customer_accounts.writable()
     if not ratings.rateable(row):
         frappe.throw(_("This visit cannot be rated."))
     ratings.record(row, rating, comment)

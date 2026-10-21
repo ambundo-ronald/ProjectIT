@@ -40,13 +40,45 @@ def is_customer(user=None):
 
 
 def account(user=None):
-    """The signed-in person's enabled customer account, or None."""
-    user = user or frappe.session.user
-    if user in ("Guest", "Administrator"):
+    """The signed-in person's enabled customer account, or None. A manager previewing the plant app (see
+    preview()) gets a read-only stand-in for that customer's admin."""
+    me = frappe.session.user
+    user = user or me
+    if user == "Guest":
         return None
     row = frappe.db.get_value(DOCTYPE, {"user": user, "enabled": 1}, ["name", "user", "customer", "customer_name",
-        "access", "full_name"], as_dict=True)
-    return row or None
+        "access", "full_name"], as_dict=True) if user != "Administrator" else None
+    if row:
+        return row
+    return preview() if user == me else None
+
+
+PREVIEW_HEADER = "X-Techy-Preview"
+
+
+def preview():
+    """A manager seeing the plant app as a machine's customer does: the machine comes in a request header from the
+    app, and only reading is allowed (writable() refuses everything else)."""
+    request = getattr(frappe.local, "request", None)
+    equipment = frappe.get_request_header(PREVIEW_HEADER) if request else None
+    if not equipment or is_customer():
+        return None
+    if not set(frappe.get_roles()) & ops.MANAGER_ROLES:
+        return None
+    row = frappe.db.get_value("Techy Equipment", str(equipment)[:140], ["customer", "customer_name"], as_dict=True)
+    if not row or not row.customer:
+        return None
+    return frappe._dict(name=None, user=frappe.session.user, customer=row.customer,
+        customer_name=row.customer_name or row.customer, access="Customer admin",
+        full_name=frappe.utils.get_fullname(), preview=True)
+
+
+def writable(acc=None):
+    """The account, unless this is a manager's preview (which only reads)."""
+    acc = acc or require_account()
+    if acc.get("preview"):
+        frappe.throw(_("This is a preview of the customer's app: nothing can be saved."), frappe.PermissionError)
+    return acc
 
 
 def require_account():
@@ -106,9 +138,13 @@ def guard():
 
 # Who may manage accounts ---------------------------------------------------------------------------------------
 
-def _scope(customer=None, equipment=None):
+def _scope(customer=None, equipment=None, write=True):
     """(customer, staff?) the caller may manage. Staff managers choose; a customer admin always gets their own."""
     acc = account()
+    if acc and acc.get("preview") and not write:
+        return acc.customer, False
+    if acc and acc.get("preview"):
+        writable(acc)
     if acc:
         if acc.access != "Customer admin":
             frappe.throw(_("Only the customer's admin can manage accounts."), frappe.PermissionError)
@@ -150,7 +186,7 @@ def _row(doc):
 @frappe.whitelist()
 def list_accounts(customer=None, equipment=None):
     """People with access to this customer's plant (staff: any customer; a customer admin: their own)."""
-    customer, staff = _scope(customer, equipment)
+    customer, staff = _scope(customer, equipment, write=False)
     names = frappe.get_all(DOCTYPE, filters={"customer": customer}, pluck="name", order_by="access asc, full_name asc")
     rows = [_row(frappe.get_doc(DOCTYPE, n)) for n in names]
     if equipment:

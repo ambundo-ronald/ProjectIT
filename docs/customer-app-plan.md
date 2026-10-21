@@ -92,20 +92,20 @@ These are my recommendations. Change any you disagree with.
 
 ## Phase 7: Our side (staff)
 
-- [ ] **7.1 Customer accounts list**: who has access, to which machines, last login and last log; disable or resend the invite.
-- [ ] **7.2 Logging compliance report**: per customer and machine, the logs expected, received and missed, plus an export (Excel/PDF, as in the other reports).
-- [ ] **7.3 "Customer view" preview**: a manager can see a machine's page as the customer sees it, to check nothing internal leaks.
+- [x] **7.1 Customer accounts list**: who has access, to which machines, last login and last log; disable or resend the invite.
+- [x] **7.2 Logging compliance report**: per customer and machine, the logs expected, received and missed, plus an export (Excel/PDF, as in the other reports).
+- [x] **7.3 "Customer view" preview**: a manager can see a machine's page as the customer sees it, to check nothing internal leaks.
 
 ## Phase 8: Testing, docs and go-live
 
-- [ ] **8.1 Unit tests**: account creation, scoping, log save and grouping, the edit window, reminders.
-- [ ] **8.2 Browser flows** (Playwright), each as a separate account:
+- [x] **8.1 Unit tests**: account creation, scoping, log save and grouping, the edit window, reminders.
+- [x] **8.2 Browser flows** (Playwright), each as a separate account:
   - a customer admin;
   - an operator;
   - a second customer that must see nothing of the first.
 
   They cover phone and desktop size, light and dark mode, and offline logging.
-- [ ] **8.3 Docs**:
+- [x] **8.3 Docs**:
   - `docs/customer-app.md`, a short guide for customers and operators;
   - a staff section in `docs/ops.md` on creating accounts and reading customer logs.
 - [ ] **8.4 Go-live checklist**:

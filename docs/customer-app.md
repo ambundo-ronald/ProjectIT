@@ -45,7 +45,7 @@ The top of the Log page shows whether today's log is done. Each machine is logge
 
 Turn on **Notifications → On this phone** in **Account** to get alerts even when the app is closed. On an iPhone, first add the app to the home screen (Share, then Add to Home Screen; iOS 16.4 or later).
 
-- **Visits and reports:** a visit is planned or moved, our technician has started work, the visit is done and its report is ready, or the membranes need cleaning and we are planning it.
+- **Visits and reports:** a visit is planned or moved, our technician is on the way (with when they expect to arrive) or has started work, the visit is done and its report is ready, or the membranes need cleaning and we are planning it.
 - **Log reminders:** once a day, after 10:00, while a machine's log is due. Someone with several machines gets one reminder listing them. Reminders go to the machine's operators, or to the admin when it has none.
 - **Replies to your requests** always arrive.
 

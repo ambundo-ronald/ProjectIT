@@ -156,6 +156,7 @@ const STATE = {
   received: { icon: 'inbox', chip: 'bg-gray-100 text-gray-700' },
   accepted: { icon: 'check', chip: 'bg-brand-50 text-brand-700' },
   scheduled: { icon: 'calendar', chip: 'bg-brand-50 text-brand-700' },
+  onway: { icon: 'navigation', chip: 'bg-brand-50 text-brand-700' },
   working: { icon: 'tool', chip: 'bg-amber-50 text-amber-800' },
   done: { icon: 'check-circle', chip: 'bg-green-50 text-green-700' },
   closed: { icon: 'x-circle', chip: 'bg-gray-100 text-gray-600' },

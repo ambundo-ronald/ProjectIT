@@ -60,6 +60,7 @@ The choice applies to all three apps and is remembered on that device.
 
 Technicians send a finished job **for review**, and a manager approves it (completing it) or sends it back. See [docs/employee-access.md](employee-access.md) for exactly what technicians and managers can do.
 
+- **On my way**: on a job at a customer's machine that has not started yet, someone on the job presses **On my way** and picks when they expect to arrive (15 min, 30 min, 1 h, 2 h or not sure). The customer's people get a notification, their plant app shows the technician on the way, and the job notes who left when. It can be pressed once per trip (again after 12 hours).
 - Create a work order from **Work orders**, from an asset, or by approving a request. Each one has a priority, category, due date, asset or location, assignees, an optional project, an optional procedure from the library (see [Procedures](#procedures)) and an optional quick checklist.
 - The board groups work orders by status: Open (including ERPNext Overdue), In progress (Working), On hold / review (Pending Review) and Done (Completed). The list view adds status filters and search.
 - Technicians see the work orders assigned to them or created by them. They can start, hold, complete and reopen them, tick checklist steps, add photos and post updates. They can create work orders but assign them only to themselves.
@@ -259,6 +260,12 @@ Each person belongs to one customer. A staff email cannot be used for a customer
 **Their service requests** arrive in **Requests** like any other work request, raised by the customer's person (urgent ones as High priority). Approving or declining works as usual. The customer sees the request move from *Received* to *Accepted*, *Scheduled* (from the job's planned start), *In progress* and *Done*. A decline reason is shown to them as **Our reply**, so write it for the customer. In the app they can also download each completed visit's service report (no prices) and rate the visit.
 
 **Notifications.** Customers' people are told, on their phones, when a visit on their machine is planned or moved (the job's planned start date), when work starts, and when it is completed (report ready, please rate). They are also told when we raise a membrane cleaning job, and get replies to their requests. Operators get one log reminder a day after **Log Reminder Time** (Techy Ops Settings, default 10:00) while a machine's log is due. Managers get one notification when machines have had no customer log for **Tell Managers After (Days Without a Log)** days (default 3), once per gap. Both need the site scheduler running.
+
+**Staff tools.** **Customer app** (managers; in the sidebar, or **More** on a phone) has two tabs:
+- **Logging:** every customer machine someone can log, with its schedule, how many of the expected days it was logged over 7, 30 or 90 days, the last log and who made it. Worst first. **Excel** exports it together with the accounts.
+- **Accounts:** every customer account across customers: access, machines, when they last signed in and logged, with **New link** and **Switch off**.
+
+**See it as the customer.** On a machine's **Customer app access** card, or **Preview** in the Logging tab, opens the plant app as that customer's admin sees it. A banner shows it is a preview. Nothing can be saved, and **Leave preview** returns to the machine.
 
 **What customers never see:** costs, labour, internal notes, investigations, chat, other customers, ERPNext or the staff apps. Customer accounts have no rights on any DocType. Every request they make is checked on the server, and anything outside the plant app is refused.
 

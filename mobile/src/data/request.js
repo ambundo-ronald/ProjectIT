@@ -5,6 +5,8 @@
 export async function request(method, args = {}) {
   const headers = { Accept: 'application/json', 'Content-Type': 'application/json; charset=utf-8' }
   if (window.csrf_token && !window.csrf_token.includes('{{')) headers['X-Frappe-CSRF-Token'] = window.csrf_token
+  // A manager previewing the customer plant app as one machine's customer (read-only; see data/plant.js).
+  if (window.__techyPreview && method.startsWith('projectit.plant.')) headers['X-Techy-Preview'] = window.__techyPreview
   let res
   try {
     res = await fetch(`/api/method/${method}`, { method: 'POST', headers, body: JSON.stringify(args) })

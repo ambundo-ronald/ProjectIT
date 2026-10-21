@@ -46,6 +46,14 @@
       </div>
     </header>
 
+    <div v-if="plant.me?.preview" class="sticky top-14 z-20 border-b border-amber-200 bg-amber-50 md:top-16" role="status">
+      <div class="mx-auto flex max-w-3xl flex-wrap items-center gap-2 px-4 py-2 text-sm text-amber-900 md:px-6">
+        <FeatherIcon name="eye" class="h-4 w-4 shrink-0" />
+        <span class="min-w-0 flex-1">Preview: what {{ plant.me.customer_name }}'s admin sees. Nothing can be saved.</span>
+        <button class="btn btn-secondary btn-sm" @click="leavePreview">Leave preview</button>
+      </div>
+    </div>
+
     <main class="mx-auto max-w-3xl px-4 py-5 md:px-6 md:py-8">
       <div v-if="!plant.me && !plant.error" class="space-y-3" aria-busy="true">
         <div v-for="i in 3" :key="i" class="h-24 animate-pulse rounded-2xl bg-gray-200/70" />
@@ -65,12 +73,12 @@
 </template>
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { FeatherIcon } from 'frappe-ui'
 import Dropdown from '@/components/ops/Dropdown.vue'
 import EmptyState from '@/components/ops/EmptyState.vue'
 import Modal from '@/components/ops/Modal.vue'
-import { plant, machine, loadPlant, chooseMachine } from '@/data/plant'
+import { plant, machine, loadPlant, chooseMachine, setPreview } from '@/data/plant'
 
 const TABS = [
   { name: 'PlantHome', label: 'Home', icon: 'home' },
@@ -91,5 +99,15 @@ function openPicker() {
   picking.value = true
 }
 const isActive = (t) => route.name === t.name || route.matched.some((r) => r.name === t.name)
-onMounted(() => loadPlant().catch(() => {}))
+const router = useRouter()
+onMounted(() => {
+  // A manager opening the preview from a machine page: /plant?preview=EQ-…
+  if (route.query.preview) setPreview(String(route.query.preview))
+  loadPlant().catch(() => {})
+})
+function leavePreview() {
+  const eq = window.__techyPreview
+  setPreview(null)
+  router.push(eq ? { name: 'OpsEquipmentDetail', params: { name: eq } } : { name: 'Home' })
+}
 </script>

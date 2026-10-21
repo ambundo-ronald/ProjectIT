@@ -75,6 +75,13 @@ class VisitNewsTests(OpsTestCase):
         self.assertEqual(self.told, [])
 
 
+    def test_on_the_way(self):
+        self.n.on_the_way(self.job(), "Tina", 30)
+        self.n.on_the_way(self.job(), "Tina")
+        self.assertEqual(self.told, ["Tina, our technician, is on the way to RO 1. They should arrive in about 30 minutes.",
+            "Tina, our technician, is on the way to RO 1."])
+
+
 class ScheduledTests(OpsTestCase):
     def setUp(self):
         super().setUp()

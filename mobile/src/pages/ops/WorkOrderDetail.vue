@@ -37,6 +37,25 @@
             <span>Nobody has this job yet.</span>
             <button class="btn btn-primary btn-sm" :disabled="busy" @click="take"><FeatherIcon name="user-plus" class="h-4 w-4" />Take this job</button>
           </div>
+          <!-- Setting off to the customer: they are told on their phone -->
+          <div v-if="data.on_way?.at" class="mt-4 flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-2.5 text-sm text-brand-800" role="status">
+            <FeatherIcon name="navigation" class="h-4 w-4 shrink-0" />
+            <span>{{ data.on_way.by }} left {{ fromNow(data.on_way.at) }}{{ data.on_way.minutes ? `, arriving in about ${data.on_way.minutes} min` : '' }}. The customer has been told.</span>
+          </div>
+          <div v-else-if="data.on_way?.can_go" class="mt-4 rounded-lg border border-gray-200 px-3 py-2.5 text-sm">
+            <div v-if="!choosingEta" class="flex flex-wrap items-center justify-between gap-3">
+              <span class="text-gray-600">Setting off? The customer gets a notification.</span>
+              <button class="btn btn-secondary btn-sm" :disabled="busy" @click="choosingEta = true"><FeatherIcon name="navigation" class="h-4 w-4" />On my way</button>
+            </div>
+            <div v-else>
+              <p class="mb-2 font-medium text-gray-900">Arriving in about…</p>
+              <div class="flex flex-wrap gap-1.5" role="group" aria-label="Arriving in about">
+                <button v-for="m in data.on_way.choices" :key="m" class="chip" :disabled="busy" @click="goOnWay(m)">{{ m < 60 ? `${m} min` : `${m / 60} h` }}</button>
+                <button class="chip" :disabled="busy" @click="goOnWay(null)">Not sure</button>
+                <button class="btn btn-ghost btn-sm ml-auto" :disabled="busy" @click="choosingEta = false">Cancel</button>
+              </div>
+            </div>
+          </div>
           <p v-if="inReview" class="mt-4 flex items-start gap-2 rounded-lg bg-brand-50 px-3 py-2.5 text-sm text-brand-800" role="status">
             <FeatherIcon name="check-square" class="mt-0.5 h-4 w-4 shrink-0" />
             <span v-if="data.manager">Ready for review. Approve it to complete the job, or send it back with what still needs doing.</span>
@@ -338,6 +357,14 @@ async function run(work) {
   }
 }
 
+const choosingEta = ref(false)
+function goOnWay(minutes) {
+  return run(async () => {
+    set(await api('projectit.work_orders.on_my_way', { name: wo.value.name, minutes }))
+    choosingEta.value = false
+    toast({ title: 'The customer has been told you are on the way', icon: 'navigation', iconClasses: 'text-brand-600', position: 'top-center' })
+  }).catch(() => {})
+}
 const load = () => run(async () => set(await api('projectit.work_orders.get_work_order', { name: route.params.name }))).catch(() => {})
 const update = (changes) => run(async () => set(await api('projectit.work_orders.update_work_order', { name: wo.value.name, modified: wo.value.modified, ...changes }))).catch(() => {})
 function act(a) {

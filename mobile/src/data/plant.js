@@ -6,6 +6,25 @@ import { reactive, computed } from 'vue'
 import { api, request } from './ops'
 
 const KEY = 'techy_plant_machine'
+const PREVIEW = 'techy_plant_preview'
+
+/** A manager's read-only preview of the plant app as a machine's customer sees it (null to stop). */
+export function setPreview(equipment) {
+  window.__techyPreview = equipment || null
+  try {
+    if (equipment) sessionStorage.setItem(PREVIEW, equipment)
+    else sessionStorage.removeItem(PREVIEW)
+  } catch (e) {
+    /* storage blocked: the preview lasts until the page reloads */
+  }
+  plant.me = null
+  loading = null
+}
+try {
+  if (typeof window !== 'undefined') window.__techyPreview = sessionStorage.getItem(PREVIEW) || null
+} catch (e) {
+  /* storage blocked */
+}
 export const plant = reactive({ me: null, machine: null, error: '' })
 
 function remembered() {
@@ -24,7 +43,8 @@ export function loadPlant(force = false) {
         plant.me = me
         plant.error = ''
         const names = me.machines.map((m) => m.name)
-        plant.machine = names.includes(plant.machine) ? plant.machine : names.includes(remembered()) ? remembered() : names[0] || null
+        const previewed = me.preview ? window.__techyPreview : null
+        plant.machine = names.includes(previewed) ? previewed : names.includes(plant.machine) ? plant.machine : names.includes(remembered()) ? remembered() : names[0] || null
         return me
       })
       .catch((e) => {

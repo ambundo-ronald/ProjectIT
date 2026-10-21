@@ -82,6 +82,15 @@ def on_task_update(doc, method=None):
         frappe.log_error(title=f"Techy Plant: visit notification for {doc.name} failed")
 
 
+def on_the_way(doc, first_name, minutes=None):
+    """The technician has set off to the customer's machine."""
+    users = audience(doc.custom_equipment, VISITS)
+    if users:
+        when = _(" They should arrive in about {0} minutes.").format(minutes) if minutes else ""
+        _tell(users, _("{0}, our technician, is on the way to {1}.{2}").format(first_name, _machine(doc.custom_equipment), when),
+            "Task", doc.name)
+
+
 def cleaning_raised(equipment, task):
     """We raised a membrane cleaning job: tell the customer why."""
     users = audience(equipment, VISITS)

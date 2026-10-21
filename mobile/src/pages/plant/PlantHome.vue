@@ -98,8 +98,14 @@
                 <span v-if="n.estimate" class="block text-xs text-gray-500">Estimated from its daily running hours</span>
               </span>
               <span class="shrink-0 text-right text-xs tabular-nums" :class="n.past ? 'text-gray-500' : 'text-gray-700'">
-                <span class="block font-semibold">{{ n.estimate ? 'About ' : '' }}{{ formatDate(n.on) }}</span>
-                <span class="block text-gray-500">{{ n.past ? 'Ended' : until(n.on) }}</span>
+                <template v-if="n.kind === 'onway'">
+                  <span class="block font-semibold">{{ n.minutes ? `About ${n.minutes} min` : 'Soon' }}</span>
+                  <span class="block text-gray-500">Left {{ fromNow(n.on) }}</span>
+                </template>
+                <template v-else>
+                  <span class="block font-semibold">{{ n.estimate ? 'About ' : '' }}{{ formatDate(n.on) }}</span>
+                  <span class="block text-gray-500">{{ n.past ? 'Ended' : until(n.on) }}</span>
+                </template>
               </span>
             </li>
           </ul>
@@ -138,7 +144,7 @@ const STATUS = {
   watch: { label: 'Needs attention', icon: 'alert-circle', band: 'bg-amber-50', badge: 'bg-amber-100 text-amber-700' },
   action: { label: 'Action needed', icon: 'alert-triangle', band: 'bg-red-50', badge: 'bg-red-100 text-red-700' },
 }
-const NEXT_ICON = { visit: 'truck', service: 'tool', warranty_until: 'shield', contract_until: 'file-text' }
+const NEXT_ICON = { onway: 'navigation', visit: 'truck', service: 'tool', warranty_until: 'shield', contract_until: 'file-text' }
 const d = ref(null)
 const error = ref('')
 const days = ref(90)

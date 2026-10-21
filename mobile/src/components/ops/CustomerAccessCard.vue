@@ -5,7 +5,10 @@
         <h2 class="card-title">{{ equipment ? 'Customer app access' : 'People' }}</h2>
         <p class="text-xs text-gray-500">{{ equipment ? `${data.customer_name} people who can see this machine in the plant app` : 'Who can sign in to the plant app' }}</p>
       </div>
-      <button class="btn btn-secondary btn-sm" @click="openInvite"><FeatherIcon name="user-plus" class="h-4 w-4" />Invite someone</button>
+      <span class="flex flex-wrap gap-2">
+        <router-link v-if="equipment && data.staff" :to="{ path: '/plant', query: { preview: equipment } }" class="btn btn-ghost btn-sm"><FeatherIcon name="eye" class="h-4 w-4" />See it as the customer</router-link>
+        <button class="btn btn-secondary btn-sm" @click="openInvite"><FeatherIcon name="user-plus" class="h-4 w-4" />Invite someone</button>
+      </span>
     </div>
 
     <ul v-if="data.accounts.length" class="divide-y divide-gray-100">
