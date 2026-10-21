@@ -28,14 +28,13 @@
   "contract_until",
   "service_contract",
   "log_schedule",
-  "plant_status",
-  "plant_status_reasons",
-  "plant_status_on",
   "built_section",
   "built_from_work_order",
   "column_break_built",
   "built_from_bom",
   "components",
+  "supplies_section",
+  "supplies",
   "notes_section",
   "notes",
   "ro_baseline_on"
@@ -233,30 +232,20 @@
    "description": "How often the customer's operators should log this machine's readings in the plant app."
   },
   {
-   "fieldname": "plant_status",
-   "fieldtype": "Select",
-   "label": "Plant Status",
-   "options": "\nRunning well\nNeeds attention\nAction needed",
-   "read_only": 1,
-   "in_standard_filter": 1,
-   "description": "Worked out from the readings, logs, services and repairs; refreshed on changes and daily."
+   "fieldname": "supplies_section",
+   "fieldtype": "Section Break",
+   "label": "Filters and Chemicals"
   },
   {
-   "fieldname": "plant_status_reasons",
-   "fieldtype": "Small Text",
-   "label": "Plant Status Reasons",
-   "read_only": 1
-  },
-  {
-   "fieldname": "plant_status_on",
-   "fieldtype": "Datetime",
-   "label": "Plant Status Checked",
-   "read_only": 1
+   "fieldname": "supplies",
+   "fieldtype": "Table",
+   "label": "Supplies",
+   "options": "Techy Equipment Supply"
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-21 15:00:00.000000",
+ "modified": "2026-10-21 17:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Techy Equipment",

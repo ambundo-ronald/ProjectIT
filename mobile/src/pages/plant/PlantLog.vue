@@ -67,6 +67,8 @@
       </div>
     </form>
 
+    <SuppliesCard v-if="plant.machine" :key="plant.machine" :equipment="plant.machine" plant />
+
     <!-- History -->
     <div v-if="form?.recent.length" class="card overflow-hidden">
       <div class="card-header"><h2 class="card-title">Recent logs</h2><span class="text-xs text-gray-500">{{ form.recent.length }}</span></div>
@@ -118,6 +120,7 @@ import EmptyState from '@/components/ops/EmptyState.vue'
 import Modal from '@/components/ops/Modal.vue'
 import PhotoButtons from '@/components/ops/PhotoButtons.vue'
 import AdviceCard from '@/components/plant/AdviceCard.vue'
+import SuppliesCard from '@/components/ops/SuppliesCard.vue'
 import { api, request, formatDate, fromNow } from '@/data/ops'
 import { plant, machine, waiting, queueLog, sendWaiting } from '@/data/plant'
 

@@ -34,6 +34,14 @@ Open **Log**, read the gauges, and type each number in. The form lists the machi
 
 The top of the Log page shows whether today's log is done. Each machine is logged once a day unless we agreed otherwise (twice a day, once a week, or not at all).
 
+## Filters and chemicals
+
+Under the log, **Filters and chemicals** lists what the machine uses, when each is next due and how much is on site.
+- **Changed** (filters) records a change: it uses the usual amount and starts the countdown again. **Topped up** (chemicals) asks how much was used.
+- **Due now**, **Due in 2 days** and **Running low** also show on Home and in the plant's status.
+- **Order more** asks us for more. We send a quotation. The supply shows *Ordered* until the delivery arrives.
+- **⋯ → A delivery arrived** adds stock. **⋯ → Correct what is on site** fixes the count.
+
 ## Service
 
 - **Ask for service**: say what is wrong, add details and a photo, and tick **Urgent** if the plant has stopped or the water is not safe. The request goes straight to our team.

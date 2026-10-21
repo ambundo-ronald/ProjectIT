@@ -139,9 +139,12 @@ def plant_status(level=None, search=None):
     ops.require_manager()
     from projectit import customer_notify
     from projectit.plant import LOG, on_the_way
+    states = {s.equipment: s for s in frappe.get_all("Techy Plant Status", fields=["equipment", "status", "reasons", "checked_on"])}
     machines = frappe.get_all("Techy Equipment", filters={"status": "Active", "customer": ["is", "set"],
-        "plant_status": ["is", "set"]}, fields=["name", "equipment_name", "customer", "customer_name", "site", "tag",
-        "plant_status", "plant_status_reasons", "plant_status_on"])
+        "name": ["in", list(states) or [""]]}, fields=["name", "equipment_name", "customer", "customer_name", "site", "tag"])
+    for m in machines:
+        s = states[m.name]
+        m.update(plant_status=s.status, plant_status_reasons=s.reasons, plant_status_on=s.checked_on)
     counts = {k: 0 for k in ORDER}
     rows = []
     for m in machines:

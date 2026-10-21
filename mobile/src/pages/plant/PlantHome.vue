@@ -96,7 +96,7 @@
             <li v-for="n in d.next" :key="n.kind" class="flex items-start gap-3 px-5 py-3 text-sm">
               <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700"><FeatherIcon :name="NEXT_ICON[n.kind] || 'calendar'" class="h-4 w-4" /></span>
               <span class="min-w-0 flex-1">
-                <span class="block font-medium text-gray-900">{{ n.label }}</span>
+                <span class="block font-medium text-gray-900">{{ n.label }}<span v-if="n.due" class="ml-2 rounded bg-red-50 px-1.5 text-[11px] font-semibold text-red-700">Due now</span></span>
                 <span v-if="n.estimate" class="block text-xs text-gray-500">Estimated from its daily running hours</span>
               </span>
               <span class="shrink-0 text-right text-xs tabular-nums" :class="n.past ? 'text-gray-500' : 'text-gray-700'">
@@ -147,7 +147,7 @@ const STATUS = {
   watch: { label: 'Needs attention', icon: 'alert-circle', band: 'bg-amber-50', badge: 'bg-amber-100 text-amber-700' },
   action: { label: 'Action needed', icon: 'alert-triangle', band: 'bg-red-50', badge: 'bg-red-100 text-red-700' },
 }
-const NEXT_ICON = { onway: 'navigation', visit: 'truck', service: 'tool', warranty_until: 'shield', contract_until: 'file-text' }
+const NEXT_ICON = { supply: 'filter', onway: 'navigation', visit: 'truck', service: 'tool', warranty_until: 'shield', contract_until: 'file-text' }
 const d = ref(null)
 const error = ref('')
 const days = ref(90)

@@ -254,7 +254,7 @@ def _week_change(points, value):
     return {"from": then["value"], "on": then["on"], "change": round(flt(value) - flt(then["value"]), 2)}
 
 
-def _status(h, ro_perf, overdue_log, out_of_range=()):
+def _status(h, ro_perf, overdue_log, out_of_range=(), supply_notes=()):
     """Running well / Needs attention / Action needed, with the reasons in plain words."""
     act, watch = [], []
     if h["health"].get("down_now"):
@@ -268,6 +268,7 @@ def _status(h, ro_perf, overdue_log, out_of_range=()):
     if out_of_range:
         words = [a["meter_name"] + " " + (_("high") if a["direction"] == "high" else _("low")) for a in out_of_range[:3]]
         watch.append(_("Out of range: {0}.").format(", ".join(words)))
+    watch.extend(supply_notes)
     if overdue_log:
         watch.append(_("No log for a while: the latest readings help us spot problems early."))
     if h["data"]["stale"]:
@@ -284,7 +285,7 @@ def _fmt(value):
 def dashboard(equipment, days=90):
     """The plant at a glance for the customer: status, key numbers, charts, what is next and how logging is going.
     Built from the same numbers as our Health tab, passing on only what a customer should see."""
-    from projectit import advice, health, ro
+    from projectit import advice, health, ro, supplies
     customer_accounts.require_machine(equipment)
     days = 30 if cint(days) == 30 else 90
     h = health.compute_health(equipment, manager=False)
@@ -355,6 +356,10 @@ def dashboard(equipment, days=90):
     if service:
         nxt.append({"kind": "service", "label": _("Service due at {0} {1}").format(_fmt(service["target"]), service.get("unit") or ""),
             "on": service["on"], "estimate": True, "confidence": (service.get("confidence") or {}).get("level")})
+    for s in supplies.rows(equipment):
+        if s["due_on"]:
+            nxt.append({"kind": "supply", "label": _("Change {0}").format(s["supply_name"]) if s["kind"] == "Filter" else
+                _("Top up {0}").format(s["supply_name"]), "on": s["due_on"], "past": False, "due": s["due"]})
     for field, label in (("warranty_until", _("Warranty ends")), ("contract_until", _("Service contract ends"))):
         if row.get(field):
             nxt.append({"kind": field, "label": label, "on": row.get(field), "past": getdate(row.get(field)) < today})
@@ -363,7 +368,8 @@ def dashboard(equipment, days=90):
     today_log = log_status(equipment)
     out_of_range = advice.current(equipment)
     return {"machine": {"name": row.name, "equipment_name": row.equipment_name, "status": row.status},
-        "status": _status(h, ro_perf, _overdue_log(equipment, today_log), out_of_range), "numbers": numbers,
+        "status": _status(h, ro_perf, _overdue_log(equipment, today_log), out_of_range, supplies.reasons(equipment)),
+        "numbers": numbers,
         "charts": charts, "membranes": membranes, "next": nxt, "logging": {**logging, "today": today_log}, "days": days,
         "as_of": now, "advice": out_of_range}
 
@@ -383,10 +389,10 @@ STATUS_LABELS = {"good": "Running well", "watch": "Needs attention", "action": "
 
 def assess(equipment):
     """The same status the customer's Home shows (whether or not the customer has the plant app)."""
-    from projectit import advice, customer_notify, health
+    from projectit import advice, customer_notify, health, supplies
     h = health.compute_health(equipment, manager=False)
     logs_expected = bool(customer_notify.audience(equipment))  # only customers with the app are expected to log
-    return _status(h, h["ro"], logs_expected and _overdue_log(equipment), advice.current(equipment))
+    return _status(h, h["ro"], logs_expected and _overdue_log(equipment), advice.current(equipment), supplies.reasons(equipment))
 
 
 def refresh_status(equipment):
@@ -398,8 +404,11 @@ def refresh_status(equipment):
     except Exception:
         frappe.log_error(title=f"Techy Plant: status of {equipment} failed")
         return
-    frappe.db.set_value("Techy Equipment", equipment, {"plant_status": STATUS_LABELS[status["level"]],
-        "plant_status_reasons": json.dumps(status["reasons"]), "plant_status_on": now_datetime()}, update_modified=False)
+    values = {"status": STATUS_LABELS[status["level"]], "reasons": json.dumps(status["reasons"]), "checked_on": now_datetime()}
+    if frappe.db.exists("Techy Plant Status", equipment):
+        frappe.db.set_value("Techy Plant Status", equipment, values, update_modified=False)
+    else:
+        frappe.get_doc({"doctype": "Techy Plant Status", "equipment": equipment, **values}).insert(ignore_permissions=True)
 
 
 def queue_status(equipment):
@@ -576,3 +585,32 @@ def rate_visit(job, rating, comment=None):
     ratings.record(row, rating, comment)
     row = frappe.db.get_value("Task", row.name, JOB_FIELDS, as_dict=True)
     return {"visit": _visit_row(row, _assignees([row.name])[row.name])}
+
+
+# Filters and chemicals ---------------------------------------------------------------------------------------------
+
+@frappe.whitelist()
+def supplies(equipment):
+    """The machine's filters and chemicals: when each is due, what is left, and the latest changes."""
+    from projectit import supplies as sup
+    customer_accounts.require_machine(equipment)
+    return {"supplies": sup.rows(equipment), "history": [{**h, "by": get_fullname(h.by) if h.by else ""}
+        for h in sup.history(equipment, 10)]}
+
+
+@frappe.whitelist(methods=["POST"])
+def record_supply(equipment, supply, action, qty=None, note=None):
+    """I changed filters, topped up a chemical, received a delivery or counted what is left."""
+    from projectit import supplies as sup
+    customer_accounts.writable(customer_accounts.require_machine(equipment))
+    sup.record(equipment, supply, action, qty, note, source="Customer")
+    return supplies(equipment)
+
+
+@frappe.whitelist(methods=["POST"])
+def order_supply(equipment, supply, qty=None):
+    """Ask us for more of a supply (we send a quotation)."""
+    from projectit import supplies as sup
+    customer_accounts.writable(customer_accounts.require_machine(equipment))
+    sup.order(equipment, supply, qty)
+    return supplies(equipment)
