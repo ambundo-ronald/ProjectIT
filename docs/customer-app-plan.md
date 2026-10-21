@@ -80,15 +80,15 @@ These are my recommendations. Change any you disagree with.
 
 ## Phase 6: Notifications
 
-- [ ] **6.1 Push notifications to the customer phone** (the existing push system):
+- [x] **6.1 Push notifications to the customer phone** (the existing push system):
   - visit scheduled or changed;
   - technician on the way;
   - visit done, with the report ready;
   - request answered;
   - membranes need cleaning.
-- [ ] **6.2 Log reminder** to operators when today's log is missing at a set time (for example 10:00). It stops once they log.
-- [ ] **6.3 Our side**: managers are notified when a customer log breaks a cleaning rule or a machine has had no logs for N days (N set in Techy Ops Settings).
-- [ ] **6.4 Per-person notification settings** on the Account page.
+- [x] **6.2 Log reminder** to operators when today's log is missing at a set time (for example 10:00). It stops once they log.
+- [x] **6.3 Our side**: managers are notified when a customer log breaks a cleaning rule or a machine has had no logs for N days (N set in Techy Ops Settings).
+- [x] **6.4 Per-person notification settings** on the Account page.
 
 ## Phase 7: Our side (staff)
 

@@ -13,7 +13,7 @@ from frappe import _
 from frappe.utils import add_days, add_to_date, cint, escape_html, flt, get_datetime, get_fullname, getdate, \
     now_datetime, nowdate
 
-from projectit import customer_accounts
+from projectit import customer_accounts, customer_notify
 
 LOG = "Techy Plant Log"
 # How often a machine should be logged: (window in days, logs expected in it).
@@ -40,7 +40,22 @@ def me():
         "customer": acc.customer, "customer_name": acc.customer_name or acc.customer,
         "machines": _machine_rows(customer_accounts.machines(acc)),
         "company": frappe.db.get_single_value("Global Defaults", "default_company"),
-        "support_phone": settings.get("support_phone"), "support_email": settings.get("support_email")}
+        "support_phone": settings.get("support_phone"), "support_email": settings.get("support_email"),
+        "notify": customer_notify.preferences(acc)}
+
+
+@frappe.whitelist(methods=["POST"])
+def set_notifications(visits=None, reminders=None):
+    """My choices: visit news, and log reminders."""
+    acc = customer_accounts.require_account()
+    values = {}
+    if visits is not None:
+        values[customer_notify.VISITS] = 1 if cint(visits) else 0
+    if reminders is not None:
+        values[customer_notify.REMINDERS] = 1 if cint(reminders) else 0
+    if values:
+        frappe.db.set_value("Techy Customer User", acc.name, values)
+    return customer_notify.preferences(acc)
 
 
 # The operator's log ---------------------------------------------------------------------------------------------

@@ -41,6 +41,16 @@ The top of the Log page shows whether today's log is done. Each machine is logge
 - **Rate this visit** (1 to 5 stars and an optional comment) for 30 days after a visit.
 - **Warranty and service contract** shows the warranty end date and, if you have a contract, what it covers: service visits (and how many are done), labour, call-outs, response and fix times, and parts.
 
+## Notifications
+
+Turn on **Notifications → On this phone** in **Account** to get alerts even when the app is closed. On an iPhone, first add the app to the home screen (Share, then Add to Home Screen; iOS 16.4 or later).
+
+- **Visits and reports:** a visit is planned or moved, our technician has started work, the visit is done and its report is ready, or the membranes need cleaning and we are planning it.
+- **Log reminders:** once a day, after 10:00, while a machine's log is due. Someone with several machines gets one reminder listing them. Reminders go to the machine's operators, or to the admin when it has none.
+- **Replies to your requests** always arrive.
+
+Each person can switch *Visits and reports* and *Log reminders* off. Tapping a notification opens the right page in the plant app.
+
 ## Account
 
 **Account** shows your machines, light or dark appearance, and how to reach us. A customer admin also sees **People**, where they invite and manage operators.

@@ -14,6 +14,8 @@
   "contact",
   "invited_by",
   "invited_on",
+  "notify_visits",
+  "notify_reminders",
   "machines_section",
   "machines"
  ],
@@ -107,11 +109,25 @@
    "label": "Machines",
    "options": "Techy Customer Machine",
    "description": "The machines this operator may see and log. A customer admin sees every machine of the customer."
+  },
+  {
+   "fieldname": "notify_visits",
+   "fieldtype": "Check",
+   "label": "Notify About Visits",
+   "default": "1",
+   "description": "Visits planned or moved, work started, visit done, membranes need cleaning."
+  },
+  {
+   "fieldname": "notify_reminders",
+   "fieldtype": "Check",
+   "label": "Log Reminders",
+   "default": "1",
+   "description": "A reminder when the day's log is due."
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-20 09:00:00.000000",
+ "modified": "2026-10-21 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Techy Customer User",

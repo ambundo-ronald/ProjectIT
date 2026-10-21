@@ -24,7 +24,10 @@ DOCTYPE = "Techy Customer User"
 
 # What a customer account may call besides projectit.plant.* and the account endpoints below.
 ALLOWED = {"login", "logout", "frappe.handler.logout", "frappe.auth.get_logged_user", "projectit.api.get_modules_for_router",
-    "projectit.api.my_apps", "projectit.api.get_header_info", "projectit.api.get_employee_id"}
+    "projectit.api.my_apps", "projectit.api.get_header_info", "projectit.api.get_employee_id",
+    # Phone notifications: their own subscriptions and what is new for them (see projectit.push).
+    "projectit.push.public_key", "projectit.push.subscribe", "projectit.push.unsubscribe", "projectit.push.pending",
+    "projectit.push.test"}
 ALLOWED_PREFIXES = ("projectit.plant.", "projectit.customer_accounts.")
 
 

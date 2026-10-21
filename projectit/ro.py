@@ -214,6 +214,8 @@ def after_reading(equipment, from_customer=False):
             _("The latest RO log shows {0}. Clean the membranes (CIP) and record a full RO log afterwards.").format(reason),
             priority="High", category="Preventive", equipment=equipment, ignore_permissions=True)
         ops.notify(_managers(), _("Membranes need cleaning: {0}").format(reason), "Task", task.name)
+        from projectit import customer_notify
+        customer_notify.cleaning_raised(equipment, task.name)
     except Exception:
         # A reading is never refused because the check after it failed.
         frappe.log_error(title=f"Techy Ops: RO check for {equipment} failed")

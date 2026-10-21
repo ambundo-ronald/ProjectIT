@@ -30,7 +30,9 @@
   "cip_dp_rise",
   "customer_app_section",
   "support_phone",
-  "support_email"
+  "support_email",
+  "log_reminder_time",
+  "log_missing_days"
  ],
  "fields": [
   {
@@ -199,12 +201,25 @@
    "fieldtype": "Data",
    "label": "Support Email",
    "options": "Email"
+  },
+  {
+   "fieldname": "log_reminder_time",
+   "fieldtype": "Time",
+   "label": "Log Reminder Time",
+   "default": "10:00:00",
+   "description": "Operators are reminded once a day after this time while a machine's log is due."
+  },
+  {
+   "fieldname": "log_missing_days",
+   "fieldtype": "Int",
+   "label": "Tell Managers After (Days Without a Log)",
+   "default": "3"
   }
  ],
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-20 09:00:00.000000",
+ "modified": "2026-10-21 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Techy Ops Settings",

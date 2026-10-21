@@ -258,6 +258,8 @@ Each person belongs to one customer. A staff email cannot be used for a customer
 
 **Their service requests** arrive in **Requests** like any other work request, raised by the customer's person (urgent ones as High priority). Approving or declining works as usual. The customer sees the request move from *Received* to *Accepted*, *Scheduled* (from the job's planned start), *In progress* and *Done*. A decline reason is shown to them as **Our reply**, so write it for the customer. In the app they can also download each completed visit's service report (no prices) and rate the visit.
 
+**Notifications.** Customers' people are told, on their phones, when a visit on their machine is planned or moved (the job's planned start date), when work starts, and when it is completed (report ready, please rate). They are also told when we raise a membrane cleaning job, and get replies to their requests. Operators get one log reminder a day after **Log Reminder Time** (Techy Ops Settings, default 10:00) while a machine's log is due. Managers get one notification when machines have had no customer log for **Tell Managers After (Days Without a Log)** days (default 3), once per gap. Both need the site scheduler running.
+
 **What customers never see:** costs, labour, internal notes, investigations, chat, other customers, ERPNext or the staff apps. Customer accounts have no rights on any DocType. Every request they make is checked on the server, and anything outside the plant app is refused.
 
 ## Service contracts

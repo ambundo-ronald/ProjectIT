@@ -172,7 +172,7 @@ doc_events = {
     },
     "Task": {
         "validate": "projectit.work_orders.validate_task",
-        "on_update": "projectit.work_orders.on_task_update",
+        "on_update": ["projectit.work_orders.on_task_update", "projectit.customer_notify.on_task_update"],
     },
     "Delivery Note": {
         "on_submit": "projectit.equipment.on_delivery_note_submit",
@@ -200,8 +200,10 @@ doc_events = {
 }
 
 scheduler_events = {
-    "daily": ["projectit.maintenance.generate_pm_work_orders", "projectit.contracts.generate_visits"],
-    "cron": {"* * * * *": ["projectit.reminders.send_due"], "*/10 * * * *": ["projectit.sla.check_due"]},
+    "daily": ["projectit.maintenance.generate_pm_work_orders", "projectit.contracts.generate_visits",
+        "projectit.customer_notify.missing_logs"],
+    "cron": {"* * * * *": ["projectit.reminders.send_due"], "*/10 * * * *": ["projectit.sla.check_due"],
+        "*/15 * * * *": ["projectit.customer_notify.remind_logs"]},
 }
 
 # Scheduled Tasks
