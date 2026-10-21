@@ -263,6 +263,8 @@ def _record(doc, value, job=None, note=None, reset=False, flagged=False, confirm
     if doc.equipment and check_ro:
         from projectit import ro
         ro.after_reading(doc.equipment)
+        from projectit import plant
+        plant.queue_status(doc.equipment)
     return reading, raised
 
 

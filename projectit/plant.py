@@ -5,6 +5,7 @@ directly, so customers never need role rights on any DocType. Only customer-safe
 labour, internal notes, investigations or technician chat.
 """
 import base64
+import json
 import re
 from datetime import timedelta
 
@@ -172,6 +173,7 @@ def save_log(equipment, values, note=None, photo=None, confirm=0, taken_on=None,
     if photo:
         ops.save_photo(LOG, log.name, photo, "plant-log", ignore_permissions=True)
     ro.after_reading(equipment, from_customer=True)  # once, on the whole log
+    queue_status(equipment)
     from projectit import advice
     return {"log": _log_row(log), "status": log_status(equipment), "advice": advice.for_readings(equipment, entries)}
 
@@ -217,6 +219,7 @@ def fix_log(log, values):
         log.db_set("edited_on", now_datetime())
         log.add_comment("Info", escape_html(_("{0} corrected {1}.").format(get_fullname(), "; ".join(changes))))
         ro.after_reading(log.equipment, from_customer=True)
+        queue_status(log.equipment)
     return {"log": _log_row(frappe.get_doc(LOG, log.name)), "changed": len(changes)}
 
 
@@ -251,7 +254,7 @@ def _week_change(points, value):
     return {"from": then["value"], "on": then["on"], "change": round(flt(value) - flt(then["value"]), 2)}
 
 
-def _status(h, ro_perf, overdue_log):
+def _status(h, ro_perf, overdue_log, out_of_range=()):
     """Running well / Needs attention / Action needed, with the reasons in plain words."""
     act, watch = [], []
     if h["health"].get("down_now"):
@@ -262,6 +265,9 @@ def _status(h, ro_perf, overdue_log):
         act.append(_("Several things need looking at (readings, service or repairs)."))
     elif h["health"].get("grade") == "Watch":
         watch.append(_("Some readings or services need watching."))
+    if out_of_range:
+        words = [a["meter_name"] + " " + (_("high") if a["direction"] == "high" else _("low")) for a in out_of_range[:3]]
+        watch.append(_("Out of range: {0}.").format(", ".join(words)))
     if overdue_log:
         watch.append(_("No log for a while: the latest readings help us spot problems early."))
     if h["data"]["stale"]:
@@ -355,13 +361,61 @@ def dashboard(equipment, days=90):
 
     logging = health.customer_logging(equipment) or {"schedule": "Daily", "logs": 0, "done": 0, "expected": 0, "days": 30}
     today_log = log_status(equipment)
-    window = SCHEDULE.get(today_log["schedule"], (0, 0))[0]
-    overdue_log = bool(window) and (not today_log["last_on"] or
-        get_datetime(today_log["last_on"]) < now - timedelta(days=2 * window + 1))
+    out_of_range = advice.current(equipment)
     return {"machine": {"name": row.name, "equipment_name": row.equipment_name, "status": row.status},
-        "status": _status(h, ro_perf, overdue_log), "numbers": numbers, "charts": charts, "membranes": membranes,
-        "next": nxt, "logging": {**logging, "today": today_log}, "days": days, "as_of": now,
-        "advice": advice.current(equipment)}
+        "status": _status(h, ro_perf, _overdue_log(equipment, today_log), out_of_range), "numbers": numbers,
+        "charts": charts, "membranes": membranes, "next": nxt, "logging": {**logging, "today": today_log}, "days": days,
+        "as_of": now, "advice": out_of_range}
+
+
+def _overdue_log(equipment, today_log=None):
+    """The customer should be logging this machine and has not for twice its schedule (plus a day)."""
+    today_log = today_log or log_status(equipment)
+    window = SCHEDULE.get(today_log["schedule"], (0, 0))[0]
+    return bool(window) and (not today_log["last_on"] or
+        get_datetime(today_log["last_on"]) < now_datetime() - timedelta(days=2 * window + 1))
+
+
+# The plant's status, kept on the machine for our overview ---------------------------------------------------------
+
+STATUS_LABELS = {"good": "Running well", "watch": "Needs attention", "action": "Action needed"}
+
+
+def assess(equipment):
+    """The same status the customer's Home shows (whether or not the customer has the plant app)."""
+    from projectit import advice, customer_notify, health
+    h = health.compute_health(equipment, manager=False)
+    logs_expected = bool(customer_notify.audience(equipment))  # only customers with the app are expected to log
+    return _status(h, h["ro"], logs_expected and _overdue_log(equipment), advice.current(equipment))
+
+
+def refresh_status(equipment):
+    """Work the machine's status out again and keep it on the machine (for the staff overview)."""
+    if not frappe.db.exists("Techy Equipment", equipment):
+        return
+    try:
+        status = assess(equipment)
+    except Exception:
+        frappe.log_error(title=f"Techy Plant: status of {equipment} failed")
+        return
+    frappe.db.set_value("Techy Equipment", equipment, {"plant_status": STATUS_LABELS[status["level"]],
+        "plant_status_reasons": json.dumps(status["reasons"]), "plant_status_on": now_datetime()}, update_modified=False)
+
+
+def queue_status(equipment):
+    """Refresh a machine's status soon (once, however many changes come in together)."""
+    if equipment:
+        frappe.enqueue("projectit.plant.refresh_status", equipment=equipment, queue="short",
+            job_id=f"techy_plant_status::{equipment}", deduplicate=True, enqueue_after_commit=True)
+
+
+def refresh_all():
+    """Daily: every active customer machine with meters, so nothing goes stale between changes."""
+    with_meters = set(frappe.get_all("Techy Meter", filters={"active": 1, "equipment": ["is", "set"]}, pluck="equipment"))
+    for name in frappe.get_all("Techy Equipment", filters={"status": "Active", "customer": ["is", "set"]}, pluck="name"):
+        if name in with_meters:
+            refresh_status(name)
+            frappe.db.commit()
 
 
 # Service: requests, visits, reports, ratings and cover --------------------------------------------------------------

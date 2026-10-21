@@ -1,6 +1,6 @@
 <template>
   <section class="mx-auto max-w-6xl space-y-5 p-4 md:p-8">
-    <PageHeader title="Customer app" subtitle="Who has the plant app, and whether customers are logging their machines.">
+    <PageHeader title="Customer plants" subtitle="How every customer plant is doing, who has the plant app, and whether they log.">
       <a :href="`/api/method/projectit.customer_reports.export?days=${days}`" class="btn btn-secondary" download><FeatherIcon name="download" class="h-4 w-4" /><span class="hidden sm:inline">Excel</span></a>
     </PageHeader>
 
@@ -11,12 +11,52 @@
       <div v-if="tab === 'logging'" class="segmented" role="group" aria-label="Period">
         <button v-for="d in [7, 30, 90]" :key="d" type="button" :aria-pressed="days === d" @click="setDays(d)">{{ d }} days</button>
       </div>
-      <input v-model="search" type="search" class="input ml-auto w-full sm:w-64" :placeholder="tab === 'logging' ? 'Search customer or machine' : 'Search name, email or customer'" aria-label="Search" @input="debounced" />
+      <input v-model="search" type="search" class="input ml-auto w-full sm:w-64" :placeholder="tab === 'accounts' ? 'Search name, email or customer' : 'Search customer or machine'" aria-label="Search" @input="debounced" />
     </div>
     <p v-if="error" role="alert" class="text-sm text-red-600">{{ error }}</p>
 
+    <!-- Plant status: where to send someone -->
+    <template v-if="tab === 'status'">
+      <div v-if="!plants" class="h-48 animate-pulse rounded-2xl bg-gray-200/70" />
+      <template v-else>
+        <div class="grid grid-cols-3 gap-3" role="group" aria-label="Filter by status">
+          <button v-for="s in STATUSES" :key="s.key" type="button" class="card p-4 text-left transition" :class="level === s.key ? 'ring-2 ring-brand-500' : 'hover:border-gray-300'" :aria-pressed="level === s.key" @click="setLevel(s.key)">
+            <p class="flex items-center gap-1 text-xs font-medium text-gray-500"><FeatherIcon :name="s.icon" class="h-3.5 w-3.5" :class="s.iconTone" />{{ s.key }}</p>
+            <p class="mt-1 text-[22px] font-semibold tabular-nums text-gray-900">{{ plants.counts[s.key] || 0 }}</p>
+            <p class="text-xs text-gray-500">plants</p>
+          </button>
+        </div>
+        <div class="card overflow-hidden">
+          <div class="card-header"><h2 class="card-title">{{ level || 'All plants' }}</h2><span class="text-xs text-gray-500">{{ plants.total }} · worst first, unplanned first</span></div>
+          <ul v-if="plants.rows.length" class="divide-y divide-gray-100">
+            <li v-for="r in plants.rows" :key="r.equipment" class="flex flex-wrap items-start gap-3 px-5 py-3 text-sm">
+              <span class="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold" :class="statusOf(r.status).chip"><FeatherIcon :name="statusOf(r.status).icon" class="h-3.5 w-3.5" />{{ r.status }}</span>
+              <span class="min-w-0 flex-1 basis-60">
+                <router-link :to="{ name: 'OpsEquipmentDetail', params: { name: r.equipment }, query: { tab: 'health' } }" class="font-medium text-gray-900 hover:text-brand-700">{{ r.equipment_name }}</router-link>
+                <span class="text-xs text-gray-500"> · {{ [r.customer_name, r.site].filter(Boolean).join(' · ') }}</span>
+                <ul v-if="r.reasons.length" class="mt-0.5 space-y-0.5 text-xs text-gray-700"><li v-for="x in r.reasons" :key="x">{{ x }}</li></ul>
+                <span class="mt-0.5 block text-xs text-gray-500">
+                  <template v-if="r.on_way">Technician on the way · </template>
+                  <template v-else-if="r.planned && dueIn(r.planned) < 0"><span class="font-medium text-red-700">Planned visit overdue ({{ formatDate(r.planned) }})</span> · </template>
+                  <template v-else-if="r.planned">Visit planned {{ formatDate(r.planned) }} · </template>
+                  <template v-else-if="r.open_jobs">{{ r.open_jobs }} open job{{ r.open_jobs === 1 ? '' : 's' }}, not scheduled · </template>
+                  <template v-else-if="r.status !== 'Running well'"><span class="font-medium text-amber-700">Nothing planned</span> · </template>
+                  {{ r.has_app ? (r.last_log ? `last customer log ${fromNow(r.last_log)}` : 'customer has not logged') : 'no plant app' }} · checked {{ fromNow(r.checked) }}
+                </span>
+              </span>
+              <span class="flex shrink-0 gap-1.5">
+                <button v-if="r.status !== 'Running well'" class="btn btn-secondary btn-sm" @click="newJob(r)"><FeatherIcon name="plus" class="h-4 w-4" />New job</button>
+                <router-link v-if="r.has_app" :to="{ path: '/plant', query: { preview: r.equipment } }" class="btn btn-ghost btn-sm" :aria-label="`See ${r.equipment_name} as the customer`"><FeatherIcon name="eye" class="h-4 w-4" /></router-link>
+              </span>
+            </li>
+          </ul>
+          <p v-else class="px-5 py-4 text-sm text-gray-500">No plants{{ level ? ` with ${level.toLowerCase()}` : '' }}{{ search ? ' match' : '' }}. Statuses are worked out for customer machines with meters, after a reading or log and every night.</p>
+        </div>
+      </template>
+    </template>
+
     <!-- Logging -->
-    <template v-if="tab === 'logging'">
+    <template v-else-if="tab === 'logging'">
       <div v-if="!log" class="h-48 animate-pulse rounded-2xl bg-gray-200/70" />
       <template v-else>
         <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -100,15 +140,30 @@
   </section>
 </template>
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, inject } from 'vue'
 import { FeatherIcon, toast } from 'frappe-ui'
 import PageHeader from '@/components/ops/PageHeader.vue'
 import Modal from '@/components/ops/Modal.vue'
-import { api, request, fromNow } from '@/data/ops'
+import { api, request, fromNow, formatDate, dueIn } from '@/data/ops'
 
-const TABS = [{ key: 'logging', label: 'Logging' }, { key: 'accounts', label: 'Accounts' }]
+const TABS = [{ key: 'status', label: 'Plant status' }, { key: 'logging', label: 'Logging' }, { key: 'accounts', label: 'Accounts' }]
+// Status: an icon and a word, never colour alone.
+const STATUSES = [
+  { key: 'Action needed', icon: 'alert-triangle', iconTone: 'text-red-600', chip: 'bg-red-50 text-red-700' },
+  { key: 'Needs attention', icon: 'alert-circle', iconTone: 'text-amber-600', chip: 'bg-amber-50 text-amber-800' },
+  { key: 'Running well', icon: 'check-circle', iconTone: 'text-green-600', chip: 'bg-green-50 text-green-700' },
+]
+const statusOf = (key) => STATUSES.find((s) => s.key === key) || STATUSES[2]
+const plants = ref(null)
+const level = ref('')
+const openNew = inject('openNewWorkOrder', null)
+function setLevel(key) {
+  level.value = level.value === key ? '' : key
+  load()
+}
+const newJob = (r) => openNew?.({ equipment: { name: r.equipment, equipment_name: r.equipment_name, customer: r.customer, customer_name: r.customer_name, site: r.site } })
 const SCHEDULE = { Daily: 'Daily', 'Twice a day': 'Twice a day', Weekly: 'Weekly', 'Not expected': 'Not expected' }
-const tab = ref('logging')
+const tab = ref('status')
 const days = ref(30)
 const search = ref('')
 const log = ref(null)
@@ -123,7 +178,8 @@ const tone = (share) => (share >= 90 ? { chip: 'bg-green-50 text-green-700', ico
 async function load() {
   error.value = ''
   try {
-    if (tab.value === 'logging') log.value = await api('projectit.customer_reports.logging', { days: days.value, search: search.value || null })
+    if (tab.value === 'status') plants.value = await api('projectit.customer_reports.plant_status', { level: level.value || null, search: search.value || null })
+    else if (tab.value === 'logging') log.value = await api('projectit.customer_reports.logging', { days: days.value, search: search.value || null })
     else people.value = await api('projectit.customer_reports.accounts', { search: search.value || null })
   } catch (e) {
     error.value = e.message

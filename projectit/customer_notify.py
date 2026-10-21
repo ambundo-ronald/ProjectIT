@@ -61,6 +61,9 @@ def on_task_update(doc, method=None):
         return
     try:
         before = doc.get_doc_before_save() if callable(getattr(doc, "get_doc_before_save", None)) else None
+        if not before or before.status != doc.status:
+            from projectit import plant
+            plant.queue_status(doc.custom_equipment)  # repairs and downtime change the plant's status
         machine = _machine(doc.custom_equipment)
         kind = VISIT_WORDS.get(doc.get("custom_work_category"), _("Visit"))
         users = audience(doc.custom_equipment, VISITS)

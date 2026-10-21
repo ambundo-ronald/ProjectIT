@@ -124,3 +124,45 @@ def export(days=30):
     frappe.local.response.filename = f"Customer app logging, last {report['days']} days.xlsx"
     frappe.local.response.filecontent = out.getvalue()
     frappe.local.response.type = "download"
+
+
+# Every customer plant's status -----------------------------------------------------------------------------------
+
+ORDER = {"Action needed": 0, "Needs attention": 1, "Running well": 2}
+
+
+@frappe.whitelist()
+def plant_status(level=None, search=None):
+    """Every customer plant by status, the worst first, with what is already planned: where to send someone today."""
+    import json
+    ops.system_user()
+    ops.require_manager()
+    from projectit import customer_notify
+    from projectit.plant import LOG, on_the_way
+    machines = frappe.get_all("Techy Equipment", filters={"status": "Active", "customer": ["is", "set"],
+        "plant_status": ["is", "set"]}, fields=["name", "equipment_name", "customer", "customer_name", "site", "tag",
+        "plant_status", "plant_status_reasons", "plant_status_on"])
+    counts = {k: 0 for k in ORDER}
+    rows = []
+    for m in machines:
+        counts[m.plant_status] = counts.get(m.plant_status, 0) + 1
+        if level and m.plant_status != level:
+            continue
+        if not _match(search, m.equipment_name, m.customer_name, m.site, m.tag, m.name):
+            continue
+        jobs = frappe.get_all("Task", filters={"custom_work_order": 1, "custom_equipment": m.name, "parent_task": ["is", "not set"],
+            "is_template": 0, "status": ["not in", ["Completed", "Cancelled"]]}, fields=["name", "status", "exp_start_date",
+            "custom_on_way_at"], order_by="exp_start_date asc")
+        planned = next((j.exp_start_date for j in jobs if j.exp_start_date), None)
+        try:
+            reasons = json.loads(m.plant_status_reasons or "[]")
+        except ValueError:
+            reasons = []
+        rows.append({"equipment": m.name, "equipment_name": m.equipment_name, "customer": m.customer,
+            "customer_name": m.customer_name, "site": m.site, "status": m.plant_status, "reasons": reasons,
+            "checked": m.plant_status_on, "open_jobs": len(jobs), "planned": planned,
+            "on_way": any(on_the_way(j) for j in jobs),
+            "last_log": frappe.db.get_value(LOG, {"equipment": m.name}, "log_on", order_by="log_on desc"),
+            "has_app": bool(customer_notify.audience(m.name))})
+    rows.sort(key=lambda r: (ORDER.get(r["status"], 3), r["open_jobs"] > 0, r["customer_name"] or ""))
+    return {"rows": rows[:300], "total": len(rows), "counts": counts}

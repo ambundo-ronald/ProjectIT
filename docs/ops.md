@@ -263,7 +263,8 @@ Each person belongs to one customer. A staff email cannot be used for a customer
 
 **Notifications.** Customers' people are told, on their phones, when a visit on their machine is planned or moved (the job's planned start date), when work starts, and when it is completed (report ready, please rate). They are also told when we raise a membrane cleaning job, and get replies to their requests. Operators get one log reminder a day after **Log Reminder Time** (Techy Ops Settings, default 10:00) while a machine's log is due. Managers get one notification when machines have had no customer log for **Tell Managers After (Days Without a Log)** days (default 3), once per gap. Both need the site scheduler running.
 
-**Staff tools.** **Customer app** (managers; in the sidebar, or **More** on a phone) has two tabs:
+**Staff tools.** **Customer plants** (managers; in the sidebar, or **More** on a phone) has three tabs:
+- **Plant status:** every customer plant with meters, as *Action needed*, *Needs attention* or *Running well*, with the reasons. The reasons are the same as on the customer's Home: membranes need cleaning, machine down, readings out of range, not logged, not read recently. Plants needing action and with nothing planned come first. Each row shows what is already arranged (technician on the way, visit planned or overdue, open jobs), with **New job** for the machine. Statuses are refreshed after every reading, log and job status change, and every night.
 - **Logging:** every customer machine someone can log, with its schedule, how many of the expected days it was logged over 7, 30 or 90 days, the last log and who made it. Worst first. **Excel** exports it together with the accounts.
 - **Accounts:** every customer account across customers: access, machines, when they last signed in and logged, with **New link** and **Switch off**.
 

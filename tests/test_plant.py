@@ -167,6 +167,12 @@ class DashboardTests(OpsTestCase):
         self.assertIsNone(self.plant._week_change(pts, None))
 
 
+    def test_out_of_range_readings_need_attention(self):
+        h = {"health": {"grade": "Good", "down_now": False}, "data": {"stale": []}}
+        status = self.plant._status(h, None, False, [{"meter_name": "Feed pressure", "direction": "high"}])
+        self.assertEqual(status, {"level": "watch", "reasons": ["Out of range: Feed pressure high."]})
+
+
 class RequestStateTests(OpsTestCase):
     def setUp(self):
         super().setUp()
