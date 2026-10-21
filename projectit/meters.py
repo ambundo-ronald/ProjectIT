@@ -111,6 +111,7 @@ def summary(meter, readings=None):
     alert = any(t["open_job"] and t["trigger_type"] != "Every" for t in triggers)
     return {"name": meter.name, "meter_name": meter.meter_name, "unit": meter.unit, "meter_type": meter.meter_type,
         "active": cint(meter.active), "equipment": meter.equipment, "asset": meter.asset, "notes": meter.notes,
+        "advice_high": meter.get("advice_high"), "advice_low": meter.get("advice_low"),
         "last_reading": meter.last_reading if meter.last_reading_on else None, "last_reading_on": meter.last_reading_on,
         "last_reading_by": frappe.utils.get_fullname(meter.last_reading_by) if meter.last_reading_by else None,
         "triggers": triggers, "alert": alert,
@@ -488,6 +489,8 @@ def save_meter(data, name=None):
     doc.meter_type = meter_type
     doc.active = 1 if data.get("active", 1) else 0
     doc.notes = ops.text(data.get("notes"), "notes", 1000, required=False)
+    doc.advice_high = ops.text(data.get("advice_high"), "the advice", 500, required=False) or None
+    doc.advice_low = ops.text(data.get("advice_low"), "the advice", 500, required=False) or None
     rows = data.get("triggers") or []
     if not isinstance(rows, list) or len(rows) > 10:
         frappe.throw(_("Add at most 10 triggers."))

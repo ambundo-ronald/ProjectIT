@@ -150,6 +150,10 @@ import Modal from '@/components/ops/Modal.vue'
 import PhotoButtons from '@/components/ops/PhotoButtons.vue'
 import { api, request, formatDate } from '@/data/ops'
 import { plant, machine } from '@/data/plant'
+import { useRoute, useRouter } from 'vue-router'
+
+const route = useRoute()
+const router = useRouter()
 
 // Request states: an icon and a word, never colour alone.
 const STATE = {
@@ -184,7 +188,15 @@ watch(() => plant.machine, () => {
   s.value = null
   load()
 })
-onMounted(load)
+onMounted(() => {
+  load()
+  // From "Ask for service" on an out-of-range reading: open the form with the readings filled in.
+  if (route.query.ask) {
+    openAsk()
+    ask.subject = String(route.query.ask).slice(0, 140)
+    router.replace({ query: {} })
+  }
+})
 
 function openAsk() {
   Object.assign(ask, { subject: '', description: '', urgent: false, photo: null })

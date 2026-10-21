@@ -172,7 +172,8 @@ def save_log(equipment, values, note=None, photo=None, confirm=0, taken_on=None,
     if photo:
         ops.save_photo(LOG, log.name, photo, "plant-log", ignore_permissions=True)
     ro.after_reading(equipment, from_customer=True)  # once, on the whole log
-    return {"log": _log_row(log), "status": log_status(equipment)}
+    from projectit import advice
+    return {"log": _log_row(log), "status": log_status(equipment), "advice": advice.for_readings(equipment, entries)}
 
 
 def _visible_log(name):
@@ -277,7 +278,7 @@ def _fmt(value):
 def dashboard(equipment, days=90):
     """The plant at a glance for the customer: status, key numbers, charts, what is next and how logging is going.
     Built from the same numbers as our Health tab, passing on only what a customer should see."""
-    from projectit import health, ro
+    from projectit import advice, health, ro
     customer_accounts.require_machine(equipment)
     days = 30 if cint(days) == 30 else 90
     h = health.compute_health(equipment, manager=False)
@@ -359,7 +360,8 @@ def dashboard(equipment, days=90):
         get_datetime(today_log["last_on"]) < now - timedelta(days=2 * window + 1))
     return {"machine": {"name": row.name, "equipment_name": row.equipment_name, "status": row.status},
         "status": _status(h, ro_perf, overdue_log), "numbers": numbers, "charts": charts, "membranes": membranes,
-        "next": nxt, "logging": {**logging, "today": today_log}, "days": days, "as_of": now}
+        "next": nxt, "logging": {**logging, "today": today_log}, "days": days, "as_of": now,
+        "advice": advice.current(equipment)}
 
 
 # Service: requests, visits, reports, ratings and cover --------------------------------------------------------------

@@ -27,6 +27,8 @@
         </router-link>
       </section>
 
+      <AdviceCard :items="d.advice" title="Readings out of range: what to do" :phone="plant.me?.support_phone" />
+
       <!-- Key numbers -->
       <section v-if="d.numbers.length" aria-label="Key numbers" class="grid grid-cols-2 gap-3 md:grid-cols-4">
         <div v-for="n in d.numbers" :key="n.key" class="card p-4" :title="n.help || undefined">
@@ -135,6 +137,7 @@ import { ref, reactive, computed, watch, onMounted, h } from 'vue'
 import { FeatherIcon } from 'frappe-ui'
 import EmptyState from '@/components/ops/EmptyState.vue'
 import LineChart from '@/components/ops/charts/LineChart.vue'
+import AdviceCard from '@/components/plant/AdviceCard.vue'
 import { api, formatDate, fromNow, dueIn } from '@/data/ops'
 import { plant } from '@/data/plant'
 

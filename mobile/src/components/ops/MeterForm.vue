@@ -68,6 +68,12 @@
       </fieldset>
 
       <div>
+        <template v-if="form.triggers.some((t) => t.trigger_type !== 'Every')">
+          <label class="label" for="meter-advice-high">Advice for the customer's operator when it is too high</label>
+          <textarea id="meter-advice-high" v-model="form.advice_high" class="input mb-3 min-h-[3rem]" maxlength="500" placeholder="Leave empty for the standard advice. e.g. Check the cartridge filters; if it stays high, call us." />
+          <label class="label" for="meter-advice-low">…when it is too low</label>
+          <textarea id="meter-advice-low" v-model="form.advice_low" class="input mb-3 min-h-[3rem]" maxlength="500" placeholder="Leave empty for the standard advice." />
+        </template>
         <label class="label" for="meter-notes">Notes</label>
         <textarea id="meter-notes" v-model="form.notes" class="input min-h-[4rem]" maxlength="1000" placeholder="Where to read it, normal range…" />
       </div>
@@ -97,7 +103,7 @@ const PRESETS = [
   { meter_name: 'Feed pressure', unit: 'bar', meter_type: 'Gauge', triggers: [{ trigger_type: 'Above', value: 16, priority: 'High' }] },
   { meter_name: 'Filter pressure drop', unit: 'bar', meter_type: 'Gauge', triggers: [{ trigger_type: 'Above', value: 1, priority: 'Medium', job_title: 'Change cartridge filters' }] },
 ]
-const blank = () => ({ meter_name: '', unit: '', meter_type: 'Counter', notes: '', active: true, triggers: [] })
+const blank = () => ({ meter_name: '', unit: '', meter_type: 'Counter', notes: '', advice_high: '', advice_low: '', active: true, triggers: [] })
 const form = reactive(blank())
 const busy = ref(false)
 const error = ref('')
@@ -108,7 +114,7 @@ watch(() => props.modelValue, (open) => {
   if (!open) return
   error.value = ''
   const m = props.meter
-  Object.assign(form, blank(), m ? { meter_name: m.meter_name, unit: m.unit, meter_type: m.meter_type, notes: m.notes || '', active: !!m.active, triggers: m.triggers.map(row) } : {})
+  Object.assign(form, blank(), m ? { meter_name: m.meter_name, unit: m.unit, meter_type: m.meter_type, notes: m.notes || '', advice_high: m.advice_high || '', advice_low: m.advice_low || '', active: !!m.active, triggers: m.triggers.map(row) } : {})
 })
 function usePreset(p) {
   Object.assign(form, { meter_name: p.meter_name, unit: p.unit, meter_type: p.meter_type, triggers: p.triggers.map(row) })

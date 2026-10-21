@@ -9,6 +9,8 @@
       </p>
     </div>
 
+    <AdviceCard :items="advice" title="Some readings are out of range: what to do now" :phone="plant.me?.support_phone" dismissible @close="advice = []" />
+
     <div v-if="waiting.items.length || waiting.failed.length" class="card space-y-1 px-5 py-3 text-sm" role="status">
       <p v-if="waiting.items.length" class="flex items-center gap-2 text-amber-800">
         <FeatherIcon name="wifi-off" class="h-4 w-4 shrink-0" />{{ waiting.items.length }} log{{ waiting.items.length === 1 ? '' : 's' }} waiting to send. {{ online ? 'Sending…' : 'They send by themselves when you are back online.' }}
@@ -115,6 +117,7 @@ import { FeatherIcon, toast } from 'frappe-ui'
 import EmptyState from '@/components/ops/EmptyState.vue'
 import Modal from '@/components/ops/Modal.vue'
 import PhotoButtons from '@/components/ops/PhotoButtons.vue'
+import AdviceCard from '@/components/plant/AdviceCard.vue'
 import { api, request, formatDate, fromNow } from '@/data/ops'
 import { plant, machine, waiting, queueLog, sendWaiting } from '@/data/plant'
 
@@ -126,6 +129,7 @@ const photo = ref(null)
 const saving = ref(false)
 const formError = ref('')
 const flagged = ref({}) // meter -> why it looks unusual
+const advice = ref([]) // readings just logged that crossed a limit, and what to do
 const fixing = ref(null)
 const fixError = ref('')
 const photoUrl = ref('')
@@ -203,6 +207,8 @@ async function save(confirm = 0) {
     form.value.status = r.status
     form.value.recent.unshift(r.log)
     reset()
+    advice.value = r.advice || []
+    if (advice.value.length) window.scrollTo({ top: 0, behavior: 'smooth' })
     toast({ title: 'Log saved. Thank you!', icon: 'check-circle', iconClasses: 'text-green-600', position: 'top-center' })
     load()
   } catch (err) {

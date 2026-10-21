@@ -29,6 +29,7 @@ Open **Log**, read the gauges, and type each number in. The form lists the machi
 - **Counters only go up.** Running hours cannot be lower than last time. If a meter was replaced, tell us.
 - **Note and photo.** Add a note about anything unusual (a leak, a noise, an alarm, filters changed) and, if you like, a photo of the gauges.
 - **No signal?** Save the log anyway. It waits on the phone ("1 log waiting to send") and sends by itself when the phone is back online, with the time it was taken.
+- **Out of range.** If a reading is above or below its limit, the app says what to check first and when to call us, with an **Ask for service** button that fills in the reading. Home shows the same advice while the latest reading is out of range.
 - **Typos afterwards.** Under **Recent logs**, **Correct a typo** fixes your own log for a day after saving it. We can see that it was corrected.
 
 The top of the Log page shows whether today's log is done. Each machine is logged once a day unless we agreed otherwise (twice a day, once a week, or not at all).
