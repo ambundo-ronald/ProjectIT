@@ -100,7 +100,11 @@ def info(job, key):
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 @rate_limit(limit=10, seconds=3600)
 def submit(job, key, rating, comment=None):
-    row = _job(job, key)
+    return record(_job(job, key), rating, comment)
+
+
+def record(row, rating, comment=None):
+    """Save the customer's rating of a completed visit (from the emailed link, or the plant app)."""
     if not still_open(row):
         frappe.throw(_("Ratings for this visit have closed. Thank you."))
     stars = cint(rating)

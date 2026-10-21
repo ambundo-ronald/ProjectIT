@@ -256,6 +256,8 @@ Each person belongs to one customer. A staff email cannot be used for a customer
 - A customer's reading **never raises a job**. If it sets off a meter trigger (service due, or a limit crossed) or breaks an RO cleaning rule, managers get a notification starting "Customer log". Decide whether to send someone. Cleaning alerts repeat at most once a week while the rule stays broken.
 - The Health tab's **How complete the data is** card shows how many of the expected days the customer logged in the last 30 days.
 
+**Their service requests** arrive in **Requests** like any other work request, raised by the customer's person (urgent ones as High priority). Approving or declining works as usual. The customer sees the request move from *Received* to *Accepted*, *Scheduled* (from the job's planned start), *In progress* and *Done*. A decline reason is shown to them as **Our reply**, so write it for the customer. In the app they can also download each completed visit's service report (no prices) and rate the visit.
+
 **What customers never see:** costs, labour, internal notes, investigations, chat, other customers, ERPNext or the staff apps. Customer accounts have no rights on any DocType. Every request they make is checked on the server, and anything outside the plant app is refused.
 
 ## Service contracts

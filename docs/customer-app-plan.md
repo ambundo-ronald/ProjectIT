@@ -72,11 +72,11 @@ These are my recommendations. Change any you disagree with.
 
 ## Phase 5: Service
 
-- [ ] **5.1 Raise a request** (problem or question) for a machine, with a photo. It uses the existing work-request flow, so it shows up in our Requests inbox.
-- [ ] **5.2 Track requests**: Received, Scheduled (with date), In progress, Done, with simple status words.
-- [ ] **5.3 Visit history**: past visits with date, what was done and the readings taken, and a **Download service report (PDF)** without prices.
-- [ ] **5.4 Rate a visit**: the existing rating flow, inside the app.
-- [ ] **5.5 Contract and warranty page**: what's covered, visits included and used, and the end date.
+- [x] **5.1 Raise a request** (problem or question) for a machine, with a photo. It uses the existing work-request flow, so it shows up in our Requests inbox.
+- [x] **5.2 Track requests**: Received, Scheduled (with date), In progress, Done, with simple status words.
+- [x] **5.3 Visit history**: past visits with date, what was done and the readings taken, and a **Download service report (PDF)** without prices.
+- [x] **5.4 Rate a visit**: the existing rating flow, inside the app.
+- [x] **5.5 Contract and warranty page**: what's covered, visits included and used, and the end date.
 
 ## Phase 6: Notifications
 

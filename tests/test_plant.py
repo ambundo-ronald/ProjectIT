@@ -167,5 +167,32 @@ class DashboardTests(OpsTestCase):
         self.assertIsNone(self.plant._week_change(pts, None))
 
 
+class RequestStateTests(OpsTestCase):
+    def setUp(self):
+        super().setUp()
+        self.frappe.utils.escape_html = lambda v: v
+        self.plant = importlib.import_module("projectit.plant")
+
+    def test_request_states_in_plain_words(self):
+        state = lambda issue, job=None: self.plant._request_state(Dict(issue), Dict(job) if job else None)["key"]
+        self.assertEqual(state({"status": "Open", "custom_work_order": None}), "received")
+        self.assertEqual(state({"status": "Closed", "custom_work_order": None}), "closed")
+        self.assertEqual(state({"status": "Open", "custom_work_order": "T1"}, {"status": "Open"}), "accepted")
+        self.assertEqual(state({"status": "Open", "custom_work_order": "T1"}, {"status": "Open", "exp_start_date": "2026-10-30"}), "scheduled")
+        self.assertEqual(state({"status": "Open", "custom_work_order": "T1"}, {"status": "Working"}), "working")
+        self.assertEqual(state({"status": "Resolved", "custom_work_order": "T1"}, {"status": "Completed"}), "done")
+
+    def test_reports_and_ratings_only_for_my_completed_visits(self):
+        self.frappe.db.get_value = MagicMock(return_value=Dict(name="T1", custom_work_order=1, custom_equipment="EQ-1", status="Working"))
+        with patch.object(self.plant.customer_accounts, "require_machine") as require:
+            with self.assertRaises(Exception) as caught:
+                self.plant._visit("T1")
+        require.assert_called_once_with("EQ-1")
+        self.assertIn("once the visit is completed", str(caught.exception))
+        self.frappe.db.get_value = MagicMock(return_value=Dict(name="T2", custom_work_order=0, custom_equipment="EQ-1"))
+        with self.assertRaises(PermissionError):
+            self.plant._visit("T2")  # a plain task, not a visit
+
+
 if __name__ == "__main__":
     unittest.main()

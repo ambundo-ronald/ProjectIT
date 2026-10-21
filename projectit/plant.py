@@ -338,3 +338,152 @@ def dashboard(equipment, days=90):
     return {"machine": {"name": row.name, "equipment_name": row.equipment_name, "status": row.status},
         "status": _status(h, ro_perf, overdue_log), "numbers": numbers, "charts": charts, "membranes": membranes,
         "next": nxt, "logging": {**logging, "today": today_log}, "days": days, "as_of": now}
+
+
+# Service: requests, visits, reports, ratings and cover --------------------------------------------------------------
+
+VISIT_KINDS = {"Preventive": "Service visit", "Corrective": "Repair", "Inspection": "Inspection", "Installation": "Installation",
+    "Safety": "Safety check", "Other": "Visit"}
+JOB_FIELDS = ["name", "subject", "status", "custom_work_category", "custom_completed_at", "custom_work_summary",
+    "exp_start_date", "custom_customer", "custom_rating", "custom_rating_comment", "custom_rated_on",
+    "custom_rating_key", "custom_work_order", "custom_equipment", "modified", "creation", "company"]
+DECLINED = "Declined:"
+
+
+def _request_state(issue, job):
+    """What the customer sees of a request, in plain words."""
+    if issue.status in ("Resolved", "Closed") and not issue.custom_work_order:
+        return {"key": "closed", "label": _("Closed")}
+    if not job:
+        return {"key": "received", "label": _("Received")}
+    if job.status == "Completed":
+        return {"key": "done", "label": _("Done")}
+    if job.status in ("Working", "Pending Review"):
+        return {"key": "working", "label": _("In progress")}
+    if job.exp_start_date:
+        return {"key": "scheduled", "label": _("Scheduled"), "on": job.exp_start_date}
+    return {"key": "accepted", "label": _("Accepted"), "note": _("We will schedule a visit and tell you the date.")}
+
+
+def _requests(equipment, customer):
+    """Requests my company's people raised for this machine (not our staff's own notes)."""
+    from projectit import ops
+    users = frappe.get_all("Techy Customer User", filters={"customer": customer}, pluck="user")
+    rows = frappe.get_all("Issue", filters={"custom_maintenance_request": 1, "custom_equipment": equipment,
+        "raised_by": ["in", users or [""]]}, fields=["name", "subject", "description", "status", "raised_by", "creation",
+        "custom_work_order", "priority"], order_by="creation desc", limit_page_length=30)
+    linked = [r.custom_work_order for r in rows if r.custom_work_order]
+    jobs = {j.name: j for j in frappe.get_all("Task", filters={"name": ["in", linked or [""]]},
+        fields=["name", "status", "exp_start_date"])}
+    out = []
+    for r in rows:
+        state = _request_state(r, jobs.get(r.custom_work_order))
+        reason = None
+        if state["key"] == "closed":
+            notes = frappe.get_all("Comment", filters={"reference_doctype": "Issue", "reference_name": r.name,
+                "comment_type": "Comment"}, pluck="content", order_by="creation desc", limit_page_length=5)
+            note = next((n for n in notes if DECLINED in (n or "")), None)
+            reason = ops.plain(note).split(DECLINED, 1)[-1].strip() if note else None
+        out.append({"name": r.name, "subject": r.subject, "description": ops.plain(r.description)[:400],
+            "on": r.creation, "by": get_fullname(r.raised_by), "mine": r.raised_by == frappe.session.user,
+            "urgent": r.priority in ("High", "Urgent"), "state": state, "reason": reason,
+            "visit": r.custom_work_order if state["key"] == "done" else None})
+    return out
+
+
+def _visit_row(job, people):
+    from projectit import ratings
+    return {"name": job.name, "title": job.subject, "kind": _(VISIT_KINDS.get(job.custom_work_category, "Visit")),
+        "on": job.custom_completed_at or job.modified, "summary": job.custom_work_summary or "",
+        "technicians": [get_fullname(u).split(" ")[0] for u in people],
+        "rating": cint(job.custom_rating) or None, "comment": job.custom_rating_comment or "",
+        "can_rate": ratings.rateable(job) and ratings.still_open(job)}
+
+
+def _visits(equipment, limit=20):
+    from projectit.work_orders import _assignees
+    jobs = frappe.get_all("Task", filters={"custom_work_order": 1, "custom_equipment": equipment, "parent_task": ["is", "not set"],
+        "is_template": 0, "status": "Completed"}, fields=JOB_FIELDS, order_by="custom_completed_at desc, modified desc",
+        limit_page_length=limit)
+    people = _assignees([j.name for j in jobs])
+    return [_visit_row(j, people[j.name]) for j in jobs]
+
+
+def _cover(equipment):
+    """The warranty and service contract, as the customer may see them (no subscription or payment details)."""
+    from projectit import contracts
+    row = frappe.db.get_value("Techy Equipment", equipment, ["warranty_until", "contract_until", "service_contract",
+        "installed_on"], as_dict=True)
+    today = getdate(nowdate())
+    terms = contracts.terms(row.service_contract) if row.service_contract else None
+    contract = None
+    if terms and terms["state"] != "Cancelled":
+        start = frappe.db.get_value("Techy Service Contract", row.service_contract, "start_date")
+        done = frappe.db.count("Task", {"custom_work_order": 1, "custom_equipment": equipment, "status": "Completed",
+            "custom_work_category": "Preventive", "custom_completed_at": [">=", start]}) if start else None
+        contract = {"title": terms["title"], "state": terms["state"], "start": start, "end": terms["end_date"],
+            "visit_frequency": terms["visit_frequency"], "labour_included": bool(terms["labour_included"]),
+            "callouts_included": terms["callouts_included"], "response_hours": terms["response_hours"],
+            "fix_hours": terms["fix_hours"], "items": [i.item_name or i.item_code for i in terms["items"]],
+            "visits_done": done}
+    return {"installed_on": row.installed_on, "warranty_until": row.warranty_until,
+        "warranty_active": bool(row.warranty_until and getdate(row.warranty_until) >= today), "contract": contract}
+
+
+@frappe.whitelist()
+def service(equipment):
+    """The Service tab: my company's requests for this machine, past visits with their reports, and the cover."""
+    acc = customer_accounts.require_machine(equipment)
+    today = getdate(nowdate())
+    planned = frappe.get_all("Task", filters={"custom_work_order": 1, "custom_equipment": equipment, "parent_task": ["is", "not set"],
+        "is_template": 0, "status": ["not in", ["Completed", "Cancelled"]], "exp_start_date": [">=", today]},
+        fields=["exp_start_date", "custom_work_category"], order_by="exp_start_date asc", limit_page_length=3)
+    return {"requests": _requests(equipment, acc.customer), "visits": _visits(equipment), "cover": _cover(equipment),
+        "planned": [{"on": p.exp_start_date, "kind": _(VISIT_KINDS.get(p.custom_work_category, "Visit"))} for p in planned]}
+
+
+@frappe.whitelist(methods=["POST"])
+def request_service(equipment, subject, description=None, urgent=0, photo=None):
+    """Ask us for service on a machine. It arrives in our Requests inbox like any other work request."""
+    from projectit import ops, work_requests
+    acc = customer_accounts.require_machine(equipment)
+    doc = work_requests._issue(subject, description, None, None, frappe.session.user,
+        priority="High" if cint(urgent) else None, equipment=equipment)
+    if photo:
+        ops.save_photo("Issue", doc.name, photo, "request", ignore_permissions=True)
+    return {"request": next((r for r in _requests(equipment, acc.customer) if r["name"] == doc.name), None)}
+
+
+def _visit(job):
+    """A completed job on one of my machines (for its report and rating)."""
+    row = frappe.db.get_value("Task", str(job or "")[:140], JOB_FIELDS, as_dict=True) if job else None
+    if not row or not row.custom_work_order or not row.custom_equipment:
+        frappe.throw(_("This visit was not found."), frappe.PermissionError)
+    customer_accounts.require_machine(row.custom_equipment)
+    if row.status != "Completed":
+        frappe.throw(_("The report is ready once the visit is completed."))
+    return row
+
+
+@frappe.whitelist()
+def report(job):
+    """The visit's service report (PDF, no prices), as we send it to customers."""
+    from projectit import service_report
+    row = _visit(job)
+    pdf, filename = service_report.build(row.name, trusted=True)
+    frappe.local.response.filename = filename
+    frappe.local.response.filecontent = pdf
+    frappe.local.response.type = "pdf"
+
+
+@frappe.whitelist(methods=["POST"])
+def rate_visit(job, rating, comment=None):
+    """Rate a completed visit from the app (the same rating as the emailed link)."""
+    from projectit import ratings
+    from projectit.work_orders import _assignees
+    row = _visit(job)
+    if not ratings.rateable(row):
+        frappe.throw(_("This visit cannot be rated."))
+    ratings.record(row, rating, comment)
+    row = frappe.db.get_value("Task", row.name, JOB_FIELDS, as_dict=True)
+    return {"visit": _visit_row(row, _assignees([row.name])[row.name])}
