@@ -7,6 +7,8 @@
       </div>
       <span class="flex flex-wrap gap-2">
         <router-link v-if="equipment && data.staff" :to="{ path: '/plant', query: { preview: equipment } }" class="btn btn-ghost btn-sm"><FeatherIcon name="eye" class="h-4 w-4" />See it as the customer</router-link>
+        <a v-if="data.staff" :href="`/api/method/projectit.monthly_report.download?customer=${encodeURIComponent(data.customer)}`" target="_blank" rel="noopener" class="btn btn-ghost btn-sm"><FeatherIcon name="file-text" class="h-4 w-4" />Last month's report</a>
+        <button v-if="data.staff && data.accounts.some((a) => a.access === 'Customer admin' && a.enabled)" class="btn btn-ghost btn-sm" :disabled="busy === 'report'" @click="emailReport"><FeatherIcon name="mail" class="h-4 w-4" />Email it</button>
         <button class="btn btn-secondary btn-sm" @click="openInvite"><FeatherIcon name="user-plus" class="h-4 w-4" />Invite someone</button>
       </span>
     </div>
@@ -130,6 +132,19 @@ async function load() {
 }
 onMounted(load)
 
+async function emailReport() {
+  if (!window.confirm(`Email last month's plant report to ${data.value.customer_name}'s admins?`)) return
+  busy.value = 'report'
+  error.value = ''
+  try {
+    const r = await api('projectit.monthly_report.send_now', { customer: data.value.customer })
+    toast({ title: `Sent to ${r.sent_to.join(', ')}`, icon: 'mail', iconClasses: 'text-green-600', position: 'top-center' })
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    busy.value = ''
+  }
+}
 function openInvite() {
   Object.assign(form, { full_name: '', email: '', phone: '', access: 'Operator', machines: props.equipment ? [props.equipment] : data.value.machines.length === 1 ? [data.value.machines[0].name] : [] })
   formError.value = ''

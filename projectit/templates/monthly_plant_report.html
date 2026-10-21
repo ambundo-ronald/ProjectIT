@@ -1,0 +1,146 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>{{ _("Plant report") }} {{ month | e }}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 10.5pt; color: #1f2937; margin: 0; }
+  h1 { font-size: 17pt; margin: 0; color: #0f2a4a; }
+  h2 { font-size: 13pt; margin: 0; color: #0f2a4a; }
+  h3 { font-size: 9.5pt; text-transform: uppercase; letter-spacing: .06em; color: #0f2a4a; margin: 14px 0 6px;
+       padding-bottom: 4px; border-bottom: 2px solid #0f2a4a; }
+  table { width: 100%; border-collapse: collapse; }
+  td, th { vertical-align: top; text-align: left; }
+  .muted { color: #6b7280; }
+  .small { font-size: 8.5pt; }
+  .label { font-size: 8pt; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; padding-bottom: 2px; }
+  .big { font-size: 16pt; font-weight: bold; color: #0f2a4a; }
+  .tiles td { width: 25%; padding: 8px 10px; border: 1px solid #d1d5db; }
+  .rows td, .rows th { padding: 5px 6px; border-bottom: 1px solid #e5e7eb; }
+  .rows th { font-size: 8pt; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; background: #f3f4f6; }
+  .rows tr { page-break-inside: avoid; }
+  .pill { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 8.5pt; font-weight: bold; background: #ecfdf5; color: #047857; }
+  .pill.watch { background: #fef3c7; color: #92400e; }
+  .pill.action { background: #fee2e2; color: #b91c1c; }
+  .bar { height: 7px; background: #e5e7eb; border-radius: 4px; }
+  .bar span { display: block; height: 7px; background: #1e5aa0; border-radius: 4px; }
+  .tips li { margin-bottom: 4px; }
+  .text { white-space: pre-wrap; line-height: 1.4; }
+  .machine { page-break-before: always; }
+  .footer { margin-top: 22px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 8.5pt; color: #6b7280; }
+</style>
+</head>
+<body>
+  {% macro head() %}
+  {% if company.letter_head %}
+    <div>{{ company.letter_head | safe }}</div>
+  {% else %}
+    <table><tr>
+      <td>{% if company.logo %}<img src="{{ company.logo | e }}" style="max-height:48px">{% endif %}</td>
+      <td style="text-align:right" class="small muted">
+        <b style="font-size:11pt;color:#0f2a4a">{{ (company.name or "") | e }}</b><br>
+        {% if company.phone %}{{ company.phone | e }}<br>{% endif %}{% if company.email %}{{ company.email | e }}<br>{% endif %}{% if company.website %}{{ company.website | e }}{% endif %}
+      </td>
+    </tr></table>
+  {% endif %}
+  {% endmacro %}
+  {% macro num(v, digits=1) %}{% if v is none %}–{% else %}{{ "%.*f" | format(digits, v) }}{% endif %}{% endmacro %}
+  {% macro statuspill(s) %}{% if s %}<span class="pill {{ 'action' if s == 'Action needed' else 'watch' if s == 'Needs attention' else '' }}">{{ _(s) }}</span>{% endif %}{% endmacro %}
+
+  {{ head() }}
+  <table style="margin-top:14px"><tr>
+    <td><h1>{{ _("Monthly plant report") }}</h1><div class="muted">{{ customer | e }}</div></td>
+    <td style="text-align:right;width:40%"><div class="big">{{ month | e }}</div><div class="small muted">{{ start }} – {{ end }}</div></td>
+  </tr></table>
+
+  <table class="tiles" style="margin-top:12px"><tr>
+    <td><div class="label">{{ _("Water produced") }}</div><div class="big">{% if water is not none %}{{ num(water) }} m³{% else %}–{% endif %}</div></td>
+    <td><div class="label">{{ _("Machines") }}</div><div class="big">{{ machines | length }}</div></td>
+    <td><div class="label">{{ _("Visits") }}</div><div class="big">{{ visits }}</div></td>
+    <td><div class="label">{{ _("Your requests") }}</div><div class="big">{{ requests }}</div></td>
+  </tr></table>
+
+  <h3>{{ _("Your machines this month") }}</h3>
+  <table class="rows">
+    <tr><th>{{ _("Machine") }}</th><th>{{ _("Status now") }}</th><th style="text-align:right">{{ _("Water (m³)") }}</th><th style="text-align:right">{{ _("Hours run") }}</th><th>{{ _("Logged") }}</th><th style="text-align:right">{{ _("Visits") }}</th></tr>
+    {% for m in machines %}
+    <tr>
+      <td><b>{{ m.equipment_name | e }}</b>{% if m.site %}<div class="small muted">{{ m.site | e }}</div>{% endif %}</td>
+      <td>{{ statuspill(m.status) }}</td>
+      <td style="text-align:right">{{ num(m.water) }}</td>
+      <td style="text-align:right">{{ num(m.ran, 0) }}</td>
+      <td>{% if m.expected %}{{ m.logged }} / {{ m.expected }}{% else %}<span class="muted">{{ _("Not expected") }}</span>{% endif %}</td>
+      <td style="text-align:right">{{ m.visits_total }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p class="small muted">{{ _("Water produced is the hours the plant ran times its average product flow, from the logs and our readings.") }}</p>
+
+  {% for m in machines %}
+  <div class="machine">
+    {{ head() }}
+    <table style="margin-top:12px"><tr>
+      <td><h2>{{ m.equipment_name | e }}</h2><div class="small muted">{{ [m.site, m.tag] | select | join(" · ") | e }}</div></td>
+      <td style="text-align:right">{{ statuspill(m.status) }}<div class="small muted">{{ month | e }}</div></td>
+    </tr></table>
+
+    <table class="tiles" style="margin-top:10px"><tr>
+      <td><div class="label">{{ _("Water produced") }}</div><div class="big">{% if m.water is not none %}{{ num(m.water) }} m³{% else %}–{% endif %}</div>{% if m.per_day is not none %}<div class="small muted">{{ num(m.per_day, 2) }} m³ {{ _("a day") }}</div>{% endif %}</td>
+      <td><div class="label">{{ _("Hours run") }}</div><div class="big">{{ num(m.ran, 0) }}</div></td>
+      <td><div class="label">{{ _("Water quality (TDS)") }}</div><div class="big">{{ num(m.quality.avg) }}</div><div class="small muted">{{ m.quality.unit | e }}{% if m.quality.min is not none %} · {{ num(m.quality.min) }}–{{ num(m.quality.max) }}{% endif %}</div></td>
+      <td><div class="label">{{ _("Recovery") }}</div><div class="big">{% if m.membranes and m.membranes.recovery is not none %}{{ num(m.membranes.recovery) }}%{% else %}–{% endif %}</div></td>
+    </tr></table>
+
+    <h3>{{ _("Logs") }}</h3>
+    {% if m.expected %}
+      <table><tr><td style="width:60%"><div class="bar"><span style="width:{{ [100, (100 * m.logged / m.expected) | round] | min }}%"></span></div></td>
+        <td style="padding-left:10px">{{ m.logged }} {{ _("of") }} {{ m.expected }} {{ _("weeks") if m.schedule == "Weekly" else _("days") }} {{ _("logged") }}</td></tr></table>
+    {% else %}<p class="muted">{{ _("No regular log is expected for this machine.") }}</p>{% endif %}
+
+    {% if m.membranes %}
+    <h3>{{ _("Membranes") }}</h3>
+    <p>{{ _("Compared with when they were last clean, corrected for water temperature and pressure:") }}
+      {{ _("water output") }} <b>{{ "%+.1f" | format(m.membranes.flow) }}%</b>{% if m.membranes.salt is not none %}, {{ _("salt let through") }} <b>{{ "%+.1f" | format(m.membranes.salt) }}%</b>{% endif %}.
+      {% if m.membranes.needs_cleaning %}<span class="pill action">{{ _("Cleaning needed") }}</span>{% else %}<span class="pill">{{ _("Within limits") }}</span>{% endif %}</p>
+    {% endif %}
+
+    <h3>{{ _("Visits") }}</h3>
+    {% if m.visits %}
+    <table class="rows">
+      {% for v in m.visits %}
+      <tr><td style="width:22%">{{ frappe.utils.format_date(v.on) }}<div class="small muted">{{ v.kind | e }}</div></td>
+        <td><b>{{ v.title | e }}</b>{% if v.summary %}<div class="text small">{{ v.summary | e }}</div>{% endif %}</td></tr>
+      {% endfor %}
+    </table>
+    {% if m.visits_total > m.visits | length %}<p class="small muted">{{ _("The latest {0} of {1} visits this month.").format(m.visits | length, m.visits_total) }}</p>{% endif %}
+    {% else %}<p class="muted">{{ _("No visits this month.") }}</p>{% endif %}
+
+    {% if m.requests %}
+    <h3>{{ _("Your requests") }}</h3>
+    <table class="rows">
+      {% for r in m.requests %}<tr><td style="width:22%">{{ frappe.utils.format_date(r.on) }}</td><td>{{ r.subject | e }}</td><td style="width:15%">{{ r.state | e }}</td></tr>{% endfor %}
+    </table>
+    {% endif %}
+
+    {% if m.supplies %}
+    <h3>{{ _("Filters and chemicals") }}</h3>
+    <table class="rows">
+      <tr><th>{{ _("Supply") }}</th><th style="text-align:right">{{ _("Changes this month") }}</th><th style="text-align:right">{{ _("On site") }}</th><th>{{ _("Next") }}</th></tr>
+      {% for s in m.supplies %}
+      <tr><td>{{ s.name | e }}</td><td style="text-align:right">{{ s.used }}</td><td style="text-align:right">{{ num(s.stock) }} {{ s.unit | e }}</td>
+        <td>{% if s.due %}<span class="pill action">{{ _("Due now") }}</span>{% elif s.due_on %}{{ frappe.utils.format_date(s.due_on) }}{% endif %}{% if s.low %} <span class="pill watch">{{ _("Low") }}</span>{% endif %}</td></tr>
+      {% endfor %}
+    </table>
+    {% endif %}
+
+    <h3>{{ _("What we recommend") }}</h3>
+    {% if m.recommendations %}
+      <ul class="tips">{% for t in m.recommendations %}<li>{{ t | e }}</li>{% endfor %}</ul>
+    {% else %}<p>{{ _("Nothing: the plant is running well. Keep logging every day.") }}</p>{% endif %}
+  </div>
+  {% endfor %}
+
+  <div class="footer">{{ _("Prepared on") }} {{ printed | e }}. {{ _("Questions? Ask us in the plant app (Service) or call us.") }}</div>
+</body>
+</html>

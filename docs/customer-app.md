@@ -48,6 +48,7 @@ Under the log, **Filters and chemicals** lists what the machine uses, when each 
 - **Your requests** shows each request your company raised for the machine. It shows as *Received*, then *Accepted* (we will schedule a visit), *Scheduled* with the date, *In progress* and *Done*. If we can't help with a request, it shows *Closed* with our reply.
 - **Past visits** lists what was done and by whom. **Service report** opens the visit's report as a PDF. It has no prices; the invoice has those.
 - **Rate this visit** (1 to 5 stars and an optional comment) for 30 days after a visit.
+- **Monthly reports** (customer admins): a PDF for each month with every machine's water produced, hours run, days logged, water quality, membrane condition, visits, requests, filters and chemicals, and what we recommend. Admins also get last month's report by email on the 1st; switch it off in Account.
 - **Warranty and service contract** shows the warranty end date and, if you have a contract, what it covers: service visits (and how many are done), labour, call-outs, response and fix times, and parts.
 
 ## Notifications

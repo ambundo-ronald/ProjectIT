@@ -270,6 +270,8 @@ Each person belongs to one customer. A staff email cannot be used for a customer
 - **Logging:** every customer machine someone can log, with its schedule, how many of the expected days it was logged over 7, 30 or 90 days, the last log and who made it. Worst first. **Excel** exports it together with the accounts.
 - **Accounts:** every customer account across customers: access, machines, when they last signed in and logged, with **New link** and **Switch off**.
 
+**Monthly plant reports.** On the 1st of each month every customer with a plant app admin is emailed last month's report (PDF): water produced (hours run × average product flow), hours run, days logged against the schedule, water quality, recovery, membrane condition, the visits done with their summaries, their requests, filters and chemicals, and recommendations. It has no costs or internal notes. On a machine's **Customer app access** card, **Last month's report** opens it, and **Email it** sends it now. Admins can download any month in the plant app (Service) and switch the email off. Needs the scheduler and outgoing email.
+
 **See it as the customer.** On a machine's **Customer app access** card, or **Preview** in the Logging tab, opens the plant app as that customer's admin sees it. A banner shows it is a preview. Nothing can be saved, and **Leave preview** returns to the machine.
 
 **What customers never see:** costs, labour, internal notes, investigations, chat, other customers, ERPNext or the staff apps. Customer accounts have no rights on any DocType. Every request they make is checked on the server, and anything outside the plant app is refused.

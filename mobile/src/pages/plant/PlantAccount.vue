@@ -36,7 +36,7 @@
           </span>
           <Toggle :on="push.subscribed" label="Notifications on this phone" :disabled="!push.supported || push.permission === 'denied' || busy" @change="togglePhone" />
         </div>
-        <div v-for="c in CHOICES" :key="c.key" class="flex items-center gap-3 px-5 py-3">
+        <div v-for="c in CHOICES.filter((x) => !x.admin || plant.me.admin)" :key="c.key" class="flex items-center gap-3 px-5 py-3">
           <FeatherIcon :name="c.icon" class="h-4 w-4 shrink-0 text-gray-500" />
           <span class="min-w-0 flex-1 text-sm"><span class="block font-medium text-gray-900">{{ c.label }}</span><span class="block text-xs text-gray-500">{{ c.help }}</span></span>
           <Toggle :on="!!plant.me.notify?.[c.key]" :label="c.label" :disabled="busy" @change="(v) => setChoice(c.key, v)" />
@@ -83,6 +83,7 @@ import { request } from '@/data/ops'
 const CHOICES = [
   { key: 'visits', label: 'Visits and reports', icon: 'truck', help: 'Visit planned or moved, work started, visit done and the report ready, membranes need cleaning.' },
   { key: 'reminders', label: 'Log reminders', icon: 'edit-3', help: "Once a day when a machine's log is due." },
+  { key: 'reports', label: 'Monthly report by email', icon: 'mail', help: "Last month's plant report on the 1st: water produced, logs, visits and what we recommend.", admin: true },
 ]
 const busy = ref(false)
 const tested = ref(false)

@@ -46,10 +46,12 @@ def me():
 
 
 @frappe.whitelist(methods=["POST"])
-def set_notifications(visits=None, reminders=None):
-    """My choices: visit news, and log reminders."""
+def set_notifications(visits=None, reminders=None, reports=None):
+    """My choices: visit news, log reminders, and (admins) the monthly report by email."""
     acc = customer_accounts.writable()
     values = {}
+    if reports is not None:
+        values[customer_notify.REPORTS] = 1 if cint(reports) else 0
     if visits is not None:
         values[customer_notify.VISITS] = 1 if cint(visits) else 0
     if reminders is not None:
@@ -614,3 +616,32 @@ def order_supply(equipment, supply, qty=None):
     customer_accounts.writable(customer_accounts.require_machine(equipment))
     sup.order(equipment, supply, qty)
     return supplies(equipment)
+
+
+# Monthly reports ---------------------------------------------------------------------------------------------------
+
+def _report_account():
+    """Reports cover all of the customer's machines, so they are for its admins."""
+    acc = customer_accounts.require_account()
+    if acc.access != "Customer admin":
+        frappe.throw(_("Monthly reports are for your company's admin."), frappe.PermissionError)
+    return acc
+
+
+@frappe.whitelist()
+def monthly_reports():
+    """The months I can download a plant report for."""
+    from projectit import monthly_report
+    acc = _report_account()
+    return {"months": monthly_report.months(acc.customer), "email": customer_notify.preferences(acc)["reports"]}
+
+
+@frappe.whitelist()
+def monthly_report(month=None):
+    """My company's plant report for a month (PDF)."""
+    from projectit import monthly_report as report
+    acc = _report_account()
+    pdf, filename = report.build(acc.customer, month)
+    frappe.local.response.filename = filename
+    frappe.local.response.filecontent = pdf
+    frappe.local.response.type = "pdf"

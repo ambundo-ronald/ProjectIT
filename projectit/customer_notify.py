@@ -17,7 +17,7 @@ from frappe.utils import cint, format_date, get_datetime, getdate, now_datetime,
 from projectit import customer_accounts, ops
 
 DOCTYPE = "Techy Customer User"
-VISITS, REMINDERS = "notify_visits", "notify_reminders"
+VISITS, REMINDERS, REPORTS = "notify_visits", "notify_reminders", "notify_reports"
 DEFAULT_REMINDER = "10:00"
 DEFAULT_MISSING_DAYS = 3
 
@@ -182,6 +182,6 @@ def missing_logs():
 # The person's choices ------------------------------------------------------------------------------------------------
 
 def preferences(acc):
-    row = frappe.db.get_value(DOCTYPE, acc.name, [VISITS, REMINDERS], as_dict=True) or {}
-    return {"visits": cint(row.get(VISITS) if row.get(VISITS) is not None else 1),
-        "reminders": cint(row.get(REMINDERS) if row.get(REMINDERS) is not None else 1)}
+    row = frappe.db.get_value(DOCTYPE, acc.name, [VISITS, REMINDERS, REPORTS], as_dict=True) or {}
+    on = lambda field: cint(row.get(field) if row.get(field) is not None else 1)
+    return {"visits": on(VISITS), "reminders": on(REMINDERS), "reports": on(REPORTS)}

@@ -86,6 +86,18 @@
         <p v-else class="px-5 py-4 text-sm text-gray-500">No visits yet.</p>
       </div>
 
+      <!-- Monthly reports (admins: they cover every machine) -->
+      <div v-if="reports" class="card overflow-hidden">
+        <div class="card-header"><h2 class="card-title">Monthly reports</h2><span class="text-xs text-gray-500">{{ reports.email ? 'Also emailed to you each month' : 'Not emailed (Account)' }}</span></div>
+        <ul class="divide-y divide-gray-100">
+          <li v-for="r in reports.months" :key="r.month" class="flex items-center gap-3 px-5 py-2.5 text-sm">
+            <FeatherIcon name="file-text" class="h-4 w-4 shrink-0 text-gray-400" />
+            <span class="flex-1 text-gray-900">{{ r.label }}<span v-if="r.current" class="ml-1 text-xs text-gray-500">(so far)</span></span>
+            <a :href="`/api/method/projectit.plant.monthly_report?month=${r.month}`" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" :aria-label="`Open the report for ${r.label}`"><FeatherIcon name="download" class="h-4 w-4" />PDF</a>
+          </li>
+        </ul>
+      </div>
+
       <!-- Cover -->
       <div class="card p-5">
         <h2 class="card-title">Warranty and service contract</h2>
@@ -174,10 +186,12 @@ const askError = ref('')
 const ask = reactive({ subject: '', description: '', urgent: false, photo: null })
 const rating = ref(null)
 const highlight = ref('')
+const reports = ref(null)
 
 async function load() {
   if (!plant.machine) return
   error.value = ''
+  if (plant.me?.admin && !reports.value) api('projectit.plant.monthly_reports').then((r) => (reports.value = r)).catch(() => {})
   try {
     s.value = await api('projectit.plant.service', { equipment: plant.machine })
   } catch (e) {
