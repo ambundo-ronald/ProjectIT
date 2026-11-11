@@ -33,6 +33,21 @@ The bar at the bottom has **Work**, **Requests**, **Equipment** and **Chat**. **
 
 More shows a count when parts requests are waiting, and is highlighted while you are on one of its pages.
 
+## Light and dark appearance
+
+Choose **Appearance** in the name menu, on each device:
+- **Light**: the default.
+- **Dark**: navy, built on the logo colour rather than black.
+- **Auto**: follows the phone's or computer's own setting.
+
+The choice applies to all three apps and is remembered on that device.
+
+- **What stays the same in dark mode:** the navy sidebar, the Techy Work clock card and the camera keep their usual look. Signature pads stay white so signatures read on the service report.
+- **Printing** (Reports › Print / PDF) always uses the light colours.
+- **For developers:** the colours live in `mobile/theme.cjs`. Every Tailwind colour is a CSS variable with a light and a navy dark value, switched by the `techy-dark` class on `<html>`.
+  - Use `bg-panel` for card and input surfaces (white in light mode), and keep `bg-white/…` for translucent overlays on coloured backgrounds.
+  - Wrap anything that must keep its light colours in `palette-light`.
+
 ## Lists
 
 - **Pages:** long lists show numbered pages under the list, with *Showing 26–50 of 132*, previous and next buttons, and 25, 50 or 100 rows per page. The page size is remembered on each device.
@@ -43,6 +58,9 @@ More shows a count when parts requests are waiting, and is highlighted while you
 
 ## Work orders
 
+Technicians send a finished job **for review**, and a manager approves it (completing it) or sends it back. See [docs/employee-access.md](employee-access.md) for exactly what technicians and managers can do.
+
+- **On my way**: on a job at a customer's machine that has not started yet, someone on the job presses **On my way** and picks when they expect to arrive (15 min, 30 min, 1 h, 2 h or not sure). The customer's people get a notification, their plant app shows the technician on the way, and the job notes who left when. It can be pressed once per trip (again after 12 hours).
 - Create a work order from **Work orders**, from an asset, or by approving a request. Each one has a priority, category, due date, asset or location, assignees, an optional project, an optional procedure from the library (see [Procedures](#procedures)) and an optional quick checklist.
 - The board groups work orders by status: Open (including ERPNext Overdue), In progress (Working), On hold / review (Pending Review) and Done (Completed). The list view adds status filters and search.
 - Technicians see the work orders assigned to them or created by them. They can start, hold, complete and reopen them, tick checklist steps, add photos and post updates. They can create work orders but assign them only to themselves.
@@ -64,13 +82,17 @@ Technicians can keep working where there is no signal.
   - Any other job you open is saved too, as are the photos you have looked at.
 - **Without a connection,** a bar says *You're offline. Showing what's saved on this phone.* You can then:
   - open your jobs and the work order list, and read chat you have already seen;
-  - change a job's status, post updates, tick checklist steps, answer procedure steps (photos included), add photos, start and stop the timer, record failure codes and downtime, and write the service report's *Work done*.
+  - change a job's status, post updates, tick checklist steps, answer procedure steps (photos included), add photos, start and stop the timer, record failure codes and downtime, and write the service report's *Work done*;
+  - tap **On my way**. The customer is told when the phone has signal again; if that is more than 45 minutes later, the time is recorded but the customer is not messaged;
+  - record meter readings;
+  - in Techy Work, **check in and check out** of a project, and add site photos (see [attendance](attendance.md#offline-check-in-and-check-out)). Today's projects and their tasks are saved on the phone each time the app opens online.
   - Each change shows on the job straight away, and updates are marked *saved on this phone, waiting to send*. The bar counts what is waiting.
 - **Back online,** the changes are sent in the order they were made. **Send now** sends them straight away.
-  - Timer starts and stops keep the time they happened on the phone (up to three days back).
+  - Timer starts and stops keep the time they happened on the phone (up to three days back). Check-ins, check-outs and On my way do too (24 hours for check-ins and check-outs).
   - A status change made offline wins over one made on the server in the meantime.
+- **Waiting to send.** **See what** on the bar lists every change still on the phone, oldest first.
 - **Refused changes.** If the server refuses a change (for example the job was reassigned or cancelled meanwhile), the bar says so. **Review** lists each one with the reason: **Try again**, or **Discard** to see the job as it is now.
-- **Needs a connection:** jobs never opened on the phone, creating jobs, chat messages, parts requests, invoices, and every manager screen.
+- **Needs a connection:** jobs never opened on the phone, creating jobs, chat messages, adding parts (the parts search needs the stock list), invoices, and every manager screen.
 - **How it works:** a service worker served at `/techy-sw.js` keeps the app's files and page. Jobs and queued changes are stored in the browser (IndexedDB) on that phone only. Signing out of the phone's browser profile, or clearing its site data, removes them; changes not yet sent are lost.
 
 ## Dispatch calendar
@@ -145,6 +167,120 @@ Machines you sell and install for customers, such as RO systems, belong to the c
 - **Jobs and requests** can be raised for a machine. The job shows the customer site with **Call** and **Directions** buttons, and the machine page lists all of its jobs.
 - **QR stickers:** each machine has a printable QR sticker. When public requests are on, the customer scans it, sees only the machine model and site, and reports a problem. The request is linked to the machine and the customer.
 - **Permissions:** all staff can look up customer equipment. Only managers can register or edit it.
+
+### Machine health
+
+Each machine has a **Health** tab, next to Overview. It is built from what the app already records: meter readings, services, breakdowns, downtime, repair jobs and costs.
+
+- **Health score** out of 100: **Good** (80+), **Watch** (60 to 79) or **At risk** (under 60, or down now). It is made of:
+  - **Condition** (30): gauge readings against their Above/Below limits.
+  - **Service** (25): meter services past due, overdue preventive jobs, a missed contract visit.
+  - **Reliability** (20): breakdowns in the last 90 days.
+  - **Availability** (15): hours down in the last 90 days.
+  - **Open repairs** (10): how many repairs are open, and whether they are overdue.
+
+  Each part shows its reason. Parts that don't apply (no limits set, no schedule) are left out, and the score is scaled to what is measured.
+- **Forecasts** (straight-line projections from recent readings and history):
+  - when each counter reaches its next service;
+  - when a gauge is heading past a limit;
+  - when the next breakdown is likely, from the time between breakdowns;
+  - for managers, the cost of the next 12 months.
+
+  Breakdown and cost forecasts start once the machine has 30 days of history.
+- **Graphs:**
+  - each meter's readings for the last 12 months, with its limits, the next service level and the projection; hover for exact values, or switch to a table;
+  - jobs per month (repairs, services, other);
+  - hours down per month;
+  - cost per month (managers);
+  - the most common failure codes.
+- **What-if planner:** change the use per day and the service interval (or services a year) to see expected services, breakdowns, hours down and, for managers, yearly cost against today. Nothing is saved.
+  - Breakdowns scale with use, and with the time between services to the power 0.8: servicing half as often means about 1.7 times the breakdowns.
+- **RO process model** (reverse-osmosis machines, or any machine with a TDS meter): recovery, feed TDS, pressure, temperature, salt rejection, fouling and salt-passage rates.
+  - **Starting values:** taken from the machine's own meters where they exist (*Feed TDS*, *Permeate TDS*, *Feed pressure*, *Product flow*, *Recovery*, *Temperature*). Fouling and salt-passage rates come from the flow and permeate TDS trends, and salt rejection from feed vs permeate TDS. Each value says where it came from.
+  - **Today:** feed and concentrate flows, concentrate and permeate TDS, osmotic and net driving pressure.
+  - **Next three years:** when the membranes need cleaning (CIP), and when permeate TDS passes the target.
+  - It is a rule-of-thumb planning model, not a design tool.
+
+Name meters clearly (for example *Feed TDS*, *Permeate TDS*, *Feed pressure*, *Product flow*) so the model finds them.
+
+#### RO logging and normalised performance
+
+For reverse-osmosis machines, the Health tab compares the membranes with how they performed at a **baseline**, correcting for temperature and pressure (in the spirit of ASTM D4516). A cold month or a higher feed pressure is then not mistaken for fouling.
+
+- **Set up RO logging** (managers, on the Health tab):
+  - Adds the meters the machine is missing: feed, concentrate and permeate pressure; feed and permeate TDS; product and concentrate flow; water temperature; running hours. Existing meters with similar names are reused.
+  - Creates the **RO log sheet** procedure: each Number step records its reading on the machine's meter, plus leak and antiscalant checks.
+  - Attach the log sheet to the machine's service visits (the contract's visit procedure, or the PM task), so every visit records a full, comparable set of readings.
+- **A log** is the readings taken on one job, or else on one day. Readings marked unusual and not confirmed, or far from a meter's trend, are left out so a typo can't distort a log.
+- **Normalised values:** each log is compared with the baseline as a % change in:
+  - **Permeate flow** (corrected to the baseline's net driving pressure and temperature): falls as membranes foul or scale.
+  - **Salt passage** (corrected to the baseline's net driving pressure): rises with scaling, damage or worn membranes.
+  - **Pressure drop** (feed minus concentrate pressure, corrected to the baseline's flow): rises as the feed channels clog.
+
+  Net driving pressure uses the average of feed and concentrate pressure, the permeate pressure, and osmotic pressure of about 0.7 bar per 1,000 mg/L along the membranes. Anything not recorded is assumed (25 °C, permeate pressure 0, concentrate pressure = feed − 0.7 bar, 75% recovery) and listed on the card.
+- **Cleaning rules** (Techy Ops Settings › RO Membrane Cleaning; defaults: flow down 10%, salt passage up 10%, pressure drop up 15%):
+  - When the latest log breaks one, the card says **Clean the membranes (CIP)** with the reasons.
+  - One **Membrane cleaning (CIP)** job (High priority) is raised and managers are told. No second job is raised while it is open.
+- **Baseline:** the first full log, unless a manager chooses **Use the latest log as the baseline**, for example after new membranes are fitted.
+- The RO process model takes its fouling rate from the normalised flow trend when there is one.
+
+#### How far to trust it
+
+- **Each forecast** shows:
+  - its **confidence**: *High*, *Medium* or *Low*, from the number of readings, the time they span, how old the latest one is and (for gauges) how well the readings follow a line;
+  - what it is based on, for example "13 readings over 84 days; the latest is 2 days old";
+  - a **likely range** of dates (about 80% likely), not only one date.
+- **Breakdown forecasts** say how many breakdowns they rest on: 6 or more is *High*, 3 to 5 *Medium*, fewer *Low*.
+- **Readings left out of the trends:** readings far from the trend (a typo, or a one-off) are left out of the trend and the score, and drawn as red rings. Each is listed under its chart with its date. A value off the scale sits on the chart's edge with its value written beside it. A reading the technician confirmed when typing it always counts.
+- **Old readings:** meters not read for **45 days** are marked, and don't count towards the Condition part of the score.
+- **How complete the data is** lists what limits the answers: meters not read recently, readings left out, repairs without a problem code or a downtime answer, and, for managers, a missing labour cost per hour or jobs with no hours.
+
+**Checks when readings are typed:**
+- A reading far from a meter's usual values, or a counter rising much faster than its normal pace, asks "Is this right?" before it is saved. This applies on the machine page and in procedure steps.
+- A confirmed reading is saved as confirmed.
+- A reading typed while offline is saved when the phone reconnects; if it looked unusual, it is marked so and left out of trends unless it fits.
+
+**Require failure codes and downtime on repairs** (Techy Ops Settings): repairs on a machine then need a problem and a cause code, **and** an answer to *Was the machine down?* (*Yes, it was down*, with times, or *No, it kept running*), before they are sent for review or completed. Turn it on so availability, failure and breakdown figures can be trusted.
+
+## The customer plant app
+
+Customers whose plant we installed can have their own simple app at `/techy-app/plant`, to log their readings every day. See [docs/customer-app.md](customer-app.md) for what they see.
+
+**Giving a customer access.** On the machine page (Overview), managers see **Customer app access**.
+1. Press **Invite someone** and enter the name and email.
+2. Choose **Operator** (only the machines ticked) or **Customer admin** (every machine of the customer; can invite their own operators).
+3. The person is emailed a link to set their password. The link is also shown, with **Copy**, to send by WhatsApp or SMS if email is not set up or does not arrive. **New link** makes a fresh one. **Switch off** stops the person signing in; their logs are kept.
+
+Each person belongs to one customer. A staff email cannot be used for a customer account. Accounts are listed in Desk under **Techy Customer User**.
+
+**How often to log.** Set **Plant app log schedule** on the machine (Edit): once a day (the default), twice a day, once a week, or not expected.
+
+**What their logs do.**
+- Each log is a **Techy Plant Log** with its readings saved as ordinary meter readings marked *Source: Customer*. They appear on the meters, the Health tab and the RO charts like any other reading, and each log counts as one RO log.
+- Unusual values are checked as they are typed. A log sent later from a phone that was offline is saved with any unusual readings marked, so the Health tab leaves them out until someone checks them.
+- A customer's reading **never raises a job**. If it sets off a meter trigger (service due, or a limit crossed) or breaks an RO cleaning rule, managers get a notification starting "Customer log". Decide whether to send someone. Cleaning alerts repeat at most once a week while the rule stays broken.
+- The Health tab's **How complete the data is** card shows how many of the expected days the customer logged in the last 30 days.
+
+**Advice for operators.** When a customer's reading crosses one of its meter's Above or Below limits, the plant app tells the operator what to check and when to call you. The standard RO meters have built-in advice (pressures, water quality, flows, temperature). Write your own on a meter (Edit meter, *Advice for the customer's operator*) to replace it, or to add advice to other meters.
+
+**Filters and chemicals.** On a machine's page, managers add the supplies it uses (**Filters and chemicals → Add supplies**): the name the operator knows it by, the item you sell (optional), how often it is changed or topped up, how much each change uses, the stock on site, and the reorder level and order quantity. The customer's operator, or your technician on the machine page, records changes, top-ups, deliveries and counts, and the stock follows. A change that is due or a supply at its reorder level shows on the customer's Home and in **Plant status**. **Order more** in the plant app makes a draft **Quotation** for the customer with the item (made in the background), or a work request when the supply has no item, and notifies managers. Price and send the quotation as usual. Recording a delivery clears *Ordered*.
+
+**Their service requests** arrive in **Requests** like any other work request, raised by the customer's person (urgent ones as High priority). Approving or declining works as usual. The customer sees the request move from *Received* to *Accepted*, *Scheduled* (from the job's planned start), *In progress* and *Done*. A decline reason is shown to them as **Our reply**, so write it for the customer. In the app they can also download each completed visit's service report (no prices) and rate the visit.
+
+**Notifications.** Customers' people are told, on their phones, when a visit on their machine is planned or moved (the job's planned start date), when work starts, and when it is completed (report ready, please rate). They are also told when we raise a membrane cleaning job, and get replies to their requests. Operators get one log reminder a day after **Log Reminder Time** (Techy Ops Settings, default 10:00) while a machine's log is due. Managers get one notification when machines have had no customer log for **Tell Managers After (Days Without a Log)** days (default 3), once per gap. Both need the site scheduler running.
+
+**Staff tools.** **Customer plants** (managers; in the sidebar, or **More** on a phone) has three tabs:
+- **Plant status:** every customer plant with meters, as *Action needed*, *Needs attention* or *Running well*, with the reasons. The reasons are the same as on the customer's Home: membranes need cleaning, machine down, readings out of range, not logged, not read recently. Plants needing action and with nothing planned come first. Each row shows what is already arranged (technician on the way, visit planned or overdue, open jobs), with **New job** for the machine. Statuses are refreshed after every reading, log and job status change, and every night.
+- **Logging:** every customer machine someone can log, with its schedule, how many of the expected days it was logged over 7, 30 or 90 days, the last log and who made it. Worst first. **Excel** exports it together with the accounts.
+- **Accounts:** every customer account across customers: access, machines, when they last signed in and logged, with **New link** and **Switch off**.
+
+**Monthly plant reports.** On the 1st of each month every customer with a plant app admin is emailed last month's report (PDF): water produced (hours run × average product flow), hours run, days logged against the schedule, water quality, recovery, membrane condition, the visits done with their summaries, their requests, filters and chemicals, and recommendations. It has no costs or internal notes. On a machine's **Customer app access** card, **Last month's report** opens it, and **Email it** sends it now. Admins can download any month in the plant app (Service) and switch the email off. Needs the scheduler and outgoing email.
+
+**See it as the customer.** On a machine's **Customer app access** card, or **Preview** in the Logging tab, opens the plant app as that customer's admin sees it. A banner shows it is a preview. Nothing can be saved, and **Leave preview** returns to the machine.
+
+**WhatsApp.** Customers can get their notifications, and new people their invitation, on WhatsApp. See [docs/whatsapp.md](whatsapp.md) for the Meta set-up and the two templates.
+
+**What customers never see:** costs, labour, internal notes, investigations, chat, other customers, ERPNext or the staff apps. Customer accounts have no rights on any DocType. Every request they make is checked on the server, and anything outside the plant app is refused.
 
 ## Service contracts
 
@@ -347,7 +483,7 @@ Managers open **Reports** from the sidebar, or from **More** on a phone. Choose 
 - **Technician scorecard:** how much each person did and how well. For jobs they completed in the period:
   - **On time:** finished by the due date (jobs with a due date only).
   - **Fixed first time:** repairs where the same machine needed no other repair opened within 30 days of completion.
-  - **Sent back:** jobs that went back to work after review or completion. Each return is counted on the job (*Times Sent Back* on the Task) from this update on; older jobs count as never sent back.
+  - **Sent back:** jobs a manager sent back from review, or reopened after completion. Each is counted on the job (*Times Sent Back* on the Task). A technician resuming their own job on hold, or taking back their own review request, does not count.
   - **Coded:** repairs with both a problem and a cause code.
   - **Customer rating:** the average of the customers' star ratings (see *Customer ratings*).
   - Average time to finish, hours logged per job (from the job timer; jobs without entries share their typed hours between the assignees), and open jobs with how many are overdue.

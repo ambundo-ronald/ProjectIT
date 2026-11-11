@@ -7,7 +7,8 @@
  * Changes: the job actions below are queued on the phone when there is no connection, and the job is updated on
  * screen straight away. The queue is sent, oldest first, as soon as the connection is back. A change the server
  * refuses (the job was closed meanwhile, say) is kept and shown so the person can try again or discard it.
- * Timer starts and stops carry the time they happened on the phone.
+ * Timer starts and stops, check-ins and check-outs, site photos and On my way carry the time they happened on the
+ * phone. A check-out queued after an offline check-in is sent with the timesheet the check-in created.
  */
 import { reactive } from 'vue'
 import { request } from './request'
@@ -27,12 +28,19 @@ const READS = new Set([
   'projectit.chat.get_channel',
   'projectit.chat.get_messages',
   'projectit.reminders.my_reminders',
+  // Techy Work (check-in) and what a technician opens from a job.
+  'projectit.work.today',
+  'projectit.tasks.work_tasks',
+  'projectit.procedures.list_procedures',
+  'projectit.equipment.get_equipment',
+  'projectit.meters.get_meter',
 ])
 // Lists whose screen filters what it gets, so any saved copy is better than none.
 const ANY_ARGS = new Set(['projectit.work_orders.list_work_orders', 'projectit.work_orders.summary', 'projectit.ops.search_users'])
 
 const DETAIL = 'projectit.work_orders.get_work_order'
 const BOOT = 'projectit.ops.bootstrap'
+const TODAY = 'projectit.work.today'
 
 export const offline = reactive({ online: typeof navigator === 'undefined' || navigator.onLine, pending: 0, failed: [], syncing: false })
 
@@ -95,6 +103,8 @@ function catchUp(method, row) {
   const seconds = Math.max(0, (Date.now() - row.at) / 1000)
   if (method === DETAIL && value?.timer) for (const r of value.timer.running || []) r.elapsed = (r.elapsed || 0) + seconds
   if (method === BOOT && value?.timer) value.timer.elapsed = (value.timer.elapsed || 0) + seconds
+  // A saved Today is shown against the phone's clock, not the server time from when it was saved.
+  if (method === TODAY && value) value.server_time = localNow()
   return value
 }
 
@@ -110,9 +120,12 @@ const WRITES = {
   'projectit.work_orders.update_work_order': {
     job: (a) => a.name,
     apply(d, a) {
-      if (a.status) d.work_order.status = a.status
+      if (a.status) {
+        d.work_order.status = a.status
+        d.work_order.custom_review_requested = a.status === 'Pending Review' && Number(a.review) ? 1 : 0
+      }
     },
-    label: (a) => (a.status ? `Status: ${a.status === 'Working' ? 'In progress' : a.status === 'Pending Review' ? 'On hold' : a.status}` : 'Job update'),
+    label: (a) => (a.status ? `Status: ${a.status === 'Working' ? 'In progress' : a.status === 'Pending Review' ? (Number(a.review) ? 'Sent for review' : 'On hold') : a.status}` : 'Job update'),
   },
   'projectit.work_orders.add_comment': {
     job: (a) => a.name,
@@ -198,31 +211,82 @@ const WRITES = {
     },
     label: () => 'Work done',
   },
+  'projectit.work_orders.on_my_way': {
+    job: (a) => a.name,
+    apply(d, a, ctx) {
+      d.on_way = { ...(d.on_way || {}), at: a.at, by: ctx.me.full_name, minutes: a.minutes || null, can_go: false, pending: true }
+    },
+    stamp: true,
+    label: () => 'On my way',
+  },
+  'projectit.meters.record_reading': {
+    // No saved screen to update: the meter card shows the value itself (see MetersCard).
+    result: (a) => ({ meter: null, raised: [], queued: true, value: a.value }),
+    // An unusual reading cannot be confirmed later; the person saw the number when they typed it.
+    send: (a) => ({ ...a, confirm: 1 }),
+    label: () => 'Meter reading',
+  },
+  // Techy Work: check in and out of a project with no signal at the site.
+  'projectit.attendance.check_in': {
+    target: () => [TODAY, {}],
+    apply(t, a, ctx) {
+      const project = (t.projects || []).find((p) => p.project === a.project)
+      t.session = { name: `pending-${ctx.id}`, project: a.project, project_name: project?.project_name || a.project, from_time: a.at, task: a.task || null, note: '', docstatus: 0, pending: true }
+      const me = project?.team.find((m) => m.me)
+      if (me) me.on_site = true
+    },
+    stamp: true,
+    label: () => 'Check-in',
+  },
+  'projectit.attendance.check_out': {
+    target: () => [TODAY, {}],
+    apply(t) {
+      for (const p of t.projects || []) for (const m of p.team) if (m.me) m.on_site = false
+      t.session = null
+    },
+    stamp: true,
+    label: () => 'Check-out',
+  },
+  'projectit.attendance.add_photo': {
+    target: () => [TODAY, {}],
+    apply() {},
+    stamp: true,
+    label: () => 'Site photo',
+  },
 }
+
+/** Where a queued change shows on screen: the saved copy it updates. */
+const targetOf = (spec, args) => (spec.target ? spec.target(args) : spec.job ? [DETAIL, { name: spec.job(args) }] : null)
 
 async function queue(method, args) {
   const spec = WRITES[method]
-  const job = spec.job(args)
-  const row = await get('cache', keyOf(DETAIL, { name: job })).catch(() => null)
-  if (!row) {
-    const error = new Error("You're offline, and this job wasn't saved on this phone. Open it once while online.")
+  const job = spec.job ? spec.job(args) : null
+  const target = targetOf(spec, args)
+  const row = target ? await get('cache', keyOf(...target)).catch(() => null) : null
+  if (target && !row) {
+    const error = new Error(target[0] === DETAIL
+      ? "You're offline, and this job wasn't saved on this phone. Open it once while online."
+      : "You're offline, and this screen wasn't saved on this phone yet. Open it once while online.")
     error.offline = true
     throw error
   }
   const queued = spec.stamp ? { ...args, at: localNow() } : args
-  const id = await put('outbox', { method, args: queued, job, label: spec.label(args), created: Date.now() })
+  const id = await put('outbox', { method, args: queued, job, target, label: spec.label(args), created: Date.now() })
   const boot = await get('cache', keyOf(BOOT, {})).catch(() => null)
   const ctx = { id, now: localNow(), me: { user: boot?.value?.user, full_name: boot?.value?.full_name || 'You' } }
-  const detail = catchUp(DETAIL, row)
-  spec.apply(detail, queued, ctx)
-  await remember(DETAIL, { name: job }, detail)
+  let value = null
+  if (row) {
+    value = catchUp(target[0], row)
+    spec.apply(value, queued, ctx)
+    await remember(target[0], target[1], value)
+  }
   if (spec.boot && boot) {
-    const value = catchUp(BOOT, boot)
-    spec.boot(value, queued, detail)
-    await remember(BOOT, {}, value)
+    const b = catchUp(BOOT, boot)
+    spec.boot(b, queued, value)
+    await remember(BOOT, {}, b)
   }
   await counts()
-  return detail
+  return spec.result ? spec.result(queued, value) : value
 }
 
 export async function counts() {
@@ -240,16 +304,33 @@ export async function sync() {
   if (offline.syncing) return
   offline.syncing = true
   const touched = new Set()
+  const screens = new Map()
+  const created = await realNames()
   try {
     const rows = (await all('outbox')).filter((r) => !r.failed).sort((a, b) => a.id - b.id)
     for (const item of rows) {
-      const args = { ...item.args }
+      const spec = WRITES[item.method] || {}
+      let args = spec.send ? spec.send({ ...item.args }) : { ...item.args }
+      // A check-out or photo for a check-in made offline: use the timesheet that check-in created.
+      if (typeof args.timesheet === 'string' && args.timesheet.startsWith('pending-')) {
+        const real = created[args.timesheet]
+        if (!real) {
+          await put('outbox', { ...item, failed: true, error: 'Its check-in was not sent. Retry or discard the check-in first.' })
+          continue
+        }
+        args.timesheet = real
+      }
       try {
+        if (item.method === 'projectit.procedures.answer' && !args.confirm) args.confirm = 2 // nobody to ask any more
         if (item.method === 'projectit.work_orders.update_work_order') {
           // The job may have changed since; the change made on the phone wins.
           args.modified = (await request(DETAIL, { name: args.name })).work_order.modified
         }
-        await request(item.method, args)
+        const result = await request(item.method, args)
+        if (item.method === 'projectit.attendance.check_in' && result?.name) {
+          created[`pending-${item.id}`] = result.name
+          await put('cache', { key: 'techy-offline-timesheets', value: created, at: Date.now() })
+        }
         await del('outbox', item.id)
       } catch (e) {
         if (e.offline) {
@@ -258,7 +339,8 @@ export async function sync() {
         }
         await put('outbox', { ...item, failed: true, error: e.message })
       }
-      touched.add(item.job)
+      if (item.job) touched.add(item.job)
+      if (item.target && item.target[0] !== DETAIL) screens.set(keyOf(...item.target), item.target)
       offline.online = true
     }
     for (const job of touched) {
@@ -268,10 +350,32 @@ export async function sync() {
         /* the next read refreshes it */
       }
     }
+    for (const [method, args] of screens.values()) {
+      try {
+        await remember(method, args, await request(method, args))
+      } catch (e) {
+        /* the next read refreshes it */
+      }
+    }
   } finally {
     offline.syncing = false
     await counts()
-    if (touched.size) window.dispatchEvent(new CustomEvent('techy-synced', { detail: [...touched] }))
+    if (touched.size || screens.size) window.dispatchEvent(new CustomEvent('techy-synced', { detail: [...touched] }))
+  }
+}
+
+/** Timesheets created by check-ins sent from the outbox, by the placeholder the phone gave them. */
+async function realNames() {
+  const row = await get('cache', 'techy-offline-timesheets').catch(() => null)
+  return row?.value || {}
+}
+
+/** Everything waiting to be sent, oldest first, for the "Waiting to send" list. */
+export async function outbox() {
+  try {
+    return (await all('outbox')).sort((a, b) => a.id - b.id)
+  } catch (e) {
+    return []
   }
 }
 
@@ -284,13 +388,16 @@ export async function retry(item) {
 export async function discard(item) {
   await del('outbox', item.id)
   await counts()
-  // Show the job as it really is again.
-  try {
-    await remember(DETAIL, { name: item.job }, await request(DETAIL, { name: item.job }))
-  } catch (e) {
-    /* offline: it refreshes later */
+  // Show the job (or screen) as it really is again.
+  const target = item.target || (item.job ? [DETAIL, { name: item.job }] : null)
+  if (target) {
+    try {
+      await remember(target[0], target[1], await request(target[0], target[1]))
+    } catch (e) {
+      /* offline: it refreshes later */
+    }
   }
-  window.dispatchEvent(new CustomEvent('techy-synced', { detail: [item.job] }))
+  window.dispatchEvent(new CustomEvent('techy-synced', { detail: item.job ? [item.job] : [] }))
 }
 
 /** The offline-aware api(): see the top of this file. */
@@ -323,13 +430,22 @@ export async function api(method, args = {}) {
 
 /** Save my open jobs on the phone, so they can be opened without a connection. */
 export async function prefetch() {
-  if (!navigator.onLine) return
+  // Staff work orders only; the customer app (/plant) keeps its own logs (data/plant.js).
+  if (!navigator.onLine || location.pathname.includes('/plant')) return
   try {
     const list = await api('projectit.work_orders.list_work_orders', { scope: 'mine', status: 'Active', page_length: 100 })
     for (const row of list.work_orders.slice(0, 40)) await api(DETAIL, { name: row.name })
     await api('projectit.failures.options')
+    await api('projectit.procedures.list_procedures').catch(() => {})
   } catch (e) {
     /* best effort */
+  }
+  // Techy Work: today's projects, so a technician can check in at a site with no signal.
+  try {
+    const today = await api(TODAY)
+    for (const p of (today.projects || []).slice(0, 10)) await api('projectit.tasks.work_tasks', { project: p.project }).catch(() => {})
+  } catch (e) {
+    /* not a Techy Work user */
   }
 }
 

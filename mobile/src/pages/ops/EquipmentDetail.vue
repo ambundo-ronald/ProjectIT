@@ -8,7 +8,15 @@
     <p v-if="error" role="alert" class="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>
     <div v-if="!data && !error" class="h-40 animate-pulse rounded-xl bg-gray-200/70" />
 
-    <div v-if="data" class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+    <div v-if="data" class="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <div class="segmented" role="tablist" aria-label="Machine">
+        <button v-for="t in TABS" :key="t.key" role="tab" :aria-selected="tab === t.key" :aria-pressed="tab === t.key" @click="setTab(t.key)"><FeatherIcon :name="t.icon" class="h-3.5 w-3.5" />{{ t.label }}</button>
+      </div>
+      <p v-if="tab === 'health'" class="min-w-0 truncate text-sm text-gray-600"><span class="font-semibold text-gray-900">{{ eq.equipment_name }}</span> · {{ eq.customer_name }}</p>
+    </div>
+    <EquipmentHealth v-if="data && tab === 'health'" :key="eq.name" :equipment="eq.name" />
+
+    <div v-if="data && tab === 'overview'" class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
       <div class="min-w-0 space-y-5">
         <!-- Header -->
         <div class="card p-5">
@@ -111,6 +119,10 @@
 
         <InvestigationsCard :key="data.equipment.name" :equipment="data.equipment.name" />
 
+        <SuppliesCard :key="`supplies-${eq.name}`" :equipment="eq.name" />
+
+        <CustomerAccessCard v-if="data.manager && eq.customer" :key="`access-${eq.name}`" :equipment="eq.name" />
+
         <div v-if="data.parts?.length" class="card overflow-hidden">
           <div class="card-header"><h2 class="card-title">Parts fitted</h2><span class="text-xs text-gray-500">{{ data.parts.length }}</span></div>
           <ul class="divide-y divide-gray-100">
@@ -153,7 +165,7 @@
 
         <div class="card p-5 text-center" aria-label="QR label">
           <h2 class="section-label">QR sticker</h2>
-          <div class="mx-auto mt-3 w-fit rounded-xl border border-gray-200 bg-white p-3">
+          <div class="mx-auto mt-3 w-fit rounded-xl border border-gray-200 bg-panel p-3">
             <img v-if="qr" :src="qr" :alt="`QR code for ${eq.equipment_name}`" class="h-40 w-40" />
           </div>
           <p class="mt-3 font-semibold">{{ eq.equipment_name }}</p>
@@ -170,8 +182,9 @@
   </section>
 </template>
 <script setup>
+import { isNative, publicUrl } from '@/data/native'
 import { ref, computed, inject, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { FeatherIcon } from 'frappe-ui'
 import QRCode from 'qrcode'
 import StatusPill from '@/components/ops/StatusPill.vue'
@@ -180,11 +193,18 @@ import LinkChip from '@/components/ops/LinkChip.vue'
 import EquipmentForm from '@/components/ops/EquipmentForm.vue'
 import ContractTerms from '@/components/ops/ContractTerms.vue'
 import MetersCard from '@/components/ops/MetersCard.vue'
+import EquipmentHealth from '@/components/ops/health/EquipmentHealth.vue'
 import InvestigationsCard from '@/components/ops/InvestigationsCard.vue'
+import CustomerAccessCard from '@/components/ops/CustomerAccessCard.vue'
+import SuppliesCard from '@/components/ops/SuppliesCard.vue'
 import { api, me, formatDate, fromNow } from '@/data/ops'
 import { EQUIPMENT_STATUS, mapLink } from '@/data/equipment'
 
 const route = useRoute()
+const router = useRouter()
+const TABS = [{ key: 'overview', label: 'Overview', icon: 'info' }, { key: 'health', label: 'Health', icon: 'activity' }]
+const tab = computed(() => (route.query.tab === 'health' ? 'health' : 'overview'))
+const setTab = (key) => router.replace({ query: { ...route.query, tab: key === 'overview' ? undefined : key } })
 const openNew = inject('openNewWorkOrder')
 const data = ref(null)
 const error = ref('')
@@ -195,7 +215,10 @@ const eq = computed(() => data.value?.equipment)
 const retired = computed(() => ['Decommissioned', 'Cancelled'].includes(eq.value?.status))
 const openCount = computed(() => data.value.work_orders.filter((w) => !['Completed', 'Cancelled'].includes(w.status)).length)
 const base = window.location.pathname.startsWith('/projectit') ? '/projectit' : '/techy-app'
-const link = computed(() => `${window.location.origin}${base}/request?equipment=${encodeURIComponent(route.params.name)}`)
+const link = computed(() => {
+  const path = `/request?equipment=${encodeURIComponent(route.params.name)}`
+  return isNative ? publicUrl(path) : `${window.location.origin}${base}${path}`
+})
 const details = computed(() => {
   const e = eq.value
   const rows = [

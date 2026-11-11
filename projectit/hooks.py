@@ -93,8 +93,10 @@ doctype_js = {"Project": "public/js/project.js", "Task": "public/js/task.js",
 # ------------
 
 # before_install = "projectit.install.before_install"
-after_install = ["projectit.setup.ensure_access_fields", "projectit.setup.ensure_ops_defaults"]
-after_migrate = ["projectit.setup.ensure_access_fields", "projectit.setup.ensure_ops_defaults"]
+after_install = ["projectit.setup.ensure_access_fields", "projectit.setup.ensure_ops_defaults",
+    "projectit.setup.ensure_task_permissions", "projectit.setup.ensure_customer_roles"]
+after_migrate = ["projectit.setup.ensure_access_fields", "projectit.setup.ensure_ops_defaults",
+    "projectit.setup.ensure_task_permissions", "projectit.setup.ensure_customer_roles", "projectit.whatsapp.ensure_verify_token"]
 
 # Uninstallation
 # ------------
@@ -128,12 +130,21 @@ after_migrate = ["projectit.setup.ensure_access_fields", "projectit.setup.ensure
 # -----------
 # Permissions evaluated in scripted ways
 
+# Technicians and field staff see and change only their own tasks (see projectit/permissions.py).
 permission_query_conditions = {
     "Techy Channel": "projectit.chat.permission_query_conditions",
+    "Task": "projectit.permissions.task_query",
+    "Project": "projectit.permissions.project_query",
 }
+
+# Customer accounts reach only the customer app's endpoints (projectit.customer_accounts.guard).
+# The phone app signs requests in by device token first (projectit.device_auth), then the guard applies.
+auth_hooks = ["projectit.device_auth.authenticate", "projectit.customer_accounts.guard"]
 
 has_permission = {
     "Techy Channel": "projectit.chat.has_permission",
+    "Task": "projectit.permissions.task_permission",
+    "Project": "projectit.permissions.project_permission",
 }
 
 # DocType Class
@@ -157,12 +168,13 @@ has_permission = {
 # }
 
 doc_events = {
+    "User": {"on_update": "projectit.device_auth.on_user_update"},
     "Project" : {
         "after_insert" : "projectit.projectit.project.after_insert_of_project"
     },
     "Task": {
         "validate": "projectit.work_orders.validate_task",
-        "on_update": "projectit.work_orders.on_task_update",
+        "on_update": ["projectit.work_orders.on_task_update", "projectit.customer_notify.on_task_update"],
     },
     "Delivery Note": {
         "on_submit": "projectit.equipment.on_delivery_note_submit",
@@ -180,7 +192,7 @@ doc_events = {
         "on_trash": "projectit.billing.release_jobs",
     },
     "Notification Log": {
-        "after_insert": "projectit.push.on_notification",
+        "after_insert": ["projectit.push.on_notification", "projectit.whatsapp.on_notification"],
     },
     "Techy Service Contract": {
         "validate": "projectit.contracts.validate",
@@ -190,8 +202,11 @@ doc_events = {
 }
 
 scheduler_events = {
-    "daily": ["projectit.maintenance.generate_pm_work_orders", "projectit.contracts.generate_visits"],
-    "cron": {"* * * * *": ["projectit.reminders.send_due"], "*/10 * * * *": ["projectit.sla.check_due"]},
+    "monthly": ["projectit.monthly_report.send_all"],
+    "daily": ["projectit.maintenance.generate_pm_work_orders", "projectit.contracts.generate_visits",
+        "projectit.customer_notify.missing_logs", "projectit.plant.refresh_all"],
+    "cron": {"* * * * *": ["projectit.reminders.send_due"], "*/10 * * * *": ["projectit.sla.check_due"],
+        "*/15 * * * *": ["projectit.customer_notify.remind_logs"]},
 }
 
 # Scheduled Tasks

@@ -44,7 +44,7 @@
           <caption class="sr-only">Jobs planned for each technician and day</caption>
           <thead>
             <tr class="border-b border-gray-200">
-              <th scope="col" class="sticky left-0 z-10 w-44 bg-white px-3 py-2 text-xs font-semibold text-gray-500">Technician</th>
+              <th scope="col" class="sticky left-0 z-10 w-44 bg-panel px-3 py-2 text-xs font-semibold text-gray-500">Technician</th>
               <th v-for="d in b.days" :key="d" scope="col" class="px-2 py-2 text-xs font-semibold" :class="d === b.today ? 'text-brand-700' : isWeekend(d) ? 'text-gray-400' : 'text-gray-600'">
                 {{ dayName(d) }} <span class="font-normal">{{ dayNum(d) }}</span><span v-if="d === b.today" class="ml-1 rounded bg-brand-600 px-1 text-[10px] text-white">Today</span>
               </th>
@@ -52,7 +52,7 @@
           </thead>
           <tbody>
             <tr v-for="p in rows" :key="p.user || 'none'" class="border-b border-gray-100 align-top last:border-0">
-              <th scope="row" class="sticky left-0 z-10 bg-white px-3 py-2.5">
+              <th scope="row" class="sticky left-0 z-10 bg-panel px-3 py-2.5">
                 <span class="flex items-center gap-2">
                   <UserAvatar v-if="p.user" :name="p.full_name" :image="p.image" size="sm" />
                   <FeatherIcon v-else name="user-x" class="h-4 w-4 text-gray-400" />
@@ -147,7 +147,7 @@ const JobChip = (props) => {
   return h('button', {
     type: 'button',
     draggable: !done,
-    class: ['group flex w-full items-start gap-1.5 rounded-lg border px-2 py-1.5 text-left text-xs transition', done ? 'border-gray-100 bg-gray-50 text-gray-400 line-through' : 'border-gray-200 bg-white shadow-sm hover:border-brand-300 cursor-grab active:cursor-grabbing'],
+    class: ['group flex w-full items-start gap-1.5 rounded-lg border px-2 py-1.5 text-left text-xs transition', done ? 'border-gray-100 bg-gray-50 text-gray-400 line-through' : 'border-gray-200 bg-panel shadow-sm hover:border-brand-300 cursor-grab active:cursor-grabbing'],
     title: `${j.subject}${j.machine ? ` · ${j.machine}` : ''}${j.where ? ` · ${j.where}` : ''}`,
     'aria-label': `${j.subject}${j.where ? `, ${j.where}` : ''}, ${j.priority} priority${done ? `, ${j.status.toLowerCase()}` : ''}. Plan this job`,
     onDragstart: (e) => {

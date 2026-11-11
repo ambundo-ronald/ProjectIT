@@ -53,7 +53,7 @@
         <div v-else-if="detail.can_write" class="mt-5">
           <span class="label">Status</span>
           <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <button v-for="s in statuses" :key="s" class="flex h-10 items-center justify-center rounded-lg border text-sm font-medium transition-colors disabled:opacity-50" :class="detail.task.status === s ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'" :disabled="busy || detail.task.status === s" @click="saveStatus(s)">
+            <button v-for="s in statuses" :key="s" class="flex h-10 items-center justify-center rounded-lg border text-sm font-medium transition-colors disabled:opacity-50" :class="detail.task.status === s ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-gray-300 bg-panel text-gray-700 hover:bg-gray-50'" :disabled="busy || detail.task.status === s" @click="saveStatus(s)">
               {{ STATUS_LABEL[s] || s }}
             </button>
           </div>
@@ -108,10 +108,9 @@
         <div class="grid gap-4 sm:grid-cols-2">
           <div>
             <label class="label" for="task-project">Project <span class="text-red-500">*</span></label>
-            <select id="task-project" v-model="form.project" required class="input" @change="loadPeople">
-              <option value="">Choose project</option>
-              <option v-for="p in options.projects" :key="p.name" :value="p.name">{{ p.project_name }}</option>
-            </select>
+            <SearchSelect id="task-project" v-model="form.project" :options="projectOptions(options.projects)" required icon="briefcase"
+              aria-label="Project" placeholder="Choose project" search-placeholder="Search by project, code or customer"
+              empty-text="No open projects." @change="loadPeople" />
           </div>
           <div>
             <label class="label" for="task-assignee">Assign to <span class="text-red-500">*</span></label>
@@ -161,6 +160,8 @@ import UserAvatar from '@/components/ops/UserAvatar.vue'
 import Composer from '@/components/ops/Composer.vue'
 import Modal from '@/components/ops/Modal.vue'
 import Pager from '@/components/ops/Pager.vue'
+import SearchSelect from '@/components/ops/SearchSelect.vue'
+import { projectOptions } from '@/data/pickers'
 import { usePageLength } from '@/data/paging'
 import { api, STATUS_LABEL, formatDate, fromNow, dueIn, safeFile } from '@/data/ops'
 import PhotoButtons from '@/components/ops/PhotoButtons.vue'

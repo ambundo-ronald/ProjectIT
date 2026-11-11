@@ -1,4 +1,5 @@
 import './index.css'
+import './data/theme'
 
 import { createApp, reactive } from 'vue'
 import router from './router'
@@ -27,9 +28,25 @@ if(!employeeId){
 }
 const employee = reactive(employeeId)
 
+import { isNative, signIn, signOut, startNative } from './data/native'
+import { request } from './data/request'
+
 let app = createApp(App)
 
-setConfig('resourceFetcher', frappeRequest)
+// In the phone app, frappe-ui resources go to the company's site with this phone's token (data/native.js).
+async function nativeFetcher({ url, params }) {
+  if (url === 'login') {
+    await signIn(params.usr, params.pwd)
+    return { default_route: '/home' }
+  }
+  if (url === 'frappe.handler.logout') {
+    await signOut()
+    return {}
+  }
+  return request(url, params || {})
+}
+setConfig('resourceFetcher', isNative ? nativeFetcher : frappeRequest)
+startNative()
 
 app.use(router)
 app.use(resourcesPlugin)

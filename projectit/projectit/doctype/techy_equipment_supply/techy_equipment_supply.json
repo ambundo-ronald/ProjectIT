@@ -1,0 +1,133 @@
+{
+ "actions": [],
+ "creation": "2026-10-21 16:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "supply_name",
+  "kind",
+  "item_code",
+  "unit",
+  "change_every_days",
+  "per_change",
+  "column_break_1",
+  "stock",
+  "reorder_at",
+  "order_qty",
+  "last_changed_on",
+  "ordered_on",
+  "order_ref",
+  "order_doctype"
+ ],
+ "fields": [
+  {
+   "fieldname": "supply_name",
+   "fieldtype": "Data",
+   "label": "Supply",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 3,
+   "description": "As the operator knows it, e.g. 5 micron cartridge filters, Antiscalant."
+  },
+  {
+   "fieldname": "kind",
+   "fieldtype": "Select",
+   "label": "Kind",
+   "options": "Filter\nChemical\nSalt\nOther",
+   "default": "Filter",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "label": "Item",
+   "options": "Item",
+   "in_list_view": 1,
+   "columns": 2,
+   "description": "The item we sell: Order more makes a quotation with it."
+  },
+  {
+   "fieldname": "unit",
+   "fieldtype": "Data",
+   "label": "Unit",
+   "default": "pcs"
+  },
+  {
+   "fieldname": "change_every_days",
+   "fieldtype": "Int",
+   "label": "Change Every (Days)",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "per_change",
+   "fieldtype": "Float",
+   "label": "Used per Change",
+   "default": "1"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "stock",
+   "fieldtype": "Float",
+   "label": "On Site",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "reorder_at",
+   "fieldtype": "Float",
+   "label": "Reorder At"
+  },
+  {
+   "fieldname": "order_qty",
+   "fieldtype": "Float",
+   "label": "Order Quantity"
+  },
+  {
+   "fieldname": "last_changed_on",
+   "fieldtype": "Datetime",
+   "label": "Last Changed",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "ordered_on",
+   "fieldtype": "Datetime",
+   "label": "Ordered On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "order_ref",
+   "fieldtype": "Dynamic Link",
+   "label": "Order",
+   "options": "order_doctype",
+   "read_only": 1
+  },
+  {
+   "fieldname": "order_doctype",
+   "fieldtype": "Link",
+   "label": "Order Type",
+   "options": "DocType",
+   "read_only": 1,
+   "hidden": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-21 16:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Projectit",
+ "name": "Techy Equipment Supply",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1,
+ "editable_grid": 1
+}

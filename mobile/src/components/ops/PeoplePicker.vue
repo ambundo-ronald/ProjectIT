@@ -23,7 +23,7 @@
         @blur="hide"
       />
     </div>
-    <ul v-if="open && results.length" class="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-pop" role="listbox">
+    <ul v-if="open && results.length" class="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-gray-200 bg-panel py-1 shadow-pop" role="listbox">
       <li v-for="person in results" :key="person.user">
         <button type="button" class="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-gray-50" @mousedown.prevent="pick(person)">
           <UserAvatar :name="person.full_name" :image="person.image" size="sm" />

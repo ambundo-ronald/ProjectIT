@@ -19,10 +19,16 @@
       <p v-if="!loading && !codes.Problem.length" class="text-xs text-gray-500">No failure codes yet. A manager can add them from <router-link :to="{ name: 'OpsReports' }" class="font-medium text-brand-600 hover:underline">Reports</router-link>.</p>
 
       <div v-if="f.has_machine || f.machine_down" class="border-t border-gray-100 pt-4">
-        <label class="flex items-center justify-between gap-3">
-          <span><span class="block text-sm font-medium">Machine was down</span><span class="block text-xs text-gray-500">Out of service because of this problem. Counts towards its downtime.</span></span>
-          <input v-model="draft.machine_down" type="checkbox" class="h-5 w-5 rounded border-gray-300 text-red-600" :disabled="!f.can_edit" @change="save({ machine_down: draft.machine_down ? 1 : 0 })" />
-        </label>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <span>
+            <span class="block text-sm font-medium">Was the machine down?</span>
+            <span class="block text-xs" :class="f.downtime_missing ? 'font-medium text-amber-700' : 'text-gray-500'">{{ f.downtime_missing ? 'Needed to finish this repair.' : 'Out of service because of this problem counts towards its downtime.' }}</span>
+          </span>
+          <span class="segmented" role="radiogroup" aria-label="Was the machine down?">
+            <button type="button" role="radio" :aria-checked="!!draft.machine_down" :aria-pressed="!!draft.machine_down" :disabled="!f.can_edit" @click="setDown(true)">Yes, it was down</button>
+            <button type="button" role="radio" :aria-checked="!draft.machine_down && answered" :aria-pressed="!draft.machine_down && answered" :disabled="!f.can_edit" @click="setDown(false)">No, it kept running</button>
+          </span>
+        </div>
         <div v-if="draft.machine_down" class="mt-3 flex flex-wrap items-end gap-3">
           <div>
             <label class="label" for="down-from">Down from</label>
@@ -70,6 +76,12 @@ const nowLocal = () => {
 // The inputs edit this copy; it follows the server only when no save is waiting, so a reply to an earlier save
 // never puts an old value back into a field the person has just changed.
 const draft = reactive({})
+// Answering either way records that someone said whether the machine was down.
+const answered = computed(() => f.value.down_answered || f.value.machine_down)
+function setDown(down) {
+  draft.machine_down = down
+  save({ machine_down: down ? 1 : 0 })
+}
 const fromServer = () => Object.assign(draft, { problem: f.value.problem?.code || '', cause: f.value.cause?.code || '',
   remedy: f.value.remedy?.code || '', machine_down: f.value.machine_down, down_from: local(f.value.down_from), down_to: local(f.value.down_to) })
 fromServer()

@@ -17,7 +17,7 @@
           <FeatherIcon name="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input v-model="search" type="search" placeholder="Search work orders" aria-label="Search work orders" class="input pl-9" @input="debouncedLoad" />
         </div>
-        <div v-if="me.manager" class="segmented shrink-0" role="group" aria-label="Whose work">
+        <div class="segmented shrink-0" role="group" aria-label="Whose work">
           <button v-for="s in scopes" :key="s.value" :aria-pressed="scope === s.value" @click="scope = s.value; load()">{{ s.label }}</button>
         </div>
         <ViewToggle v-model="phoneView" class="md:hidden" />
@@ -42,7 +42,7 @@
       <div v-for="col in columns" :key="col.key" class="flex flex-col rounded-2xl bg-gray-100/80 p-2">
         <h2 class="flex items-center gap-2 px-2 pb-2 pt-1 text-[13px] font-semibold text-gray-700">
           <span class="h-2 w-2 rounded-full" :class="col.dot" />{{ col.label }}
-          <span class="ml-auto rounded-full bg-white px-2 text-xs font-semibold text-gray-600 shadow-sm">{{ col.rows.length }}</span>
+          <span class="ml-auto rounded-full bg-panel px-2 text-xs font-semibold text-gray-600 shadow-sm">{{ col.rows.length }}</span>
         </h2>
         <div class="space-y-2">
           <WorkOrderCard v-for="wo in col.rows" :key="wo.name" :wo="wo" />
@@ -53,7 +53,7 @@
 
     <!-- List -->
     <template v-else>
-      <div v-if="visible.length" class="overflow-hidden md:rounded-xl md:border md:border-gray-200 md:bg-white md:shadow-card">
+      <div v-if="visible.length" class="overflow-hidden md:rounded-xl md:border md:border-gray-200 md:bg-panel md:shadow-card">
         <div class="hidden grid-cols-[minmax(0,1fr)_8rem_7rem_10rem_7rem_6rem] gap-4 border-b border-gray-100 bg-gray-50/80 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-gray-500 md:grid">
           <span>Work order</span><span>Status</span><span>Priority</span><span>Asset / location</span><span>Due</span><span>Assigned</span>
         </div>
@@ -65,14 +65,14 @@
                 <span class="block truncate text-[15px] font-medium text-gray-900">{{ wo.subject }}</span>
                 <span class="block truncate text-xs text-gray-500">#{{ wo.name }}<template v-if="wo.exp_end_date"> · <span :class="isOverdue(wo) ? 'font-semibold text-red-600' : ''">due {{ formatDate(wo.exp_end_date) }}</span></template><template v-if="wo.equipment || wo.asset_name"> · {{ wo.equipment ? wo.equipment.customer_name : wo.asset_name }}</template></span>
               </span>
-              <StatusPill :status="wo.status !== 'Completed' && isOverdue(wo) ? 'Overdue' : wo.status" class="shrink-0" />
+              <StatusPill :status="wo.status !== 'Completed' && isOverdue(wo) ? 'Overdue' : displayStatus(wo)" class="shrink-0" />
             </router-link>
             <router-link :to="{ name: 'OpsWorkOrder', params: { name: wo.name } }" class="hidden grid-cols-[minmax(0,1fr)_8rem_7rem_10rem_7rem_6rem] items-center gap-4 px-4 py-3 hover:bg-gray-50 md:grid">
               <span class="min-w-0">
                 <span class="block truncate font-medium text-gray-900">{{ wo.subject }}</span>
                 <span class="text-xs text-gray-400">#{{ wo.name }}<template v-if="wo.custom_work_category"> · {{ wo.custom_work_category }}</template></span>
               </span>
-              <span><StatusPill :status="wo.status !== 'Completed' && isOverdue(wo) ? 'Overdue' : wo.status" /></span>
+              <span><StatusPill :status="wo.status !== 'Completed' && isOverdue(wo) ? 'Overdue' : displayStatus(wo)" /></span>
               <PriorityFlag :priority="wo.priority" />
               <span class="truncate text-[13px] text-gray-600">{{ wo.asset_name || wo.custom_location || '—' }}</span>
               <span class="text-[13px]" :class="isOverdue(wo) ? 'font-semibold text-red-600' : 'text-gray-600'">{{ wo.exp_end_date ? formatDate(wo.exp_end_date) : '—' }}</span>
@@ -106,7 +106,7 @@ import AvatarStack from '@/components/ops/AvatarStack.vue'
 import Pager from '@/components/ops/Pager.vue'
 import ViewToggle from '@/components/ops/ViewToggle.vue'
 import { usePaged, useView } from '@/data/paging'
-import { api, me, onRealtime, formatDate, isOverdue, dueIn } from '@/data/ops'
+import { api, me, onRealtime, formatDate, isOverdue, dueIn, displayStatus } from '@/data/ops'
 import { ui } from '@/data/apps'
 
 const openNew = inject('openNewWorkOrder')
@@ -122,10 +122,10 @@ const views = [
   { value: 'board', label: 'Board', icon: 'columns' },
   { value: 'list', label: 'List', icon: 'list' },
 ]
-const scopes = [
-  { value: 'mine', label: 'Mine' },
-  { value: 'all', label: 'Everyone' },
-]
+// Technicians: their own jobs, or open jobs nobody has taken yet (they can pick one up).
+const scopes = me.manager
+  ? [{ value: 'mine', label: 'Mine' }, { value: 'all', label: 'Everyone' }]
+  : [{ value: 'mine', label: 'My jobs' }, { value: 'available', label: 'Available' }]
 const storedView = (() => {
   try {
     return localStorage.getItem('techy_ops_view')
@@ -152,6 +152,7 @@ const predicates = {
   today: (r) => !isDone(r) && dueIn(r.exp_end_date) === 0,
   high: (r) => !isDone(r) && ['High', 'Urgent'].includes(r.priority),
   unassigned: (r) => !isDone(r) && !r.assignees?.length,
+  review: (r) => displayStatus(r) === 'Review',
   done: (r) => r.status === 'Completed',
 }
 const counts = computed(() => Object.fromEntries(Object.entries(predicates).map(([k, fn]) => [k, rows.value.filter(fn).length])))
@@ -160,6 +161,7 @@ const filters = computed(() => [
   { key: 'overdue', label: 'Overdue', icon: 'alert-circle', tone: 'text-red-500', count: counts.value.overdue },
   { key: 'today', label: 'Due today', icon: 'clock', tone: 'text-amber-500', count: counts.value.today },
   { key: 'high', label: 'High priority', icon: 'flag', tone: 'text-orange-500', count: counts.value.high },
+  ...(me.manager ? [{ key: 'review', label: 'To review', icon: 'check-square', tone: 'text-brand-600', count: counts.value.review }] : []),
   { key: 'unassigned', label: 'Unassigned', icon: 'user-x', tone: 'text-gray-500', count: counts.value.unassigned },
   { key: 'done', label: 'Done', icon: 'check', tone: 'text-green-600', count: counts.value.done },
 ])

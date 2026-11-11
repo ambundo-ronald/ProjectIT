@@ -5,9 +5,14 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && node scripts/copy-entry.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:android": "vite build --mode native && cap sync android"
   },
   "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/browser": "^8.0.5",
+    "@capacitor/core": "^8.6.0",
     "@internationalized/date": "^3.7.0",
     "dayjs": "^1.11.13",
     "feather-icons": "^4.29.2",
@@ -21,6 +26,7 @@
     "workbox-precaching": "^7.3.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.6.0",
     "@vitejs/plugin-vue": "^5.1.4",
     "autoprefixer": "^10.4.2",
     "postcss": "^8.4.5",
@@ -32,5 +38,6 @@
   "engines": {
     "node": ">=24",
     "yarn": ">=1.22"
-  }
+  },
+  "nativeVersion": "1.0.0"
 }

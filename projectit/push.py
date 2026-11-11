@@ -79,14 +79,14 @@ def vapid_headers(endpoint, public, private):
 
 @frappe.whitelist()
 def public_key():
-    ops.system_user()
+    _member()
     return {"key": keys()[0]}
 
 
 @frappe.whitelist(methods=["POST"])
 def subscribe(subscription, device=None):
     """Remember this browser for my notifications."""
-    ops.system_user()
+    _member()
     sub = frappe.parse_json(subscription) if isinstance(subscription, str) else (subscription or {})
     endpoint = str(sub.get("endpoint") or "")
     if not endpoint.startswith("https://") or len(endpoint) > 1000:
@@ -103,15 +103,30 @@ def subscribe(subscription, device=None):
 
 @frappe.whitelist(methods=["POST"])
 def unsubscribe(endpoint):
-    ops.system_user()
+    _member()
     for name in frappe.get_all(DOCTYPE, filters={"endpoint": str(endpoint or ""), "user": frappe.session.user}, pluck="name"):
         frappe.delete_doc(DOCTYPE, name, ignore_permissions=True)
     return {"subscribed": False}
 
 
-def _route(row):
+def _member():
+    """Staff, or a customer's person using the plant app."""
+    ops.login()
+    from projectit import customer_accounts
+    if not customer_accounts.account():
+        ops.system_user()
+
+
+# Customers' notifications open the plant app.
+PLANT_ROUTES = {"Task": "/techy-app/plant/service", "Issue": "/techy-app/plant/service",
+    "Techy Plant Log": "/techy-app/plant/log", "Techy Equipment": "/techy-app/plant"}
+
+
+def _route(row, customer=False):
     """Where tapping a notification opens."""
     name = row.document_name or ""
+    if customer:
+        return PLANT_ROUTES.get(row.document_type, "/techy-app/plant")
     return {"Task": f"/techy-app/ops/work-orders/{name}", "Techy Channel": f"/techy-app/ops/chat/{name}",
         "Issue": "/techy-app/ops/requests", "Techy Investigation": f"/techy-app/ops/investigations/{name}",
         "Techy Equipment": f"/techy-app/ops/equipment/{name}", "Techy Service Contract": f"/techy-app/ops/contracts/{name}",
@@ -122,17 +137,20 @@ def _route(row):
 def pending():
     """For the service worker when a push arrives: my newest unread notifications. The worker tags each with its
     name, so one already on screen is replaced quietly rather than shown twice."""
-    ops.system_user()
+    _member()
     since = frappe.utils.add_to_date(now_datetime(), minutes=-FRESH_MINUTES)
     rows = frappe.get_all("Notification Log", filters={"for_user": frappe.session.user, "read": 0, "creation": [">", since]},
         fields=["name", "subject", "document_type", "document_name"], order_by="creation desc", limit_page_length=MAX_SHOWN)
-    return [{"tag": r.name, "title": _("Techy Ops"), "body": ops.plain(r.subject)[:200], "url": _route(r)} for r in rows]
+    from projectit import customer_accounts
+    customer = bool(customer_accounts.account())
+    title = (frappe.db.get_single_value("Global Defaults", "default_company") or _("Your plant")) if customer else _("Techy Ops")
+    return [{"tag": r.name, "title": title, "body": ops.plain(r.subject)[:200], "url": _route(r, customer)} for r in rows]
 
 
 @frappe.whitelist(methods=["POST"])
 def test():
     """Send myself a test notification."""
-    ops.system_user()
+    _member()
     if not frappe.db.exists(DOCTYPE, {"user": frappe.session.user}):
         frappe.throw(_("Turn on notifications on this device first."))
     frappe.get_doc({"doctype": "Notification Log", "for_user": frappe.session.user, "type": "Alert",

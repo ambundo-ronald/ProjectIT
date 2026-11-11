@@ -84,10 +84,9 @@
         </label>
         <div v-if="me.manager">
           <label class="label" for="ch-project">Linked project <span class="font-normal text-gray-400">(optional)</span></label>
-          <select id="ch-project" v-model="form.project" class="input">
-            <option value="">None</option>
-            <option v-for="p in projects" :key="p.name" :value="p.name">{{ p.project_name }}</option>
-          </select>
+          <SearchSelect id="ch-project" v-model="form.project" :options="projectOptions(projects)" icon="briefcase"
+            aria-label="Linked project" placeholder="None" none-label="None" search-placeholder="Search by project, code or customer"
+            empty-text="No open projects." />
           <p class="hint">Work orders for this project post their updates here.</p>
         </div>
         <div>
@@ -114,6 +113,8 @@ import { useRouter } from 'vue-router'
 import { FeatherIcon } from 'frappe-ui'
 import Modal from '@/components/ops/Modal.vue'
 import PeoplePicker from '@/components/ops/PeoplePicker.vue'
+import SearchSelect from '@/components/ops/SearchSelect.vue'
+import { projectOptions } from '@/data/pickers'
 import PageHeader from '@/components/ops/PageHeader.vue'
 import EmptyState from '@/components/ops/EmptyState.vue'
 import UserAvatar from '@/components/ops/UserAvatar.vue'

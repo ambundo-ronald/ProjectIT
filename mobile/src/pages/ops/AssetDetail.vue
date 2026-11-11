@@ -68,7 +68,7 @@
       <aside class="lg:sticky lg:top-8 lg:self-start">
         <div class="card p-5 text-center print:border-0 print:shadow-none" aria-label="QR label">
           <h2 class="section-label">QR label</h2>
-          <div class="mx-auto mt-3 w-fit rounded-xl border border-gray-200 bg-white p-3">
+          <div class="mx-auto mt-3 w-fit rounded-xl border border-gray-200 bg-panel p-3">
             <img v-if="qr" :src="qr" :alt="`QR code for ${asset.asset_name}`" class="h-44 w-44" />
           </div>
           <p class="mt-3 font-semibold">{{ asset.asset_name }}</p>
@@ -84,6 +84,7 @@
   </section>
 </template>
 <script setup>
+import { isNative, publicUrl } from '@/data/native'
 import { ref, computed, inject, onMounted, h } from 'vue'
 import { useRoute } from 'vue-router'
 import { FeatherIcon } from 'frappe-ui'
@@ -101,7 +102,10 @@ const copied = ref(false)
 const asset = computed(() => data.value.asset)
 const openCount = computed(() => data.value.work_orders.filter((w) => !['Completed', 'Cancelled'].includes(w.status)).length)
 const base = window.location.pathname.startsWith('/projectit') ? '/projectit' : '/techy-app'
-const link = computed(() => `${window.location.origin}${base}/request?asset=${encodeURIComponent(route.params.name)}`)
+const link = computed(() => {
+  const path = `/request?asset=${encodeURIComponent(route.params.name)}`
+  return isNative ? publicUrl(path) : `${window.location.origin}${base}${path}`
+})
 
 const DueChip = (props) => {
   const d = dueIn(props.date)

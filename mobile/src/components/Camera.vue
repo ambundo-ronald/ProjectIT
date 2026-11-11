@@ -1,5 +1,5 @@
 <template>
-  <div class="fixed inset-0 z-[60] flex flex-col bg-black text-white" role="dialog" aria-modal="true" :aria-label="title">
+  <div class="palette-light fixed inset-0 z-[60] flex flex-col bg-black text-white" role="dialog" aria-modal="true" :aria-label="title">
     <header class="flex items-center justify-between px-4 pb-2 pt-[max(env(safe-area-inset-top),1rem)]">
       <button class="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 hover:bg-white/20" aria-label="Close camera" @click="close">
         <FeatherIcon name="x" class="h-5 w-5" />
@@ -30,7 +30,7 @@
           <input type="file" accept="image/jpeg,image/png" class="sr-only" @change="pickFile" />
         </label>
         <button class="flex h-[72px] w-[72px] items-center justify-center rounded-full border-4 border-white disabled:opacity-40" :disabled="!!failed || !ready" aria-label="Take photo" @click="capture">
-          <span class="h-14 w-14 rounded-full bg-white transition active:scale-90" />
+          <span class="h-14 w-14 rounded-full bg-panel transition active:scale-90" />
         </button>
         <button class="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-40" :disabled="!!failed" aria-label="Switch camera" @click="swap">
           <FeatherIcon name="refresh-cw" class="h-5 w-5" />

@@ -64,9 +64,9 @@
         <div class="mt-auto flex items-center justify-between pt-4">
           <div v-if="p.crew.length" class="flex items-center gap-2">
             <div class="flex -space-x-1.5">
-              <span v-for="m in p.crew.slice(0, 5)" :key="m.employee" class="relative rounded-full ring-2 ring-white">
+              <span v-for="m in p.crew.slice(0, 5)" :key="m.employee" class="relative rounded-full ring-2 ring-panel">
                 <UserAvatar :name="m.name" :image="m.image" size="sm" />
-                <span v-if="m.on_site" class="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 ring-2 ring-white" />
+                <span v-if="m.on_site" class="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 ring-2 ring-panel" />
               </span>
             </div>
             <span class="text-xs text-gray-500">{{ p.crew.length }} {{ p.crew.length === 1 ? 'person' : 'people' }}</span>

@@ -43,3 +43,37 @@ class OfflineTimerTests(OpsTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OfflineOnMyWayTests(OpsTestCase):
+    """An On my way tapped without signal: the phone's time, and no stale message to the customer."""
+
+    def setUp(self):
+        super().setUp()
+        import sys
+        self.notify = MagicMock()
+        sys.modules["projectit.customer_notify"] = self.notify
+        import projectit
+        projectit.customer_notify = self.notify
+        self.addCleanup(sys.modules.pop, "projectit.customer_notify", None)
+        self.doc = Dict(name="TASK-1", status="Open", custom_equipment="EQ-1", custom_customer="C-1",
+            db_set=MagicMock(), add_comment=MagicMock())
+        self.doc.get = lambda key, default=None: self.doc[key] if key in self.doc else default
+        self.wo._work_order = MagicMock(return_value=self.doc)
+        self.wo._assignees = MagicMock(return_value={"TASK-1": ["tech@example.com"]})
+        self.wo.get_work_order = MagicMock(return_value={})
+
+    def test_recent_offline_tap_uses_phone_time_and_tells_customer(self):
+        self.wo.on_my_way("TASK-1", 30, at="2026-10-11 08:40:00")  # now is 09:00
+        self.assertEqual(self.doc.db_set.call_args.args[0]["custom_on_way_at"], datetime(2026, 10, 11, 8, 40))
+        self.notify.on_the_way.assert_called_once()
+
+    def test_late_offline_tap_is_recorded_without_messaging(self):
+        self.wo.on_my_way("TASK-1", 30, at="2026-10-11 07:30:00")
+        self.assertEqual(self.doc.db_set.call_args.args[0]["custom_on_way_at"], datetime(2026, 10, 11, 7, 30))
+        self.notify.on_the_way.assert_not_called()
+        self.assertIn("not messaged", self.doc.add_comment.call_args.args[1])
+
+    def test_online_tap_tells_customer(self):
+        self.wo.on_my_way("TASK-1", 15)
+        self.notify.on_the_way.assert_called_once()

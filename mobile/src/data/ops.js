@@ -1,5 +1,6 @@
 import { reactive, ref } from 'vue'
 import { io } from 'socket.io-client'
+import { isNative } from './native'
 
 /** Call a whitelisted method (see data/request.js); works offline for the reads and job changes in data/offline.js. */
 import { api } from './offline'
@@ -29,7 +30,8 @@ let socket = null
 export const online = ref(false)
 
 function connect({ sitename, socketio_port }) {
-  if (socket) return
+  // The phone app has no session cookie for live updates yet; screens refresh when opened instead.
+  if (socket || isNative) return
   // Same rule as Frappe Desk: a custom port means socket.io runs on its own port; otherwise it is proxied.
   const url = window.location.port
     ? `${window.location.protocol}//${window.location.hostname}:${socketio_port}/${sitename}`
@@ -63,7 +65,8 @@ export const STATUS_LABEL = {
   Open: 'Open',
   Overdue: 'Overdue',
   Working: 'In progress',
-  'Pending Review': 'On hold / review',
+  'Pending Review': 'On hold',
+  Review: 'Waiting for review',
   Completed: 'Done',
   Cancelled: 'Cancelled',
 }
@@ -73,9 +76,13 @@ export const STATUS_STYLE = {
   Overdue: 'bg-red-100 text-red-800',
   Working: 'bg-amber-100 text-amber-800',
   'Pending Review': 'bg-violet-100 text-violet-800',
+  Review: 'bg-brand-100 text-brand-800',
   Completed: 'bg-green-100 text-green-800',
   Cancelled: 'bg-gray-200 text-gray-700',
 }
+
+/** A job sent for review shows as "Waiting for review" (its status is Pending Review with the review flag). */
+export const displayStatus = (wo) => (wo.status === 'Pending Review' && Number(wo.custom_review_requested) ? 'Review' : wo.status)
 
 export const PRIORITY_STYLE = {
   Low: 'text-gray-600',

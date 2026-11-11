@@ -21,11 +21,13 @@ from projectit import contracts, meters, ops, parts
 
 FIELDS = ["name", "equipment_name", "item_code", "serial_no", "tag", "status", "customer", "customer_name",
     "site_address", "site", "project", "delivery_note", "delivered_on", "installed_on", "installation_note",
-    "warranty_until", "contract_until", "service_contract", "notes", "built_from_work_order", "built_from_bom", "modified"]
+    "warranty_until", "contract_until", "service_contract", "notes", "built_from_work_order", "built_from_bom", "log_schedule",
+    "modified"]
 STATUSES = ("Awaiting installation", "Active", "Out of service", "Decommissioned", "Cancelled")
 RETIRED = ("Decommissioned", "Cancelled")
 EDITABLE = ("equipment_name", "item_code", "serial_no", "tag", "status", "customer", "site_address", "project",
-    "delivered_on", "installed_on", "warranty_until", "contract_until", "notes")
+    "delivered_on", "installed_on", "warranty_until", "contract_until", "notes", "log_schedule")
+LOG_SCHEDULES = ("Daily", "Twice a day", "Weekly", "Not expected")
 
 
 def coverage(row):
@@ -208,6 +210,8 @@ def save_equipment(data, name=None):
     for field, doctype in (("item_code", "Item"), ("serial_no", "Serial No"), ("project", "Project")):
         if values.get(field) and not frappe.db.exists(doctype, values[field]):
             frappe.throw(_("{0} {1} was not found.").format(_(doctype), values[field]))
+    if "log_schedule" in values and values["log_schedule"] not in LOG_SCHEDULES:
+        frappe.throw(_("Choose how often the customer should log this machine."))
     if "status" in values and values["status"] not in STATUSES:
         frappe.throw(_("Invalid status."))
     if not (values.get("equipment_name") or doc.equipment_name) and values.get("item_code"):
@@ -221,7 +225,7 @@ def save_equipment(data, name=None):
     for field in ("delivered_on", "installed_on", "warranty_until", "contract_until"):
         if field in values:
             values[field] = _date(values[field])
-    doc.update({k: (v or None) if k not in ("equipment_name", "status") else v for k, v in values.items()})
+    doc.update({k: (v or None) if k not in ("equipment_name", "status", "log_schedule") else v for k, v in values.items()})
     if not doc.status:
         doc.status = "Active"
     doc.site = site_label(doc.site_address)

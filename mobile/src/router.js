@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { isNative } from '@/data/native'
 import { session } from './data/session'
 import { userResource } from '@/data/user'
 import { api } from '@/data/offline'
@@ -50,6 +51,7 @@ const routes = [
       { path: 'assets', name: 'OpsAssets', component: () => import('@/pages/ops/Assets.vue') },
       { path: 'assets/:name', name: 'OpsAsset', component: () => import('@/pages/ops/AssetDetail.vue'), meta: { back: true, title: 'Asset' } },
       { path: 'pm', name: 'OpsPM', component: () => import('@/pages/ops/PMSchedule.vue') },
+      { path: 'customer-app', name: 'OpsCustomerApp', component: () => import('@/pages/ops/CustomerApp.vue'), meta: { title: 'Customer plants', only: 'ops/customer-app' } },
       { path: 'dispatch', name: 'OpsDispatch', component: () => import('@/pages/ops/Dispatch.vue'), meta: { title: 'Dispatch', only: 'ops/dispatch' } },
       { path: 'investigations', name: 'OpsInvestigations', component: () => import('@/pages/ops/Investigations.vue') },
       { path: 'investigations/:name', name: 'OpsInvestigation', component: () => import('@/pages/ops/InvestigationDetail.vue'), meta: { back: true, title: 'Investigation' } },
@@ -57,6 +59,17 @@ const routes = [
       { path: 'procedures', name: 'OpsProcedures', component: () => import('@/pages/ops/Procedures.vue') },
       { path: 'procedures/:name', name: 'OpsProcedure', component: () => import('@/pages/ops/ProcedureEditor.vue'), meta: { back: true, title: 'Procedure' } },
       { path: 'chat/:channel', name: 'OpsChannel', component: () => import('@/pages/ops/Channel.vue'), meta: { back: true, title: 'Chat' } },
+    ],
+  },
+  {
+    // The customer app: customers' admins and operators (see projectit/plant.py).
+    path: '/plant',
+    component: () => import('@/pages/plant/PlantLayout.vue'),
+    children: [
+      { path: '', name: 'PlantHome', component: () => import('@/pages/plant/PlantHome.vue') },
+      { path: 'log', name: 'PlantLog', component: () => import('@/pages/plant/PlantLog.vue') },
+      { path: 'service', name: 'PlantService', component: () => import('@/pages/plant/PlantService.vue') },
+      { path: 'account', name: 'PlantAccount', component: () => import('@/pages/plant/PlantAccount.vue') },
     ],
   },
   {
@@ -81,7 +94,8 @@ const routes = [
 ]
 
 let router = createRouter({
-  history: createWebHistory(window.location.pathname.startsWith('/projectit') ? '/projectit' : '/techy-app'),
+  // The phone app runs from the phone itself, at its root (data/native.js).
+  history: createWebHistory(isNative ? '/' : window.location.pathname.startsWith('/projectit') ? '/projectit' : '/techy-app'),
   routes,
 })
 
@@ -112,7 +126,9 @@ router.beforeEach(async (to, from, next) => {
   }
   // An app opens everything under its address (/ops, /workit, /manageit); pages marked `only` must be listed.
   const allowed = to.meta.only ? modules.includes(to.meta.only) : modules.some((m) => to.path === `/${m}` || to.path.startsWith(`/${m}/`))
-  next(allowed ? undefined : { name: 'Home' })
+  // Customers have no Home (their plant app is all they have): send them to the first app they may open.
+  const fallback = modules.includes('home') || !modules.length ? { name: 'Home' } : `/${modules[0]}`
+  next(allowed ? undefined : fallback)
 })
 
 export default router

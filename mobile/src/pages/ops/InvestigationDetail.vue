@@ -155,7 +155,7 @@
       </div>
     </div>
 
-    <div v-if="d?.can_edit && !loading" class="fixed inset-x-0 bottom-16 z-30 border-t border-gray-200 bg-white/95 backdrop-blur md:bottom-0 md:left-64">
+    <div v-if="d?.can_edit && !loading" class="fixed inset-x-0 bottom-16 z-30 border-t border-gray-200 bg-panel/95 backdrop-blur md:bottom-0 md:left-64">
       <div class="mx-auto flex max-w-6xl items-center gap-2 p-3 md:pl-8 md:pr-24">
         <span class="text-sm" :class="dirty ? 'font-medium text-amber-700' : 'text-gray-500'">{{ dirty ? 'Unsaved changes' : saved ? 'All changes saved' : '' }}</span>
         <button type="button" class="btn btn-primary ml-auto" :disabled="busy || !dirty || !form.title.trim()" @click="save"><FeatherIcon name="check" class="h-4 w-4" />{{ busy ? 'Saving…' : 'Save' }}</button>

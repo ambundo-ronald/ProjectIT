@@ -126,7 +126,7 @@
     </div>
 
     <!-- Save bar -->
-    <div v-if="editable && !loading" class="fixed inset-x-0 bottom-16 z-30 border-t border-gray-200 bg-white/95 backdrop-blur md:bottom-0 md:left-64">
+    <div v-if="editable && !loading" class="fixed inset-x-0 bottom-16 z-30 border-t border-gray-200 bg-panel/95 backdrop-blur md:bottom-0 md:left-64">
       <div class="mx-auto flex max-w-6xl items-center gap-2 p-3 md:pl-8 md:pr-24">
         <button v-if="!isNew" type="button" class="btn btn-ghost text-gray-500" :disabled="saving" @click="toggleArchive">{{ archivedDoc ? 'Restore' : 'Archive' }}</button>
         <span class="ml-auto hidden text-xs text-gray-500 sm:inline">{{ answerable }} step{{ answerable === 1 ? '' : 's' }} to answer</span>

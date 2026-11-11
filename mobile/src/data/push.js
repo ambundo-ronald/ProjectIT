@@ -66,3 +66,16 @@ export async function disablePush() {
 }
 
 export const testPush = () => api('projectit.push.test')
+
+/** Whether this browser is already subscribed, and whether notifications are blocked (for settings screens). */
+export async function checkPush() {
+  push.permission = typeof Notification !== 'undefined' ? Notification.permission : 'default'
+  if (!push.supported) return false
+  try {
+    const reg = await registration()
+    push.subscribed = !!(reg && (await reg.pushManager.getSubscription()))
+  } catch (e) {
+    push.subscribed = false
+  }
+  return push.subscribed
+}

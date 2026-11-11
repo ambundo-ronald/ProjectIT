@@ -43,8 +43,10 @@ def _task(name, write=False):
     doc.check_permission("write" if write else "read")
     if not doc.project or doc.is_template:
         frappe.throw(_("Select a project task, not a template."))
-    frappe.get_doc("Project", doc.project).check_permission("read")
-    if not _manager():
+    if _manager():
+        frappe.get_doc("Project", doc.project).check_permission("read")
+    else:
+        # Field staff: allocated to the project and assigned the task (they need no access to the whole project).
         if doc.project not in _allocated_projects() or doc.name not in _assigned_names():
             frappe.throw(_("This task must be assigned to you in an allocated project."), frappe.PermissionError)
     return doc
@@ -172,7 +174,7 @@ def task_options(project=None):
     _login()
     if not _manager():
         frappe.throw(_("Project manager access is required."), frappe.PermissionError)
-    projects = frappe.get_list("Project", filters={"status": "Open"}, fields=["name", "project_name"],
+    projects = frappe.get_list("Project", filters={"status": "Open"}, fields=["name", "project_name", "customer"],
         order_by="project_name asc", limit_page_length=0)
     people = []
     if project:

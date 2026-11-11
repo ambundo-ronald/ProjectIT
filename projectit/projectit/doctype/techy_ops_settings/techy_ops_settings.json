@@ -23,7 +23,29 @@
   "require_failure_codes",
   "push_section",
   "vapid_public_key",
-  "vapid_private_key"
+  "vapid_private_key",
+  "ro_section",
+  "cip_flow_drop",
+  "cip_salt_rise",
+  "cip_dp_rise",
+  "customer_app_section",
+  "support_phone",
+  "support_email",
+  "log_reminder_time",
+  "log_missing_days",
+  "android_app_url",
+  "whatsapp_section",
+  "whatsapp_enabled",
+  "whatsapp_phone_number_id",
+  "whatsapp_token",
+  "whatsapp_app_secret",
+  "whatsapp_verify_token",
+  "whatsapp_column",
+  "whatsapp_template_update",
+  "whatsapp_template_invite",
+  "whatsapp_language",
+  "whatsapp_country_code",
+  "whatsapp_api_base"
  ],
  "fields": [
   {
@@ -128,8 +150,8 @@
    "fieldname": "require_failure_codes",
    "fieldtype": "Check",
    "default": "0",
-   "label": "Require Problem and Cause Codes to Complete a Repair",
-   "description": "Corrective jobs on a machine (customer equipment or our assets) cannot be completed until the technician chooses a problem and a cause code. Keeps the failure reports complete."
+   "label": "Require Failure Codes and Downtime on Repairs",
+   "description": "Repairs on a machine need a problem and a cause code, and an answer to whether the machine was down, before they are sent for review or completed."
   },
   {
    "fieldname": "push_section",
@@ -150,12 +172,145 @@
    "label": "Push Private Key",
    "hidden": 1,
    "length": 1000
+  },
+  {
+   "fieldname": "ro_section",
+   "fieldtype": "Section Break",
+   "label": "RO Membrane Cleaning",
+   "description": "Normalised performance against the baseline log; breaking any rule raises one cleaning (CIP) job."
+  },
+  {
+   "fieldname": "cip_flow_drop",
+   "fieldtype": "Percent",
+   "label": "Clean When Normalised Flow Falls By",
+   "default": "10"
+  },
+  {
+   "fieldname": "cip_salt_rise",
+   "fieldtype": "Percent",
+   "label": "Clean When Normalised Salt Passage Rises By",
+   "default": "10"
+  },
+  {
+   "fieldname": "cip_dp_rise",
+   "fieldtype": "Percent",
+   "label": "Clean When Normalised Pressure Drop Rises By",
+   "default": "15"
+  },
+  {
+   "fieldname": "customer_app_section",
+   "fieldtype": "Section Break",
+   "label": "Customer App",
+   "description": "Shown to customers in the plant app (/techy-app/plant)."
+  },
+  {
+   "fieldname": "support_phone",
+   "fieldtype": "Data",
+   "label": "Support Phone",
+   "options": "Phone"
+  },
+  {
+   "fieldname": "support_email",
+   "fieldtype": "Data",
+   "label": "Support Email",
+   "options": "Email"
+  },
+  {
+   "fieldname": "log_reminder_time",
+   "fieldtype": "Time",
+   "label": "Log Reminder Time",
+   "default": "10:00:00",
+   "description": "Operators are reminded once a day after this time while a machine's log is due."
+  },
+  {
+   "fieldname": "log_missing_days",
+   "fieldtype": "Int",
+   "label": "Tell Managers After (Days Without a Log)",
+   "default": "3"
+  },
+  {
+   "fieldname": "android_app_url",
+   "fieldtype": "Data",
+   "options": "URL",
+   "label": "Android App Link",
+   "description": "The Techy App's Play Store link. When set, invitations tell customers they can use the app, and which address to type in it."
+  },
+  {
+   "fieldname": "whatsapp_section",
+   "fieldtype": "Section Break",
+   "label": "WhatsApp (Customer App)",
+   "description": "Meta's WhatsApp Cloud API: invitations and plant app notifications to customers who turn WhatsApp on. See docs/whatsapp.md for the set-up and the two message templates to have approved."
+  },
+  {
+   "fieldname": "whatsapp_enabled",
+   "fieldtype": "Check",
+   "label": "Send WhatsApp Messages"
+  },
+  {
+   "fieldname": "whatsapp_phone_number_id",
+   "fieldtype": "Data",
+   "label": "Phone Number ID",
+   "description": "WhatsApp Manager > API Setup: the ID of the business number (not the number itself)."
+  },
+  {
+   "fieldname": "whatsapp_token",
+   "fieldtype": "Password",
+   "label": "Access Token",
+   "description": "A permanent token of a System User with whatsapp_business_messaging permission."
+  },
+  {
+   "fieldname": "whatsapp_app_secret",
+   "fieldtype": "Password",
+   "label": "App Secret",
+   "description": "To check that delivery updates really come from Meta (App settings > Basic)."
+  },
+  {
+   "fieldname": "whatsapp_verify_token",
+   "fieldtype": "Data",
+   "label": "Webhook Verify Token",
+   "read_only": 1,
+   "description": "Paste into the webhook set-up with the callback URL /api/method/projectit.whatsapp.webhook"
+  },
+  {
+   "fieldname": "whatsapp_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "whatsapp_template_update",
+   "fieldtype": "Data",
+   "label": "Update Template",
+   "default": "plant_update"
+  },
+  {
+   "fieldname": "whatsapp_template_invite",
+   "fieldtype": "Data",
+   "label": "Invitation Template",
+   "default": "plant_invite"
+  },
+  {
+   "fieldname": "whatsapp_language",
+   "fieldtype": "Data",
+   "label": "Template Language",
+   "default": "en"
+  },
+  {
+   "fieldname": "whatsapp_country_code",
+   "fieldtype": "Data",
+   "label": "Default Country Code",
+   "default": "254",
+   "description": "For numbers typed without it (0712 345 678 becomes 254712345678)."
+  },
+  {
+   "fieldname": "whatsapp_api_base",
+   "fieldtype": "Data",
+   "label": "API Address",
+   "default": "https://graph.facebook.com/v21.0"
   }
  ],
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-16 18:00:00.000000",
+ "modified": "2026-11-12 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Techy Ops Settings",

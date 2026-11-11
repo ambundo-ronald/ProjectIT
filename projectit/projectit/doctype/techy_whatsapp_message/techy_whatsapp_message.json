@@ -1,0 +1,138 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-10-22 09:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "to_number",
+  "user",
+  "template",
+  "status",
+  "column_break_1",
+  "sent_on",
+  "message_id",
+  "reference_doctype",
+  "reference_name",
+  "details_section",
+  "body",
+  "params",
+  "error"
+ ],
+ "fields": [
+  {
+   "fieldname": "to_number",
+   "fieldtype": "Data",
+   "label": "To",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "label": "User",
+   "options": "User",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "template",
+   "fieldtype": "Data",
+   "label": "Template",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Queued\nSent\nDelivered\nRead\nFailed",
+   "default": "Queued",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sent_on",
+   "fieldtype": "Datetime",
+   "label": "Sent On",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "message_id",
+   "fieldtype": "Data",
+   "label": "WhatsApp Message ID",
+   "search_index": 1
+  },
+  {
+   "fieldname": "reference_doctype",
+   "fieldtype": "Link",
+   "label": "About",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Dynamic Link",
+   "label": "About (Name)",
+   "options": "reference_doctype"
+  },
+  {
+   "fieldname": "details_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "body",
+   "fieldtype": "Small Text",
+   "label": "Message"
+  },
+  {
+   "fieldname": "params",
+   "fieldtype": "Code",
+   "label": "Template Values",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "error",
+   "fieldtype": "Small Text",
+   "label": "Error"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-22 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Projectit",
+ "name": "Techy WhatsApp Message",
+ "owner": "Administrator",
+ "read_only": 1,
+ "description": "Every WhatsApp message the app sends, and what WhatsApp reported about it.",
+ "permissions": [
+  {
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "role": "System Manager",
+   "delete": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "role": "Maintenance Manager",
+   "delete": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "role": "Projects Manager",
+   "delete": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "to_number"
+}

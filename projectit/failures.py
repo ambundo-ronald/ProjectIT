@@ -44,6 +44,20 @@ def missing(doc):
     return [kind for kind in ("Problem", "Cause") if not doc.get(FIELDS[kind])] if needs_codes(doc) else []
 
 
+def downtime_missing(doc):
+    """With the setting on, a repair on a machine must say whether the machine was down."""
+    return needs_codes(doc) and not cint(doc.get("custom_machine_down")) and not cint(doc.get("custom_down_answered"))
+
+
+def check_complete(doc, action):
+    """The failure details a repair needs before it is completed or sent for review."""
+    gaps = missing(doc)
+    if gaps:
+        frappe.throw(_("Choose the {0} code before {1} this repair.").format(" and ".join(_(k).lower() for k in gaps), action))
+    if downtime_missing(doc):
+        frappe.throw(_("Say whether the machine was down (Failure & downtime) before {0} this repair.").format(action))
+
+
 @frappe.whitelist()
 def options(include_disabled=0):
     """{Problem: [{code, title}], Cause: [...], Remedy: [...]} for the job form (managers can see disabled ones)."""
@@ -67,7 +81,8 @@ def summary(doc, can_write):
     titles = dict(frappe.get_all(DOCTYPE, filters={"name": ["in", codes]}, fields=["name", "title"], as_list=True)) if codes else {}
     return {kind.lower(): {"code": doc.get(field), "title": titles.get(doc.get(field))} if doc.get(field) else None
         for kind, field in FIELDS.items()} | {
-        "machine_down": bool(doc.get("custom_machine_down")), "down_from": doc.get("custom_down_from"),
+        "machine_down": bool(doc.get("custom_machine_down")), "down_answered": bool(cint(doc.get("custom_down_answered"))),
+        "downtime_missing": downtime_missing(doc), "down_from": doc.get("custom_down_from"),
         "down_to": doc.get("custom_down_to"),
         "down_hours": hours(doc.get("custom_down_from"), doc.get("custom_down_to")) if doc.get("custom_machine_down") else None,
         "required": needs_codes(doc), "missing": missing(doc), "can_edit": bool(can_write),
@@ -105,6 +120,7 @@ def set_failure(work_order, problem=None, cause=None, remedy=None, machine_down=
             values[FIELDS[kind]] = _code(value, kind)
     if machine_down is not None:
         values["custom_machine_down"] = cint(machine_down)
+        values["custom_down_answered"] = 1
         if cint(machine_down) and not doc.get("custom_down_from") and down_from is None:
             values["custom_down_from"] = now_datetime()
         if not cint(machine_down):
@@ -125,10 +141,7 @@ def set_failure(work_order, problem=None, cause=None, remedy=None, machine_down=
 
 def on_complete(doc):
     """Task validate, when a job is completed: require codes if the site asks, close an open downtime."""
-    gaps = missing(doc)
-    if gaps:
-        frappe.throw(_("Choose the {0} code before completing this repair.").format(
-            " and ".join(_(k).lower() for k in gaps)))
+    check_complete(doc, _("completing"))
     if doc.get("custom_machine_down") and doc.get("custom_down_from") and not doc.get("custom_down_to"):
         doc.custom_down_to = now_datetime()
 

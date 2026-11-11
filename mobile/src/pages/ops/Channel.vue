@@ -1,7 +1,7 @@
 <template>
   <div class="flex h-full">
     <!-- Main channel column -->
-    <section class="flex min-w-0 flex-1 flex-col bg-white" :class="thread ? 'hidden lg:flex' : 'flex'">
+    <section class="flex min-w-0 flex-1 flex-col bg-panel" :class="thread ? 'hidden lg:flex' : 'flex'">
       <header v-if="channel" class="flex h-16 shrink-0 items-center gap-3 border-b border-gray-200 px-4 md:px-6">
         <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg" :class="channel.is_direct ? '' : 'bg-brand-50 text-brand-700'">
           <span v-if="channel.is_direct" class="relative"><UserAvatar :name="channel.title" size="lg" /><PresenceDot :user="channel.other" class="absolute -bottom-0.5 -right-0.5" /></span>
@@ -31,7 +31,7 @@
         </div>
         <template v-for="(m, i) in messages" :key="m.name">
           <div v-if="newDay(i)" class="sticky top-0 z-10 my-3 flex justify-center">
-            <span class="rounded-full border border-gray-200 bg-white px-3 py-0.5 text-[11px] font-semibold text-gray-600 shadow-sm">{{ dayLabel(m.creation) }}</span>
+            <span class="rounded-full border border-gray-200 bg-panel px-3 py-0.5 text-[11px] font-semibold text-gray-600 shadow-sm">{{ dayLabel(m.creation) }}</span>
           </div>
           <Message :m="m" :compact="compact(i)" @reply="openThread(m)" @remove="remove(m)" @job="toJob(m)" @dismiss="dismiss" />
         </template>
@@ -49,7 +49,7 @@
     </section>
 
     <!-- Thread panel -->
-    <aside v-if="thread" class="flex w-full flex-col border-l border-gray-200 bg-white lg:w-[26rem]" aria-label="Thread">
+    <aside v-if="thread" class="flex w-full flex-col border-l border-gray-200 bg-panel lg:w-[26rem]" aria-label="Thread">
       <header class="flex h-16 shrink-0 items-center justify-between border-b border-gray-200 px-4">
         <div><h2 class="font-semibold">Thread</h2><p class="text-xs text-gray-500">{{ channel?.is_direct ? channel.title : `#${channel?.title}` }}</p></div>
         <button class="btn btn-ghost btn-icon" aria-label="Close thread" @click="thread = null"><FeatherIcon name="x" class="h-5 w-5" /></button>
@@ -208,7 +208,7 @@ const Message = (props, { emit }) => {
       h('div', { class: 'mb-1 flex items-center gap-2 text-[11px] text-gray-500' }, [
         h(FeatherIcon, { name: 'terminal', class: 'h-3.5 w-3.5' }),
         h('span', `/${m.command} · Only you can see this`),
-        h('button', { type: 'button', class: 'ml-auto rounded px-1 hover:bg-white hover:text-gray-800', 'aria-label': 'Dismiss', onClick: () => emit('dismiss', m) }, '✕'),
+        h('button', { type: 'button', class: 'ml-auto rounded px-1 hover:bg-panel hover:text-gray-800', 'aria-label': 'Dismiss', onClick: () => emit('dismiss', m) }, '✕'),
       ]),
       h(RichText, { text: m.content, names: names.value, class: 'whitespace-pre-line' }),
     ])
@@ -236,7 +236,7 @@ const Message = (props, { emit }) => {
         ? h('div', { class: 'mt-1 flex flex-wrap gap-1' }, m.reactions.map((r) => {
             const mine = r.users.includes(me.user)
             const who = r.users.map((u) => (u === me.user ? 'you' : names.value[u] || u)).join(', ')
-            return h('button', { class: ['inline-flex h-6 items-center gap-1 rounded-full border px-2 text-xs transition', mine ? 'border-brand-300 bg-brand-50 font-semibold text-brand-800' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'], title: `${r.emoji} ${who}`, 'aria-label': `${r.emoji} ${r.users.length}, from ${who}. ${mine ? 'Remove your reaction' : 'Add yours'}`, 'aria-pressed': mine, disabled: !channel.value?.is_member, onClick: () => react(m, r.emoji) }, [h('span', r.emoji), h('span', String(r.users.length))])
+            return h('button', { class: ['inline-flex h-6 items-center gap-1 rounded-full border px-2 text-xs transition', mine ? 'border-brand-300 bg-brand-50 font-semibold text-brand-800' : 'border-gray-200 bg-panel text-gray-700 hover:border-gray-300'], title: `${r.emoji} ${who}`, 'aria-label': `${r.emoji} ${r.users.length}, from ${who}. ${mine ? 'Remove your reaction' : 'Add yours'}`, 'aria-pressed': mine, disabled: !channel.value?.is_member, onClick: () => react(m, r.emoji) }, [h('span', r.emoji), h('span', String(r.users.length))])
           }))
         : null,
       !props.threadRoot && m.reply_count
@@ -247,13 +247,13 @@ const Message = (props, { emit }) => {
           ])
         : null,
     ]),
-    h('div', { class: ['absolute -top-3 right-3 gap-0.5 rounded-lg border border-gray-200 bg-white p-0.5 shadow-pop group-focus-within:flex group-hover:flex', picker.value === m.name || reminding.value === m.name ? 'flex' : 'hidden'] }, [
+    h('div', { class: ['absolute -top-3 right-3 gap-0.5 rounded-lg border border-gray-200 bg-panel p-0.5 shadow-pop group-focus-within:flex group-hover:flex', picker.value === m.name || reminding.value === m.name ? 'flex' : 'hidden'] }, [
       picker.value === m.name
-        ? h('div', { class: 'absolute bottom-full right-0 mb-1 flex gap-0.5 rounded-xl border border-gray-200 bg-white p-1 shadow-pop', role: 'group', 'aria-label': 'Reactions' }, REACTIONS.map((e) =>
+        ? h('div', { class: 'absolute bottom-full right-0 mb-1 flex gap-0.5 rounded-xl border border-gray-200 bg-panel p-1 shadow-pop', role: 'group', 'aria-label': 'Reactions' }, REACTIONS.map((e) =>
             h('button', { class: 'flex h-8 w-8 items-center justify-center rounded-lg text-lg hover:bg-gray-100', 'aria-label': `React with ${e}`, onClick: () => react(m, e) }, e)))
         : null,
       reminding.value === m.name
-        ? h('div', { class: 'absolute right-0 top-full z-10 mt-1 w-52 rounded-xl border border-gray-200 bg-white p-1 shadow-pop', role: 'menu', 'aria-label': 'Remind me' }, REMIND.map((r) =>
+        ? h('div', { class: 'absolute right-0 top-full z-10 mt-1 w-52 rounded-xl border border-gray-200 bg-panel p-1 shadow-pop', role: 'menu', 'aria-label': 'Remind me' }, REMIND.map((r) =>
             h('button', { class: 'flex w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-50', role: 'menuitem', onClick: () => remindMe(m, r) }, r.label)))
         : null,
       h('button', { class: 'rounded-md p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800', 'aria-label': 'Remind me about this', 'aria-expanded': reminding.value === m.name, title: 'Remind me', onClick: () => { picker.value = ''; reminding.value = reminding.value === m.name ? '' : m.name } }, [h(FeatherIcon, { name: 'clock', class: 'h-4 w-4' })]),

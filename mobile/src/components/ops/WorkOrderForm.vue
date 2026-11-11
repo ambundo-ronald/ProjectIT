@@ -38,7 +38,7 @@
               role="radio"
               :aria-checked="form.priority === p.value"
               class="flex h-10 items-center justify-center gap-1.5 rounded-lg border text-sm font-medium transition-colors"
-              :class="form.priority === p.value ? p.active : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'"
+              :class="form.priority === p.value ? p.active : 'border-gray-300 bg-panel text-gray-600 hover:bg-gray-50'"
               @click="form.priority = p.value"
             >
               <FeatherIcon :name="p.icon" class="h-3.5 w-3.5" />{{ p.value }}
@@ -77,7 +77,7 @@
         <div>
           <span class="label">Assign to</span>
           <PeoplePicker v-if="me.manager" v-model="form.assignees" placeholder="Search technicians" />
-          <label v-else class="flex h-10 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 text-sm">
+          <label v-else class="flex h-10 items-center gap-2 rounded-lg border border-gray-300 bg-panel px-3 text-sm">
             <input v-model="assignSelf" type="checkbox" class="rounded border-gray-300 text-brand-600" /> Assign to me
           </label>
         </div>
@@ -114,10 +114,9 @@
         </template>
         <div>
           <label class="label" for="wo-project">Project <span class="font-normal text-gray-400">(optional)</span></label>
-          <select id="wo-project" v-model="form.project" class="input">
-            <option value="">No project</option>
-            <option v-for="p in options.projects" :key="p.name" :value="p.name">{{ p.project_name }}</option>
-          </select>
+          <SearchSelect id="wo-project" v-model="form.project" :options="projectOptions(options.projects)" icon="briefcase"
+            aria-label="Project" placeholder="No project" none-label="No project" search-placeholder="Search by project, code or customer"
+            empty-text="No open projects." />
         </div>
       </div>
     </form>
@@ -138,6 +137,8 @@ import PeoplePicker from './PeoplePicker.vue'
 import AssetPicker from './AssetPicker.vue'
 import EquipmentPicker from './EquipmentPicker.vue'
 import ProcedureSelect from './ProcedureSelect.vue'
+import SearchSelect from './SearchSelect.vue'
+import { projectOptions } from '@/data/pickers'
 import { api, me, tokens } from '@/data/ops'
 import { KIND } from '@/data/links'
 

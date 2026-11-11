@@ -1,0 +1,164 @@
+{
+ "actions": [],
+ "autoname": "LOG-.YY.-.#####",
+ "naming_rule": "Expression (old style)",
+ "creation": "2026-10-20 09:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "equipment",
+  "equipment_name",
+  "customer",
+  "column_break_1",
+  "log_on",
+  "logged_by",
+  "source",
+  "details_section",
+  "readings",
+  "flagged",
+  "note",
+  "edited_on",
+  "client_id"
+ ],
+ "fields": [
+  {
+   "fieldname": "equipment",
+   "fieldtype": "Link",
+   "label": "Equipment",
+   "options": "Techy Equipment",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "equipment_name",
+   "fieldtype": "Data",
+   "label": "Equipment Name",
+   "fetch_from": "equipment.equipment_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "options": "Customer",
+   "fetch_from": "equipment.customer",
+   "read_only": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "log_on",
+   "fieldtype": "Datetime",
+   "label": "Taken On",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "logged_by",
+   "fieldtype": "Link",
+   "label": "Logged By",
+   "options": "User",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "source",
+   "fieldtype": "Select",
+   "label": "Source",
+   "options": "Customer\nTechnician",
+   "default": "Customer",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "details_section",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "readings",
+   "fieldtype": "Int",
+   "label": "Readings",
+   "read_only": 1
+  },
+  {
+   "fieldname": "flagged",
+   "fieldtype": "Int",
+   "label": "Unusual Readings",
+   "read_only": 1
+  },
+  {
+   "fieldname": "note",
+   "fieldtype": "Small Text",
+   "label": "Note"
+  },
+  {
+   "fieldname": "edited_on",
+   "fieldtype": "Datetime",
+   "label": "Corrected On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "client_id",
+   "fieldtype": "Data",
+   "label": "Phone Log ID",
+   "read_only": 1,
+   "unique": 1,
+   "hidden": 1,
+   "description": "Set by the phone, so a log sent twice after being offline is saved once."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-20 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Projectit",
+ "name": "Techy Plant Log",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "export": 1,
+   "role": "System Manager",
+   "share": 1,
+   "print": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "export": 1,
+   "role": "Maintenance Manager"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "export": 1,
+   "role": "Projects Manager"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Maintenance User"
+  }
+ ],
+ "sort_field": "log_on",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "equipment_name",
+ "track_changes": 1
+}

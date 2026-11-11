@@ -40,7 +40,7 @@
 
             <div class="mt-2.5">
               <!-- Checkbox -->
-              <label v-if="step.field_type === 'Checkbox'" class="inline-flex min-h-[2.5rem] cursor-pointer items-center gap-2.5 rounded-lg border px-3 text-sm font-medium transition-colors" :class="[step.value ? 'border-green-300 bg-green-50 text-green-800' : 'border-gray-300 bg-white text-gray-700', locked ? 'cursor-default' : 'hover:border-gray-400']">
+              <label v-if="step.field_type === 'Checkbox'" class="inline-flex min-h-[2.5rem] cursor-pointer items-center gap-2.5 rounded-lg border px-3 text-sm font-medium transition-colors" :class="[step.value ? 'border-green-300 bg-green-50 text-green-800' : 'border-gray-300 bg-panel text-gray-700', locked ? 'cursor-default' : 'hover:border-gray-400']">
                 <input type="checkbox" class="h-5 w-5 rounded-md border-gray-300 text-green-600 focus:ring-green-500" :checked="!!step.value" :disabled="locked" @change="emitAnswer(step, $event.target.checked ? '1' : '')" />
                 {{ step.value ? 'Done' : 'Mark done' }}
               </label>
@@ -65,7 +65,7 @@
 
               <!-- Number -->
               <div v-else-if="step.field_type === 'Number'" class="flex flex-wrap items-center gap-2">
-                <div class="flex items-center overflow-hidden rounded-lg border bg-white focus-within:ring-2 focus-within:ring-brand-500/20" :class="step.failed ? 'border-red-400' : 'border-gray-300 focus-within:border-brand-500'">
+                <div class="flex items-center overflow-hidden rounded-lg border bg-panel focus-within:ring-2 focus-within:ring-brand-500/20" :class="step.failed ? 'border-red-400' : 'border-gray-300 focus-within:border-brand-500'">
                   <input type="text" inputmode="decimal" class="h-10 w-28 border-0 bg-transparent px-3 text-[15px] font-semibold tabular-nums focus:ring-0" :value="step.value" :disabled="locked" :aria-label="step.label" placeholder="0" @change="emitAnswer(step, $event.target.value.replace(',', '.'))" @keydown.enter.prevent="$event.target.blur()" />
                   <span v-if="step.unit" class="pr-3 text-sm text-gray-500">{{ step.unit }}</span>
                 </div>
@@ -78,7 +78,7 @@
 
               <!-- Photo / Signature -->
               <div v-else-if="step.field_type === 'Photo' || step.field_type === 'Signature'" class="flex flex-wrap items-center gap-3">
-                <a v-if="step.value && !preview" :href="step.value" target="_blank" rel="noopener" class="block overflow-hidden rounded-lg border border-gray-200 bg-white" :class="step.field_type === 'Signature' ? 'h-16 w-40' : 'h-20 w-20'">
+                <a v-if="step.value && !preview" :href="step.value" target="_blank" rel="noopener" class="block overflow-hidden rounded-lg border border-gray-200 bg-panel" :class="step.field_type === 'Signature' ? 'h-16 w-40' : 'h-20 w-20'">
                   <img :src="step.value" :alt="step.field_type === 'Signature' ? 'Signature' : step.label" class="h-full w-full" :class="step.field_type === 'Signature' ? 'object-contain' : 'object-cover'" />
                 </a>
                 <span v-else-if="step.value" class="inline-flex h-10 items-center gap-1.5 rounded-lg bg-green-50 px-3 text-sm font-medium text-green-800"><FeatherIcon name="check" class="h-4 w-4" />{{ step.field_type === 'Signature' ? 'Signed' : 'Photo added' }}</span>
@@ -136,7 +136,7 @@ const pct = (n) => `${total.value ? (n / total.value) * 100 : 0}%`
 const CHOICES = { 'Pass/Fail': ['Pass', 'Fail'], 'Yes/No/N/A': ['Yes', 'No', 'N/A'] }
 const choices = (step) => CHOICES[step.field_type] || (step.field_type === 'Multiple Choice' ? (step.options || '').split('\n').filter(Boolean) : null)
 function choiceTone(step, c) {
-  if (step.value !== c) return 'border-gray-300 bg-white text-gray-700 enabled:hover:border-gray-400 enabled:hover:bg-gray-50'
+  if (step.value !== c) return 'border-gray-300 bg-panel text-gray-700 enabled:hover:border-gray-400 enabled:hover:bg-gray-50'
   if (c === 'Pass' || c === 'Yes') return 'border-green-500 bg-green-500 text-white'
   if (c === 'Fail') return 'border-red-500 bg-red-500 text-white'
   if (c === 'No') return 'border-amber-500 bg-amber-500 text-white'

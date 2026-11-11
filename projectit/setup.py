@@ -56,3 +56,36 @@ def ensure_ops_defaults():
         frappe.db.set_single_value("Techy Ops Settings", "pm_lead_days", 3)
     if not frappe.db.exists("Mobile Module Item", "Ops"):
         frappe.get_doc({"doctype": "Mobile Module Item", "module": "Ops"}).insert(ignore_permissions=True)
+
+
+# Task rights the Techy apps need, narrowed to each person's own work by projectit.permissions. Never delete.
+TASK_RIGHTS = {"Maintenance User": ("read", "write", "create", "report", "print"),
+    "Employee": ("read", "write", "report", "print")}
+# Read the projects they are allocated to (narrowed by projectit.permissions.project_query).
+PROJECT_RIGHTS = {"Maintenance User": ("read",), "Employee": ("read",)}
+
+
+def ensure_task_permissions():
+    """Give technicians and field staff Task access (only ever adds rights; a site's other changes are kept)."""
+    from frappe.permissions import add_permission, update_permission_property
+    for doctype, grants in (("Task", TASK_RIGHTS), ("Project", PROJECT_RIGHTS)):
+        for role, rights in grants.items():
+            if not frappe.db.exists("Role", role):
+                continue
+            add_permission(doctype, role, 0)
+            row = frappe.db.get_value("Custom DocPerm", {"parent": doctype, "role": role, "permlevel": 0, "if_owner": 0},
+                list(rights), as_dict=True) or {}
+            for right in rights:
+                if not row.get(right):
+                    update_permission_property(doctype, role, 0, right, 1)
+
+
+def ensure_customer_roles():
+    """Roles for customer accounts (see projectit.customer_accounts): no Desk, and signing in opens the plant app."""
+    from projectit.customer_accounts import ACCESS, HOME
+    for role in ACCESS.values():
+        if frappe.db.exists("Role", role):
+            frappe.db.set_value("Role", role, {"desk_access": 0, "home_page": HOME})
+        else:
+            frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": 0, "home_page": HOME}).insert(
+                ignore_permissions=True)

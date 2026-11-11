@@ -20,7 +20,7 @@
 
     <form v-else id="part-form" class="space-y-4" @submit.prevent="add">
       <div class="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
-        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-gray-500 ring-1 ring-gray-200"><FeatherIcon name="package" class="h-4 w-4" /></span>
+        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-panel text-gray-500 ring-1 ring-gray-200"><FeatherIcon name="package" class="h-4 w-4" /></span>
         <span class="min-w-0 flex-1"><span class="block truncate font-semibold">{{ item.item_name }}</span><span class="font-mono text-xs text-gray-500">{{ item.name }}</span></span>
         <button type="button" class="btn btn-ghost btn-sm" @click="item = null">Change</button>
       </div>
