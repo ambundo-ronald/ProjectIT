@@ -1,6 +1,6 @@
 # Techy App for Android (Play Store)
 
-One app on the Play Store serves every company that runs Techy. On first open, the person types their company's Techy address (for example `ops.yourcompany.com`), then signs in with their usual email and password. It is the same app as the web version, so technicians, managers and customers each see their own apps.
+One app on the Play Store serves every company that runs Techy. It is also the customers' plant app: a customer account signs in and lands on its plant app, as on the web ([customer app](customer-app.md#on-an-android-phone)). On first open, the person types their company's Techy address (for example `ops.yourcompany.com`), then signs in with their usual email and password. It is the same app as the web version, so technicians, managers and customers each see their own apps.
 
 ## How it differs from the web app
 

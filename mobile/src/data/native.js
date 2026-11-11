@@ -168,7 +168,9 @@ const FILE_RE = /(^|["'(\s=])(\/(?:private\/)?files\/[^"'()\s<>]+)/g
 
 /** Make server paths in an answer usable from the phone (see the top of this file). */
 export async function localize(value) {
-  if (!isNative || !server.url || value === null || typeof value !== 'object') return value
+  if (!isNative || !server.url || value === null) return value
+  if (typeof value === 'string') return value.includes('/files/') ? (await localize([value]))[0] : value
+  if (typeof value !== 'object') return value
   const privates = new Set()
   const scan = (v) => {
     if (typeof v === 'string') {

@@ -27,7 +27,9 @@ ALLOWED = {"login", "logout", "frappe.handler.logout", "frappe.auth.get_logged_u
     "projectit.api.my_apps", "projectit.api.get_header_info", "projectit.api.get_employee_id",
     # Phone notifications: their own subscriptions and what is new for them (see projectit.push).
     "projectit.push.public_key", "projectit.push.subscribe", "projectit.push.unsubscribe", "projectit.push.pending",
-    "projectit.push.test"}
+    "projectit.push.test",
+    # The Android app: their own phones (see projectit.device_auth).
+    "projectit.device_auth.my_devices", "projectit.device_auth.sign_out_device"}
 ALLOWED_PREFIXES = ("projectit.plant.", "projectit.customer_accounts.")
 
 
@@ -129,7 +131,7 @@ def guard():
     method = _method(path, frappe.local.form_dict or {})
     if method is None and not path.startswith("/api/"):
         return  # pages (the app itself, /update-password, assets); Desk is closed to Website Users anyway
-    if method in ("logout", "frappe.handler.logout"):
+    if method in ("logout", "frappe.handler.logout", "projectit.device_auth.sign_out"):
         return
     allowed = method and (method in ALLOWED or method.startswith(ALLOWED_PREFIXES))
     if not allowed or not account():
@@ -221,6 +223,17 @@ def _invite_link(user):
     return frappe.get_doc("User", user)._reset_password(send_email=False)
 
 
+def _app_note():
+    """For the invitation email: the Android app, and the address to type in it (once the company has set the link)."""
+    url = frappe.db.get_single_value("Techy Ops Settings", "android_app_url")
+    if not url:
+        return ""
+    host = frappe.utils.get_url().split("://")[-1].rstrip("/")
+    return _("<p>On an Android phone you can also use the <a href=\"{0}\">Techy App</a>. After you set your password, "
+        "open the app, type <b>{1}</b> as your company's address and sign in with the same email and password.</p>").format(
+        frappe.utils.escape_html(url), frappe.utils.escape_html(host))
+
+
 def _send(user, full_name, link, customer_name):
     """Email the invitation. Returns False when the site cannot send email (the link is shown instead)."""
     company = frappe.db.get_single_value("Global Defaults", "default_company") or _("us")
@@ -230,7 +243,7 @@ def _send(user, full_name, link, customer_name):
                 "readings, follow how it is running and ask us for service.</p><p><a href=\"{3}\">Set your password and "
                 "sign in</a></p><p>The link works once. If it has expired, ask us for a new one.</p>").format(
                 frappe.utils.escape_html(full_name), frappe.utils.escape_html(company),
-                frappe.utils.escape_html(customer_name or ""), link),
+                frappe.utils.escape_html(customer_name or ""), link) + _app_note(),
             now=True)
         return True
     except Exception:

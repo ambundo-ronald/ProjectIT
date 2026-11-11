@@ -112,6 +112,8 @@ class CustomerAccountTests(OpsTestCase):
         self.guard("/api/method/frappe.auth.get_logged_user")
         self.guard("/techy-app/plant")
         self.guard("/api/method/logout", acc=None)  # a switched-off account can still sign out
+        self.guard("/api/method/projectit.device_auth.sign_out", acc=None)  # in the Android app too
+        self.guard("/api/method/projectit.device_auth.my_devices")
 
     def test_guard_refuses_everything_else(self):
         for path in ("/api/method/projectit.work_orders.list_work_orders", "/api/resource/Techy Equipment",
@@ -129,6 +131,19 @@ class CustomerAccountTests(OpsTestCase):
     def test_guard_leaves_staff_alone(self):
         self.frappe.get_roles.return_value = ["Maintenance User"]
         self.guard("/api/method/projectit.work_orders.list_work_orders")
+
+
+    # The invitation email and the Android app ----------------------------------------------------------------
+
+    def test_invitation_mentions_the_app_only_once_it_has_a_link(self):
+        self.frappe.utils.get_url = lambda path="": "https://ops.example.com"
+        self.frappe.utils.escape_html = lambda text: text
+        self.frappe.db.get_single_value = MagicMock(return_value=None)
+        self.assertEqual(self.ca._app_note(), "")
+        self.frappe.db.get_single_value = MagicMock(return_value="https://play.google.com/store/apps/details?id=x")
+        note = self.ca._app_note()
+        self.assertIn("ops.example.com", note)
+        self.assertIn("play.google.com", note)
 
 
 class PreviewTests(OpsTestCase):

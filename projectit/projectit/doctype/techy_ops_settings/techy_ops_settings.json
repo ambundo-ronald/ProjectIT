@@ -33,6 +33,7 @@
   "support_email",
   "log_reminder_time",
   "log_missing_days",
+  "android_app_url",
   "whatsapp_section",
   "whatsapp_enabled",
   "whatsapp_phone_number_id",
@@ -228,6 +229,13 @@
    "default": "3"
   },
   {
+   "fieldname": "android_app_url",
+   "fieldtype": "Data",
+   "options": "URL",
+   "label": "Android App Link",
+   "description": "The Techy App's Play Store link. When set, invitations tell customers they can use the app, and which address to type in it."
+  },
+  {
    "fieldname": "whatsapp_section",
    "fieldtype": "Section Break",
    "label": "WhatsApp (Customer App)",
@@ -302,7 +310,7 @@
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-22 09:00:00.000000",
+ "modified": "2026-11-12 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Techy Ops Settings",

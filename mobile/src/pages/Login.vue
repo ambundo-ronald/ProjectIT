@@ -5,7 +5,7 @@
       <div class="mb-6 flex flex-col items-center text-center">
         <img :src="isNative && server.logo ? server.logo : '/techy-app.svg'" alt="" class="h-14 w-14 rounded-2xl bg-panel object-contain shadow-card" @error="(e) => (e.target.src = '/techy-app.svg')" />
         <h1 class="mt-4 text-[24px] font-semibold tracking-tight">{{ isNative && server.url ? `Sign in to ${server.company}` : 'Sign in to Techy App' }}</h1>
-        <p class="mt-1 text-sm text-gray-500">Work orders, field work and your team, in one place.</p>
+        <p class="mt-1 text-sm text-gray-500">{{ isNative ? 'For our team and our customers.' : 'Work orders, field work and your team, in one place.' }}</p>
       </div>
 
       <!-- Phone app, first time: which company's Techy site -->
@@ -13,7 +13,7 @@
         <div>
           <label class="label" for="login-server">Your company's Techy address</label>
           <input id="login-server" v-model="address" required type="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="url" class="input" placeholder="ops.yourcompany.com" @input="error = ''" />
-          <p class="hint">Your manager can give you this. You only enter it once.</p>
+          <p class="hint">It is in your invitation, or ask your manager or service provider. You can also paste the invitation link. You only enter it once.</p>
         </div>
         <p v-if="error" role="alert" class="flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700"><FeatherIcon name="alert-circle" class="mt-0.5 h-4 w-4 shrink-0" />{{ error }}</p>
         <button class="btn btn-primary w-full" :disabled="busy">{{ busy ? 'Checking…' : 'Continue' }}</button>

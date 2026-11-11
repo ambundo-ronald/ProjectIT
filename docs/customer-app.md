@@ -63,6 +63,20 @@ Turn on **Notifications → On this phone** in **Account** to get alerts even wh
 
 Each person can switch *Visits and reports* and *Log reminders* off. Tapping a notification opens the right page in the plant app.
 
+## On an Android phone
+
+Customers can use the same Techy App from the Play Store as our team; see [Techy App for Android](android-app.md).
+
+1. They set their password from the invitation link, as before.
+2. They open the app, type our Techy address (or paste the invitation link), and sign in with the same email and password. The app opens straight on their plant app.
+
+- **Logging works with no signal.** The log is kept on the phone and sent when the signal is back.
+- **Reports.** Service reports and monthly reports open in the phone's browser.
+- **The invitation.**
+  - Once **Android App Link** in **Techy Ops Settings** holds the app's Play Store link, the invitation email also says the app exists and which address to type in it.
+  - The WhatsApp invitation is a template Meta has approved, so it stays as it is.
+- **Signing out.** **Sign out** in the app signs that phone out. A lost phone can be signed out from Desk: **Techy Device**, tick **Signed Out**. Switching an account off signs out its phones.
+
 ## Account
 
 **Account** shows your machines, light or dark appearance, and how to reach us. A customer admin also sees **People**, where they invite and manage operators.
