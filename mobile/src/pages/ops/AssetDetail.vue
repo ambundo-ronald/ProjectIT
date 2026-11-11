@@ -84,6 +84,7 @@
   </section>
 </template>
 <script setup>
+import { isNative, publicUrl } from '@/data/native'
 import { ref, computed, inject, onMounted, h } from 'vue'
 import { useRoute } from 'vue-router'
 import { FeatherIcon } from 'frappe-ui'
@@ -101,7 +102,10 @@ const copied = ref(false)
 const asset = computed(() => data.value.asset)
 const openCount = computed(() => data.value.work_orders.filter((w) => !['Completed', 'Cancelled'].includes(w.status)).length)
 const base = window.location.pathname.startsWith('/projectit') ? '/projectit' : '/techy-app'
-const link = computed(() => `${window.location.origin}${base}/request?asset=${encodeURIComponent(route.params.name)}`)
+const link = computed(() => {
+  const path = `/request?asset=${encodeURIComponent(route.params.name)}`
+  return isNative ? publicUrl(path) : `${window.location.origin}${base}${path}`
+})
 
 const DueChip = (props) => {
   const d = dueIn(props.date)

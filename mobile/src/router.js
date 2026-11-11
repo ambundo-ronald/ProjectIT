@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { isNative } from '@/data/native'
 import { session } from './data/session'
 import { userResource } from '@/data/user'
 import { api } from '@/data/offline'
@@ -93,7 +94,8 @@ const routes = [
 ]
 
 let router = createRouter({
-  history: createWebHistory(window.location.pathname.startsWith('/projectit') ? '/projectit' : '/techy-app'),
+  // The phone app runs from the phone itself, at its root (data/native.js).
+  history: createWebHistory(isNative ? '/' : window.location.pathname.startsWith('/projectit') ? '/projectit' : '/techy-app'),
   routes,
 })
 

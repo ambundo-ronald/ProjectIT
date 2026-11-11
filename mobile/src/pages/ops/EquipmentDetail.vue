@@ -182,6 +182,7 @@
   </section>
 </template>
 <script setup>
+import { isNative, publicUrl } from '@/data/native'
 import { ref, computed, inject, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { FeatherIcon } from 'frappe-ui'
@@ -214,7 +215,10 @@ const eq = computed(() => data.value?.equipment)
 const retired = computed(() => ['Decommissioned', 'Cancelled'].includes(eq.value?.status))
 const openCount = computed(() => data.value.work_orders.filter((w) => !['Completed', 'Cancelled'].includes(w.status)).length)
 const base = window.location.pathname.startsWith('/projectit') ? '/projectit' : '/techy-app'
-const link = computed(() => `${window.location.origin}${base}/request?equipment=${encodeURIComponent(route.params.name)}`)
+const link = computed(() => {
+  const path = `/request?equipment=${encodeURIComponent(route.params.name)}`
+  return isNative ? publicUrl(path) : `${window.location.origin}${base}${path}`
+})
 const details = computed(() => {
   const e = eq.value
   const rows = [

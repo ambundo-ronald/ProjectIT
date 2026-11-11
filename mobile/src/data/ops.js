@@ -1,5 +1,6 @@
 import { reactive, ref } from 'vue'
 import { io } from 'socket.io-client'
+import { isNative } from './native'
 
 /** Call a whitelisted method (see data/request.js); works offline for the reads and job changes in data/offline.js. */
 import { api } from './offline'
@@ -29,7 +30,8 @@ let socket = null
 export const online = ref(false)
 
 function connect({ sitename, socketio_port }) {
-  if (socket) return
+  // The phone app has no session cookie for live updates yet; screens refresh when opened instead.
+  if (socket || isNative) return
   // Same rule as Frappe Desk: a custom port means socket.io runs on its own port; otherwise it is proxied.
   const url = window.location.port
     ? `${window.location.protocol}//${window.location.hostname}:${socketio_port}/${sitename}`

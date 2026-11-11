@@ -138,7 +138,8 @@ permission_query_conditions = {
 }
 
 # Customer accounts reach only the customer app's endpoints (projectit.customer_accounts.guard).
-auth_hooks = ["projectit.customer_accounts.guard"]
+# The phone app signs requests in by device token first (projectit.device_auth), then the guard applies.
+auth_hooks = ["projectit.device_auth.authenticate", "projectit.customer_accounts.guard"]
 
 has_permission = {
     "Techy Channel": "projectit.chat.has_permission",
@@ -167,6 +168,7 @@ has_permission = {
 # }
 
 doc_events = {
+    "User": {"on_update": "projectit.device_auth.on_user_update"},
     "Project" : {
         "after_insert" : "projectit.projectit.project.after_insert_of_project"
     },

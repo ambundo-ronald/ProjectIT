@@ -3,8 +3,11 @@ import { computed, reactive, ref } from 'vue'
 import { createResource } from 'frappe-ui'
 
 import { userResource } from './user'
+import { isNative, server } from './native'
 
 export function sessionUser() {
+  // The phone app has no session cookie: it is signed in while it holds a token (data/native.js).
+  if (isNative) return server.token ? server.user : null
   const cookies = new URLSearchParams(document.cookie.split('; ').join('&'))
   let _sessionUser = cookies.get('user_id')
   if (_sessionUser === 'Guest') {
