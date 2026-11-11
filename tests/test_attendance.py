@@ -137,6 +137,33 @@ class AttendanceTests(unittest.TestCase):
         with self.assertRaises(ValidationError): self.checkout()
         self.doc.submit.assert_not_called()
 
+    # Offline punches: the phone's time, within limits, marked for HR. Server "now" is 2026-09-29 18:00.
+    def offline_checkout(self, at):
+        self.settings.allow_offline_punches = 1
+        return self.module.check_out("TS-1", 0, 0, "photo", at=at)
+
+    def test_offline_checkout_uses_phone_time_and_marks_it(self):
+        self.offline_checkout("2026-09-29 16:30:00")
+        self.module._punch.assert_called_once_with("EMP-1", "TS-1", "OUT", datetime(2026,9,29,16,30), 0.0, 0.0, self.module.OFFLINE_DEVICE)
+        self.assertIn("recorded offline", self.doc.note)
+        self.assertEqual([c.args[1] for c in self.doc.append.call_args_list][-1]["to_time"], datetime(2026,9,29,16,30))
+
+    def test_offline_time_rejected_when_turned_off(self):
+        self.settings.allow_offline_punches = 0
+        with self.assertRaises(ValidationError): self.module.check_out("TS-1", 0, 0, "photo", at="2026-09-29 16:30:00")
+        self.doc.submit.assert_not_called()
+
+    def test_offline_time_rejected_in_future_too_old_or_before_check_in(self):
+        for at in ("2026-09-29 18:05:00", "2026-09-28 17:00:00", "2026-09-29 06:00:00"):
+            with self.subTest(at=at), self.assertRaises(ValidationError): self.offline_checkout(at)
+        self.doc.submit.assert_not_called()
+        self.module._punch.assert_not_called()
+
+    def test_online_punch_ignores_offline_setting(self):
+        self.settings.allow_offline_punches = 0
+        self.checkout()
+        self.module._punch.assert_called_once_with("EMP-1", "TS-1", "OUT", datetime(2026,9,29,18), 0.0, 0.0)
+
     def test_retry_checkin_returns_existing_session(self):
         with patch.object(self.module, "_active_timesheet", return_value=self.doc):
             self.module.check_in("PROJ-1",0,0,"photo")

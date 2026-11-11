@@ -143,9 +143,11 @@ async function record(m, reset = false) {
       if (!window.confirm(`${r.warning}\n\nSave it anyway?`)) return
       r = await api('projectit.meters.record_reading', { ...args, confirm: 1 })
     }
-    meters.value = meters.value.map((x) => (x.name === m.name ? r.meter : x))
+    meters.value = meters.value.map((x) => (x.name === m.name ? r.meter || { ...x, last_reading: value, pending: true } : x))
     values[m.name] = ''
-    if (r.raised.length) {
+    if (r.queued) {
+      toast({ title: `${m.meter_name} saved on this phone`, text: 'It is sent when you have signal again.', icon: 'wifi-off', iconClasses: 'text-amber-600', position: 'top-center' })
+    } else if (r.raised.length) {
       toast({ title: `Job raised: ${r.raised[0].subject}`, icon: 'alert-triangle', iconClasses: 'text-amber-600', position: 'top-center' })
       emit('reload')
     } else {

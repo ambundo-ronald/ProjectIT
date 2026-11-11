@@ -82,13 +82,17 @@ Technicians can keep working where there is no signal.
   - Any other job you open is saved too, as are the photos you have looked at.
 - **Without a connection,** a bar says *You're offline. Showing what's saved on this phone.* You can then:
   - open your jobs and the work order list, and read chat you have already seen;
-  - change a job's status, post updates, tick checklist steps, answer procedure steps (photos included), add photos, start and stop the timer, record failure codes and downtime, and write the service report's *Work done*.
+  - change a job's status, post updates, tick checklist steps, answer procedure steps (photos included), add photos, start and stop the timer, record failure codes and downtime, and write the service report's *Work done*;
+  - tap **On my way**. The customer is told when the phone has signal again; if that is more than 45 minutes later, the time is recorded but the customer is not messaged;
+  - record meter readings;
+  - in Techy Work, **check in and check out** of a project, and add site photos (see [attendance](attendance.md#offline-check-in-and-check-out)). Today's projects and their tasks are saved on the phone each time the app opens online.
   - Each change shows on the job straight away, and updates are marked *saved on this phone, waiting to send*. The bar counts what is waiting.
 - **Back online,** the changes are sent in the order they were made. **Send now** sends them straight away.
-  - Timer starts and stops keep the time they happened on the phone (up to three days back).
+  - Timer starts and stops keep the time they happened on the phone (up to three days back). Check-ins, check-outs and On my way do too (24 hours for check-ins and check-outs).
   - A status change made offline wins over one made on the server in the meantime.
+- **Waiting to send.** **See what** on the bar lists every change still on the phone, oldest first.
 - **Refused changes.** If the server refuses a change (for example the job was reassigned or cancelled meanwhile), the bar says so. **Review** lists each one with the reason: **Try again**, or **Discard** to see the job as it is now.
-- **Needs a connection:** jobs never opened on the phone, creating jobs, chat messages, parts requests, invoices, and every manager screen.
+- **Needs a connection:** jobs never opened on the phone, creating jobs, chat messages, adding parts (the parts search needs the stock list), invoices, and every manager screen.
 - **How it works:** a service worker served at `/techy-sw.js` keeps the app's files and page. Jobs and queued changes are stored in the browser (IndexedDB) on that phone only. Signing out of the phone's browser profile, or clearing its site data, removes them; changes not yet sent are lost.
 
 ## Dispatch calendar

@@ -19,7 +19,7 @@ References: [HRMS Shift Type](https://docs.frappe.io/hr/shift-type), [HRMS Auto 
 
 - Capture a photo and allow location access to check in or out.
 - Each IN/OUT punch stores the server time (site timezone) and the device GPS as latitude, longitude and a Desk map pin. Techy App punches show their Location section on the Employee Checkin form even when HR Settings geolocation tracking is off; turning that setting on additionally enables HRMS shift-location geofencing.
-- The server supplies the timestamp and employee identity. Timesheet, private photo, and punch are written in the same request transaction. A validation/permission failure is returned to the phone; Frappe rolls back database writes for that failed POST.
+- The server supplies the timestamp (except for offline punches, below) and employee identity. Timesheet, private photo, and punch are written in the same request transaction. A validation/permission failure is returned to the phone; Frappe rolls back database writes for that failed POST.
 - Open sessions survive page reloads and midnight. Retrying an existing check-in returns that session; retrying completed checkout does not create another OUT log.
 - My attendance shows the processing state and the latest 14 non-cancelled attendance records. Drafts are explicitly labeled. Use Refresh after HRMS processes the shift.
 - Missing/disabled shifts, off-shift punches, skipped logs, and incomplete processing settings prompt HR review. The app never advances the global last-sync watermark just because one employee checked out.
@@ -55,3 +55,14 @@ Required v16 staging checks:
 - Test regular hours, overtime boundaries, midnight/overnight shifts, and multiple project sessions on one day.
 - Process shifts with hours above/below the configured Present/Half Day/Absent thresholds. Confirm HRMS links logs to the expected submitted Attendance record, including holidays/approved leave and existing draft/submitted attendance.
 - Verify that off-shift/skipped logs are reported for review and that pending attendance changes after HRMS processing and Refresh.
+
+## Offline check-in and check-out
+
+A site with no signal does not stop anyone checking in.
+
+- On a phone without signal, the check-in or check-out (photo and GPS included) is saved on the phone with the time it happened, and sent as soon as there is signal. A check-out made after an offline check-in is sent with the timesheet that check-in creates.
+- The server accepts the phone's time only:
+  - while **Allow offline check-in and check-out** is ticked in **Work Time Settings** (on by default);
+  - for the last 24 hours, never in the future (2 minutes of clock drift allowed), and never before the check-in (or, for a check-in, the last check-out) it follows.
+- Otherwise the punch is refused and shown on the phone under **Review**, with the reason.
+- Offline punches carry device **Techy App (offline)** on the Employee Checkin, and the timesheet note shows both times (*Check in at 07:58 (recorded offline, received 09:12)*). Filter Employee Checkin by Device ID to review them.

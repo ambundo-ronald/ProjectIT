@@ -9,7 +9,9 @@
   "regular_time_activity_type",
   "column_break_redh",
   "end_time",
-  "over_time_activity_type"
+  "over_time_activity_type",
+  "offline_section",
+  "allow_offline_punches"
  ],
  "fields": [
   {
@@ -37,13 +39,25 @@
    "fieldtype": "Link",
    "label": "Over Time Activity Type",
    "options": "Activity Type"
+  },
+  {
+   "fieldname": "offline_section",
+   "fieldtype": "Section Break",
+   "label": "Offline"
+  },
+  {
+   "default": "1",
+   "fieldname": "allow_offline_punches",
+   "fieldtype": "Check",
+   "label": "Allow offline check-in and check-out",
+   "description": "A phone without signal saves the check-in or check-out with the time it happened and sends it when the signal is back (within 24 hours). These punches show device \"Techy App (offline)\" in Employee Checkin so HR can review them."
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-03-22 12:57:36.432569",
+ "modified": "2026-11-11 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Work Time Settings",

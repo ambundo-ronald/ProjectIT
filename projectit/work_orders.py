@@ -18,6 +18,7 @@ FIELDS = ["name", "subject", "status", "priority", "exp_end_date", "custom_work_
     "custom_on_way_at", "custom_on_way_by", "custom_eta_minutes"]
 ON_WAY_HOURS = 12  # "On my way" again after this long is a new trip
 ETA_CHOICES = (15, 30, 60, 120)
+ON_WAY_LATE_MINUTES = 45  # an offline "On my way" older than this is recorded without messaging the customer
 STATUSES = ("Open", "Working", "Pending Review", "Completed", "Cancelled")
 PRIORITIES = ("Low", "Medium", "High", "Urgent")
 CATEGORIES = ("Corrective", "Preventive", "Inspection", "Installation", "Safety", "Other")
@@ -151,8 +152,11 @@ def on_way(doc):
 
 
 @frappe.whitelist(methods=["POST"])
-def on_my_way(name, minutes=None):
-    """The technician sets off to the customer: the job records it and the customer's people are told."""
+def on_my_way(name, minutes=None, at=None):
+    """The technician sets off to the customer: the job records it and the customer's people are told.
+
+    `at` is when it was tapped on a phone without signal. If that is more than ON_WAY_LATE_MINUTES ago, the time is
+    recorded but the customer is not messaged: news that late would only confuse them."""
     doc = _work_order(name, write=True)
     if doc.status not in ("Open", "Overdue"):
         frappe.throw(_("On my way is for a job that has not started yet."))
@@ -161,12 +165,22 @@ def on_my_way(name, minutes=None):
     if frappe.session.user not in _assignees([doc.name])[doc.name] and not ops.manager():
         frappe.throw(_("Only someone on this job can say they are on the way."), frappe.PermissionError)
     minutes = cint(minutes) if cint(minutes) in ETA_CHOICES else None
-    doc.db_set({"custom_on_way_at": now_datetime(), "custom_on_way_by": frappe.session.user, "custom_eta_minutes": minutes})
+    now = now_datetime()
+    left = now
+    if at:
+        try:
+            left = min(get_datetime(at), now)
+        except (TypeError, ValueError):
+            left = now
+    late = (now - left).total_seconds() > ON_WAY_LATE_MINUTES * 60
+    doc.db_set({"custom_on_way_at": left, "custom_on_way_by": frappe.session.user, "custom_eta_minutes": minutes})
     who = frappe.utils.get_fullname()
     doc.add_comment("Info", escape(_("{0} is on the way{1}.").format(who,
-        _(" (about {0} min)").format(minutes) if minutes else "")))
-    from projectit import customer_notify
-    customer_notify.on_the_way(doc, who.split(" ")[0], minutes)
+        _(" (about {0} min)").format(minutes) if minutes else "")
+        + (_(" Sent from a phone without signal; the customer was not messaged.") if late else "")))
+    if not late:
+        from projectit import customer_notify
+        customer_notify.on_the_way(doc, who.split(" ")[0], minutes)
     return get_work_order(doc.name)
 
 

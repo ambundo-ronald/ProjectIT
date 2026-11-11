@@ -12,6 +12,7 @@
         <UserMenu />
       </div>
     </header>
+    <OfflineBar />
 
     <main class="mx-auto px-4 py-5 md:px-6 md:py-8" :class="width">
       <router-view />
@@ -28,6 +29,7 @@
 <script setup>
 import { useRoute } from 'vue-router'
 import { FeatherIcon } from 'frappe-ui'
+import OfflineBar from './OfflineBar.vue'
 import AppSwitcher from './AppSwitcher.vue'
 import UserMenu from './UserMenu.vue'
 

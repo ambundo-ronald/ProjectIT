@@ -40,7 +40,7 @@
           <!-- Setting off to the customer: they are told on their phone -->
           <div v-if="data.on_way?.at" class="mt-4 flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-2.5 text-sm text-brand-800" role="status">
             <FeatherIcon name="navigation" class="h-4 w-4 shrink-0" />
-            <span>{{ data.on_way.by }} left {{ fromNow(data.on_way.at) }}{{ data.on_way.minutes ? `, arriving in about ${data.on_way.minutes} min` : '' }}. The customer has been told.</span>
+            <span>{{ data.on_way.by }} left {{ fromNow(data.on_way.at) }}{{ data.on_way.minutes ? `, arriving in about ${data.on_way.minutes} min` : '' }}. {{ data.on_way.pending ? ' The customer is told when you have signal.' : ' The customer has been told.' }}</span>
           </div>
           <div v-else-if="data.on_way?.can_go" class="mt-4 rounded-lg border border-gray-200 px-3 py-2.5 text-sm">
             <div v-if="!choosingEta" class="flex flex-wrap items-center justify-between gap-3">

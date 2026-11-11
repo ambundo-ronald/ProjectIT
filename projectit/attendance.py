@@ -2,7 +2,12 @@
 
 Each POST is one Frappe transaction: timesheet, photo and punch succeed together.
 Employee row locks serialize Techy App retries and simultaneous phone requests.
-No attendance status, shift, employee ID or timestamp is accepted from the client.
+No attendance status, shift or employee ID is accepted from the client.
+
+Times are the server's, with one exception: a check-in, check-out or photo made on a phone without signal is
+sent later with the time it happened on the phone (`at`). That is accepted only while Work Time Settings allows
+offline punches, only for the last OFFLINE_HOURS, never in the future and never before the punch it follows.
+Such punches carry device_id OFFLINE_DEVICE and a note with both times, so HR can find and review them.
 """
 import base64
 import binascii
@@ -15,6 +20,9 @@ from frappe import _
 from frappe.utils import get_datetime, get_time, now_datetime
 
 from projectit.work_time import split_work_time
+
+OFFLINE_HOURS = 24
+OFFLINE_DEVICE = "Techy App (offline)"
 
 
 def _employee(lock=False):
@@ -96,9 +104,36 @@ def _geolocation(latitude, longitude):
         "geometry": {"type": "Point", "coordinates": [longitude, latitude]}}]}, indent=None)
 
 
-def _punch(employee, timesheet, log_type, timestamp, latitude, longitude):
+def _when(at, after=None):
+    """(time of the punch, recorded offline?). Without `at` it is now; see the module docstring for `at`."""
+    now = now_datetime().replace(microsecond=0)
+    if not at:
+        return now, False
+    settings = frappe.get_single("Work Time Settings")
+    if not settings.get("allow_offline_punches"):
+        frappe.throw(_("Offline check-in and check-out are turned off. Check in again now that you are online."))
+    try:
+        when = get_datetime(at).replace(microsecond=0)
+    except (TypeError, ValueError):
+        frappe.throw(_("The time recorded on the phone is not valid."))
+    from datetime import timedelta
+    if when > now + timedelta(minutes=2):
+        frappe.throw(_("The time recorded on the phone is in the future. Check the phone's clock."))
+    if when < now - timedelta(hours=OFFLINE_HOURS):
+        frappe.throw(_("This was recorded offline more than {0} hours ago. Ask your manager to enter it.").format(OFFLINE_HOURS))
+    if after and when <= get_datetime(after):
+        frappe.throw(_("The time recorded on the phone is before your check-in. Check the phone's clock."))
+    return when, True
+
+
+def _stamp(label, when, offline):
+    text = f"{label} at {when}"
+    return f"<p>{text} (recorded offline, received {now_datetime().replace(microsecond=0)})</p>" if offline else f"<p>{text}</p>"
+
+
+def _punch(employee, timesheet, log_type, timestamp, latitude, longitude, device_id=None):
     log = frappe.get_doc({
-        "doctype": "Employee Checkin", "employee": employee,
+        "doctype": "Employee Checkin", "employee": employee, "device_id": device_id,
         "custom_timesheet": timesheet, "log_type": log_type, "time": timestamp,
         "latitude": latitude, "longitude": longitude, "skip_auto_attendance": 0,
         # HRMS fills this only when HR Settings geolocation tracking is on; set it so Desk always shows the pin.
@@ -119,7 +154,7 @@ def get_active_session():
 
 
 @frappe.whitelist(methods=["POST"])
-def check_in(project, latitude, longitude, photo, filename=None, task=None):
+def check_in(project, latitude, longitude, photo, filename=None, task=None, at=None):
     employee = _employee(lock=True)
     latitude, longitude = _coordinates(latitude, longitude)
     active = _active_timesheet(employee.name, lock=True)
@@ -149,21 +184,23 @@ def check_in(project, latitude, longitude, photo, filename=None, task=None):
     """, {"project": project, "employee": employee.name})
     if not allocation:
         frappe.throw(_("You are not allocated to this project."), frappe.PermissionError)
-    timestamp = now_datetime().replace(microsecond=0)
+    last_out = frappe.db.sql("""SELECT MAX(time) FROM `tabEmployee Checkin`
+        WHERE employee = %(employee)s AND log_type = 'OUT'""", {"employee": employee.name}) if at else None
+    timestamp, offline = _when(at, last_out[0][0] if last_out and last_out[0] else None)
     doc = frappe.get_doc({
         "doctype": "Timesheet", "employee": employee.name, "company": employee.company,
         "parent_project": project, "customer": project_doc.customer,
-        "note": f"<p>Check in at {timestamp}</p>",
+        "note": _stamp("Check in", timestamp, offline),
         "time_logs": [{"from_time": timestamp, "project": project, "task": task}],
     })
     doc.insert()
-    _punch(employee.name, doc.name, "IN", timestamp, latitude, longitude)
+    _punch(employee.name, doc.name, "IN", timestamp, latitude, longitude, *([OFFLINE_DEVICE] if offline else []))
     _photo(photo, filename, doc.name)
     return _summary(doc)
 
 
 @frappe.whitelist(methods=["POST"])
-def check_out(timesheet, latitude, longitude, photo, filename=None):
+def check_out(timesheet, latitude, longitude, photo, filename=None, at=None):
     employee = _employee(lock=True)
     latitude, longitude = _coordinates(latitude, longitude)
     doc = frappe.get_doc("Timesheet", timesheet, for_update=True)
@@ -182,7 +219,7 @@ def check_out(timesheet, latitude, longitude, photo, filename=None):
     starts = [get_datetime(p.time) for p in punches if p.log_type == "IN"]
     if len(starts) != 1:
         frappe.throw(_("A single linked IN log is required. Ask your manager to reconcile this timesheet."))
-    timestamp = now_datetime().replace(microsecond=0)
+    timestamp, offline = _when(at, starts[0])
     settings = frappe.get_single("Work Time Settings")
     if not all(settings.get(field) is not None and settings.get(field) != "" for field in (
         "start_time", "end_time", "regular_time_activity_type", "over_time_activity_type",
@@ -202,12 +239,12 @@ def check_out(timesheet, latitude, longitude, photo, filename=None):
             "from_time": start, "to_time": end, "project": doc.parent_project, "task": task_name,
             "activity_type": settings.regular_time_activity_type if regular else settings.over_time_activity_type,
         })
-    doc.note = (doc.note or "") + f"<p>Check out at {timestamp}</p>"
+    doc.note = (doc.note or "") + _stamp("Check out", timestamp, offline)
     # Their own open check-in (checked above): field staff submit it here without a general right to submit
     # timesheets in ERPNext.
     doc.flags.ignore_permissions = True
     doc.submit()
-    _punch(employee.name, doc.name, "OUT", timestamp, latitude, longitude)
+    _punch(employee.name, doc.name, "OUT", timestamp, latitude, longitude, *([OFFLINE_DEVICE] if offline else []))
     _photo(photo, filename, doc.name)
     return _summary(doc)
 
@@ -247,7 +284,7 @@ def get_attendance_status():
 
 
 @frappe.whitelist(methods=["POST"])
-def add_photo(timesheet, photo, caption=""):
+def add_photo(timesheet, photo, caption="", at=None):
     employee = _employee(lock=True)
     doc = frappe.get_doc("Timesheet", timesheet, for_update=True)
     if doc.employee != employee.name:
@@ -257,6 +294,7 @@ def add_photo(timesheet, photo, caption=""):
         frappe.throw(_("Photo updates require an open timesheet."))
     _photo(photo, None, doc.name)
     text = escape(str(caption or "")[:2000])
-    doc.note = (doc.note or "") + f"<p>Photo update at {now_datetime()}: {text}</p>"
+    when, offline = _when(at)
+    doc.note = (doc.note or "") + _stamp("Photo update", when, offline)[:-4] + f": {text}</p>"
     doc.save()
     return _summary(doc)

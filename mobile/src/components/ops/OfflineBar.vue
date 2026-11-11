@@ -14,18 +14,22 @@
         </template>
       </span>
       <button v-if="offline.online && offline.pending && !offline.syncing" class="font-semibold underline" @click="sync">Send now</button>
-      <button v-if="offline.failed.length" class="font-semibold underline" @click="open = true">Review</button>
+      <button v-if="offline.pending || offline.failed.length" class="font-semibold underline" @click="show">{{ offline.failed.length ? 'Review' : 'See what' }}</button>
     </div>
 
-    <Modal v-model="open" title="Changes not saved" subtitle="These were made offline, but the job changed in the meantime. Try again, or discard them to see the job as it is now.">
+    <Modal v-model="open" title="Waiting to send" subtitle="Changes made on this phone without signal. They are sent in order as soon as you are online.">
+      <p v-if="!items.length" class="py-3 text-sm text-gray-500">Everything has been sent.</p>
       <ul class="divide-y divide-gray-100">
-        <li v-for="item in offline.failed" :key="item.id" class="py-3">
-          <p class="text-sm font-medium text-gray-900">{{ item.label }} · <router-link :to="{ name: 'OpsWorkOrder', params: { name: item.job } }" class="text-brand-600 hover:underline" @click="open = false">{{ item.job }}</router-link></p>
-          <p class="mt-0.5 text-sm text-red-700">{{ item.error }}</p>
-          <p class="text-xs text-gray-500">Made {{ fromNow(new Date(item.created).toISOString()) }}</p>
-          <div class="mt-2 flex gap-2">
-            <button class="btn btn-secondary btn-sm" @click="retry(item)">Try again</button>
-            <button class="btn btn-ghost btn-sm text-gray-600" @click="discard(item)">Discard</button>
+        <li v-for="item in items" :key="item.id" class="py-3">
+          <p class="flex items-center gap-2 text-sm font-medium text-gray-900">
+            <FeatherIcon :name="item.failed ? 'alert-triangle' : 'clock'" class="h-4 w-4 shrink-0" :class="item.failed ? 'text-red-600' : 'text-amber-600'" />
+            <span>{{ item.label }}<template v-if="item.job"> · <router-link :to="{ name: 'OpsWorkOrder', params: { name: item.job } }" class="text-brand-600 hover:underline" @click="open = false">{{ item.job }}</router-link></template></span>
+          </p>
+          <p v-if="item.failed" class="mt-0.5 text-sm text-red-700">{{ item.error }}</p>
+          <p class="text-xs text-gray-500">Made {{ fromNow(new Date(item.created).toISOString()) }}{{ item.failed ? '' : ' · waiting' }}</p>
+          <div v-if="item.failed" class="mt-2 flex gap-2">
+            <button class="btn btn-secondary btn-sm" @click="act(retry, item)">Try again</button>
+            <button class="btn btn-ghost btn-sm text-gray-600" @click="act(discard, item)">Discard</button>
           </div>
         </li>
       </ul>
@@ -37,9 +41,20 @@ import { ref, computed, watch } from 'vue'
 import { FeatherIcon } from 'frappe-ui'
 import Modal from './Modal.vue'
 import { fromNow } from '@/data/ops'
-import { offline, sync, retry, discard } from '@/data/offline'
+import { offline, sync, retry, discard, outbox } from '@/data/offline'
 
 const open = ref(false)
-watch(() => offline.failed.length, (n) => !n && (open.value = false))
+const items = ref([])
+const refresh = async () => (items.value = await outbox())
+async function show() {
+  await refresh()
+  open.value = true
+}
+async function act(fn, item) {
+  await fn(item)
+  await refresh()
+}
+// Keep the open list current while things are being sent.
+watch(() => [offline.pending, offline.failed.length], () => open.value && refresh())
 const tone = computed(() => (!offline.online ? 'border-amber-200 bg-amber-50 text-amber-900' : offline.failed.length ? 'border-red-200 bg-red-50 text-red-800' : 'border-brand-100 bg-brand-50 text-brand-900'))
 </script>
