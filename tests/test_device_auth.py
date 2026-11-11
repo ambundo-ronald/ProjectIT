@@ -35,7 +35,7 @@ def load():
     frappe.get_all = MagicMock(return_value=[])
     frappe.generate_hash = lambda length=10: "t" * length
     frappe.session = SimpleNamespace(user="Guest")
-    frappe.local = SimpleNamespace(site="ops.test", request=None)
+    frappe.local = SimpleNamespace(site="ops.test", request=None, form_dict={})
     utils = ModuleType("frappe.utils")
     utils.now_datetime = lambda: datetime(2026, 11, 12, 9)
     utils.time_diff_in_seconds = lambda a, b: (a - b).total_seconds()
@@ -86,6 +86,15 @@ class DeviceAuthTests(unittest.TestCase):
         self.m.authenticate()
         self.f.set_user.assert_called_once_with("tech@example.com")
         self.assertEqual(self.f.local.techy_device, "DEV-1")
+
+    def test_request_arguments_survive_signing_in(self):
+        # frappe.set_user empties form_dict; the job, project or log the phone sent must still arrive.
+        args = {"cmd": "projectit.work_orders.get_work_order", "name": "TASK-1"}
+        self.f.local.form_dict = args
+        self.f.set_user.side_effect = lambda user: setattr(self.f.local, "form_dict", {})
+        self.request(headers={"X-Techy-Device": TOKEN})
+        self.m.authenticate()
+        self.assertEqual(self.f.local.form_dict, args)
 
     def test_unknown_token_is_refused(self):
         self.request(headers={"X-Techy-Device": "wrong"})

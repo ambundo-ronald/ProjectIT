@@ -16,6 +16,14 @@ export function sessionUser() {
   return _sessionUser
 }
 
+/** The signed-in person's full name and user id, for greetings and the menu. */
+export function whoAmI() {
+  if (isNative) return { fullName: server.full_name || '', userId: server.user || '' }
+  const cookies = new URLSearchParams(document.cookie.split('; ').join('&'))
+  const fullName = cookies.get('full_name') || ''
+  return { fullName: fullName === 'Guest' ? '' : fullName, userId: cookies.get('user_id') || '' }
+}
+
 export const session = reactive({
   login: createResource({
     url: 'login',

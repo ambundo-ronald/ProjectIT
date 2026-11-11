@@ -52,7 +52,10 @@ def _active(filters):
 
 
 def _signed_in_as(device):
+    # frappe.set_user clears the request's arguments; keep them, as Frappe's own API-key sign-in does.
+    form_dict = frappe.local.form_dict
     frappe.set_user(device.user)
+    frappe.local.form_dict = form_dict
     frappe.local.techy_device = device.name
 
 
