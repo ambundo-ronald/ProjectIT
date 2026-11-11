@@ -1,5 +1,7 @@
 """Contract tests for technicians' rights: their own tasks, open jobs to pick up, and what stays with managers."""
 import importlib
+import sys
+from types import ModuleType
 import json
 import unittest
 from unittest.mock import MagicMock, patch
@@ -126,3 +128,64 @@ class TechnicianJobRuleTests(OpsTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OtherRolesKeepTheirRightsTests(OpsTestCase):
+    """Salespeople (or anyone a site gives Project or Task rights) are not narrowed like field staff."""
+
+    def setUp(self):
+        super().setUp()
+        self.perm = importlib.import_module("projectit.permissions")
+        self.readers = {"Project": ["Projects User", "Sales User", "Employee", "Maintenance User"]}
+        self.frappe.db.exists = MagicMock(return_value=None)  # no Custom DocPerm: the standard rows apply
+        self.frappe.get_all = MagicMock(side_effect=lambda doctype, filters=None, pluck=None: self.readers.get(filters["parent"], []))
+        self.frappe.local.__dict__.pop("techy_doctype_readers", None)
+
+    def test_a_salesperson_with_project_rights_creates_and_sees_projects(self):
+        self.frappe.get_roles.return_value = ["Sales User", "Employee"]
+        new = Dict(name="PROJ-NEW")
+        self.assertTrue(self.perm.project_permission(new, "create"))
+        self.assertEqual(self.perm.project_query(), "")  # every project, as ERPNext allows
+
+    def test_field_staff_are_still_narrowed(self):
+        self.frappe.get_roles.return_value = ["Employee", "Maintenance User"]
+        self.assertTrue(self.perm.limited(doctype="Project"))
+        self.assertFalse(self.perm.project_permission(Dict(name="PROJ-1"), "create"))
+
+    def test_a_salesperson_without_task_rights_is_still_narrowed_on_tasks(self):
+        self.frappe.get_roles.return_value = ["Sales User", "Employee"]
+        self.assertTrue(self.perm.limited(doctype="Task"))  # Sales User has no Task rights here
+
+
+class NewProjectCrewRecordTests(OpsTestCase):
+    def setUp(self):
+        super().setUp()
+        model = ModuleType("frappe.model")
+        document = ModuleType("frappe.model.document")
+        document.Document = type("Document", (), {})
+        self.patcher = patch.dict(sys.modules, {"frappe.model": model, "frappe.model.document": document})
+        self.patcher.start()
+        self.addCleanup(self.patcher.stop)
+        self.ctrl = importlib.import_module(
+            "projectit.projectit.doctype.project_allocation_and_instrucions.project_allocation_and_instrucions")
+        self.project = importlib.import_module("projectit.projectit.project")
+
+    def test_the_empty_record_made_with_a_project_needs_no_manager(self):
+        self.frappe.get_roles.return_value = ["Sales User"]
+        self.frappe.flags = Dict()
+        doc = self.ctrl.ProjectAllocationandInstrucions()
+        doc.flags = Dict(created_with_project=True)
+        doc.is_new = lambda: True
+        doc.validate()  # no error
+        doc.flags = Dict()
+        with self.assertRaises(PermissionError):
+            doc.validate()  # a salesperson still cannot change a crew
+
+    def test_creating_a_project_makes_the_record_as_the_system(self):
+        self.frappe.db.exists = MagicMock(return_value=None)
+        pai = MagicMock()
+        pai.flags = Dict()
+        self.frappe.new_doc = MagicMock(return_value=pai)
+        self.project.after_insert_of_project(Dict(name="PROJ-9"), "after_insert")
+        self.assertTrue(pai.flags.ignore_permissions and pai.flags.created_with_project)
+        pai.insert.assert_called_once()

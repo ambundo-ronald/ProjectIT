@@ -19,6 +19,9 @@ def check_editor():
 
 class ProjectAllocationandInstrucions(Document):
 	def validate(self):
+		# The empty record made with a new project (projectit.projectit.project) is not a crew change.
+		if self.flags.created_with_project and self.is_new():
+			return
 		check_editor()
 
 	def on_trash(self):

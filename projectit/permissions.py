@@ -7,8 +7,9 @@ migrate, see setup.ensure_task_permissions), narrowed by these hooks to:
 - read-only: open work orders that nobody is assigned to yet, so they can pick one up;
 - read-only: the projects they are allocated to in Techy Manage (and no others).
 
-They can never delete a task. People with a wider role keep ERPNext's normal access: managers, Projects Users
-(office staff who plan projects), HR and System Managers. A technician should therefore not also hold Projects
+They can never delete a task. Anyone with another role that the site lets use Tasks or Projects (managers,
+Projects Users, HR, System Managers, and for example Sales Users given Project rights) keeps ERPNext's normal access:
+the narrowing is only for people whose access comes from the roles this app grants (Employee, Maintenance User). A technician should therefore not also hold Projects
 User, which would let them see, change and delete every task in Desk.
 
 The same rules apply in Desk (lists, forms, reports) and in the app.
@@ -20,12 +21,31 @@ FULL_ACCESS = {"System Manager", "Projects Manager", "Projects User", "Maintenan
 OPEN = ("Open", "Overdue")
 
 
-def limited(user=None):
-    """True for technicians and field staff, whose task access is narrowed to their own work."""
+# The roles this app gives Task and Project rights to (setup.ensure_task_permissions): access through these is
+# narrowed. Rights from any other role are left to ERPNext.
+GRANTED = {"Employee", "Maintenance User"}
+GENERIC = {"All", "Guest", "Desk User"}
+
+
+def _other_roles_with_rights(doctype, roles):
+    """The user's roles, other than the ones this app granted, that the site lets read the DocType."""
+    cache = frappe.local.__dict__.setdefault("techy_doctype_readers", {})
+    if doctype not in cache:
+        # Frappe uses a DocType's Custom DocPerm rows instead of its standard ones whenever it has any.
+        source = "Custom DocPerm" if frappe.db.exists("Custom DocPerm", {"parent": doctype}) else "DocPerm"
+        cache[doctype] = set(frappe.get_all(source, filters={"parent": doctype, "permlevel": 0, "read": 1}, pluck="role"))
+    return cache[doctype] & (set(roles) - GRANTED - GENERIC)
+
+
+def limited(user=None, doctype="Task"):
+    """True for technicians and field staff, whose Task (or Project) access is narrowed to their own work."""
     user = user or frappe.session.user
     if user == "Administrator":
         return False
-    return not set(frappe.get_roles(user)) & FULL_ACCESS
+    roles = set(frappe.get_roles(user))
+    if roles & FULL_ACCESS:
+        return False
+    return not _other_roles_with_rights(doctype, roles)
 
 
 def assigned_to(name, user):
@@ -97,13 +117,13 @@ def allocated_projects(user=None):
 def project_permission(doc, ptype=None, user=None, debug=False):
     """has_permission hook for Project: field staff read only the projects they are allocated to."""
     user = user or frappe.session.user
-    if not limited(user):
+    if not limited(user, "Project"):
         return True
     return ptype in ("read", "print") and doc.name in allocated_projects(user)
 
 
 def project_query(user=None):
     user = user or frappe.session.user
-    if not limited(user):
+    if not limited(user, "Project"):
         return ""
     return f"`tabProject`.name in ({ALLOCATED.format(user=frappe.db.escape(user))})"
