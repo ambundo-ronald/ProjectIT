@@ -37,7 +37,7 @@
           </p>
           <div v-if="manager || log.procedure" class="mt-1.5 flex items-center gap-1.5 text-xs text-gray-600">
             <FeatherIcon name="clipboard" class="h-3.5 w-3.5 shrink-0 text-gray-400" />
-            <ProcedureSelect v-if="manager" :model-value="log.procedure || ''" :label="`Procedure for ${log.task_name}`" placeholder="No procedure" class="h-7 w-auto min-w-0 max-w-[15rem] py-0 pl-2 pr-7 text-xs" @update:model-value="(v) => setProcedure(log, v)" />
+            <ProcedureSelect v-if="manager" compact :model-value="log.procedure || ''" :label="`Procedure for ${log.task_name}`" placeholder="No procedure" class="h-7 w-auto min-w-0 max-w-[15rem] py-0 pl-2 pr-7 text-xs" @update:model-value="(v) => setProcedure(log, v)" />
             <span v-else class="truncate">{{ log.procedure_title }}</span>
           </div>
         </div>

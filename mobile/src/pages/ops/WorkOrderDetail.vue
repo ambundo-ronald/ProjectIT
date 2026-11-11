@@ -116,7 +116,7 @@
             <p class="mt-0.5 text-sm text-gray-500">Readings, pass/fail checks, photos and sign-off from the procedure library.</p>
           </div>
           <div class="flex gap-2 sm:w-80">
-            <ProcedureSelect v-model="picked" placeholder="Choose a procedure" class="min-w-0 flex-1" />
+            <ProcedureSelect v-model="picked" :allow-none="false" placeholder="Choose a procedure" class="min-w-0 flex-1" />
             <button class="btn btn-primary" :disabled="!picked || busy" @click="attachProcedure">Add</button>
           </div>
         </div>

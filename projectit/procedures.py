@@ -87,7 +87,7 @@ def list_procedures(search=None, archived=0):
         or_filters = {"title": ["like", like], "name": ["like", like], "category": ["like", like]}
     rows = frappe.get_all("Techy Procedure", filters=filters, or_filters=or_filters,
         fields=["name", "title", "category", "description", "disabled", "modified"], order_by="title asc",
-        limit_page_length=200)
+        limit_page_length=1000)
     counts, used = {}, {}
     if rows:
         counts = dict(frappe.db.sql("""SELECT parent, COUNT(*) FROM `tabTechy Procedure Step`
