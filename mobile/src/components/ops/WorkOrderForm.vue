@@ -114,10 +114,9 @@
         </template>
         <div>
           <label class="label" for="wo-project">Project <span class="font-normal text-gray-400">(optional)</span></label>
-          <select id="wo-project" v-model="form.project" class="input">
-            <option value="">No project</option>
-            <option v-for="p in options.projects" :key="p.name" :value="p.name">{{ p.project_name }}</option>
-          </select>
+          <SearchSelect id="wo-project" v-model="form.project" :options="projectOptions(options.projects)" icon="briefcase"
+            aria-label="Project" placeholder="No project" none-label="No project" search-placeholder="Search by project, code or customer"
+            empty-text="No open projects." />
         </div>
       </div>
     </form>
@@ -138,6 +137,8 @@ import PeoplePicker from './PeoplePicker.vue'
 import AssetPicker from './AssetPicker.vue'
 import EquipmentPicker from './EquipmentPicker.vue'
 import ProcedureSelect from './ProcedureSelect.vue'
+import SearchSelect from './SearchSelect.vue'
+import { projectOptions } from '@/data/pickers'
 import { api, me, tokens } from '@/data/ops'
 import { KIND } from '@/data/links'
 

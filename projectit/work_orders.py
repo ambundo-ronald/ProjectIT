@@ -397,8 +397,9 @@ def attach_photo(name, content):
 @frappe.whitelist()
 def options():
     ops.system_user()
-    projects = frappe.get_list("Project", filters={"status": "Open"}, fields=["name", "project_name"],
-        order_by="project_name asc", limit_page_length=200)
+    # All open projects (no cap: the pickers search them on the phone), with the customer to search by.
+    projects = frappe.get_list("Project", filters={"status": "Open"}, fields=["name", "project_name", "customer"],
+        order_by="project_name asc", limit_page_length=0)
     locations = frappe.get_all("Location", fields=["name", "location_name", "parent_location"],
         order_by="name asc", limit_page_length=500)
     return {"projects": projects, "locations": locations, "priorities": PRIORITIES, "categories": CATEGORIES,

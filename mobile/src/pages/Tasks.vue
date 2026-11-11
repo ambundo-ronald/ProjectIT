@@ -108,10 +108,9 @@
         <div class="grid gap-4 sm:grid-cols-2">
           <div>
             <label class="label" for="task-project">Project <span class="text-red-500">*</span></label>
-            <select id="task-project" v-model="form.project" required class="input" @change="loadPeople">
-              <option value="">Choose project</option>
-              <option v-for="p in options.projects" :key="p.name" :value="p.name">{{ p.project_name }}</option>
-            </select>
+            <SearchSelect id="task-project" v-model="form.project" :options="projectOptions(options.projects)" required icon="briefcase"
+              aria-label="Project" placeholder="Choose project" search-placeholder="Search by project, code or customer"
+              empty-text="No open projects." @change="loadPeople" />
           </div>
           <div>
             <label class="label" for="task-assignee">Assign to <span class="text-red-500">*</span></label>
@@ -161,6 +160,8 @@ import UserAvatar from '@/components/ops/UserAvatar.vue'
 import Composer from '@/components/ops/Composer.vue'
 import Modal from '@/components/ops/Modal.vue'
 import Pager from '@/components/ops/Pager.vue'
+import SearchSelect from '@/components/ops/SearchSelect.vue'
+import { projectOptions } from '@/data/pickers'
 import { usePageLength } from '@/data/paging'
 import { api, STATUS_LABEL, formatDate, fromNow, dueIn, safeFile } from '@/data/ops'
 import PhotoButtons from '@/components/ops/PhotoButtons.vue'

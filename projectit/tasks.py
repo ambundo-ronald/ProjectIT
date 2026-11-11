@@ -174,7 +174,7 @@ def task_options(project=None):
     _login()
     if not _manager():
         frappe.throw(_("Project manager access is required."), frappe.PermissionError)
-    projects = frappe.get_list("Project", filters={"status": "Open"}, fields=["name", "project_name"],
+    projects = frappe.get_list("Project", filters={"status": "Open"}, fields=["name", "project_name", "customer"],
         order_by="project_name asc", limit_page_length=0)
     people = []
     if project:

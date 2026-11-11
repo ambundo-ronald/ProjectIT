@@ -58,9 +58,14 @@
       <!-- Project picker -->
       <section v-if="!session">
         <h2 class="section-label mb-2 px-1">Where are you working?</h2>
+        <div v-if="data.projects.length > 5" class="relative mb-2">
+          <FeatherIcon name="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <input v-model="projectQuery" type="search" class="input pl-9" placeholder="Search your projects" aria-label="Search your projects" autocomplete="off" />
+        </div>
+        <p v-if="data.projects.length && !shownProjects.length" class="card p-4 text-sm text-gray-500">No project matches “{{ projectQuery }}”.</p>
         <div v-if="data.projects.length" class="space-y-2" role="radiogroup" aria-label="Project">
           <button
-            v-for="p in data.projects"
+            v-for="p in shownProjects"
             :key="p.project"
             role="radio"
             :aria-checked="selectedId === p.project"
@@ -85,10 +90,9 @@
 
         <div v-if="selected && (tasks.length || loadingTasks)" class="mt-3">
           <label class="label" for="work-task">Task <span class="font-normal text-gray-400">(optional)</span></label>
-          <select id="work-task" v-model="taskId" class="input" :disabled="loadingTasks">
-            <option value="">Project time only</option>
-            <option v-for="t in tasks" :key="t.name" :value="t.name">{{ t.subject }}</option>
-          </select>
+          <SearchSelect id="work-task" v-model="taskId" :options="taskOptions(tasks)" :loading="loadingTasks" :disabled="loadingTasks"
+            icon="check-square" aria-label="Task" placeholder="Project time only" none-label="Project time only"
+            search-placeholder="Search your tasks" />
           <p class="hint">Time is logged against this task at check-out.</p>
         </div>
       </section>
@@ -156,6 +160,8 @@ import Modal from '@/components/ops/Modal.vue'
 import EmptyState from '@/components/ops/EmptyState.vue'
 import UserAvatar from '@/components/ops/UserAvatar.vue'
 import AvatarStack from '@/components/ops/AvatarStack.vue'
+import SearchSelect from '@/components/ops/SearchSelect.vue'
+import { taskOptions } from '@/data/pickers'
 import { api, formatDate, formatTime, readFile } from '@/data/ops'
 import { showCamera, cameraMode, imageFile } from '@/data/camera_context'
 
@@ -173,6 +179,15 @@ let offset = 0 // server clock minus device clock, so the timer is right even if
 
 const session = computed(() => data.value?.session || null)
 const selected = computed(() => data.value?.projects.find((p) => p.project === selectedId.value) || null)
+const projectQuery = ref('')
+// The chosen project always stays in view, so the search never hides what you picked.
+const shownProjects = computed(() => {
+  const words = projectQuery.value.toLowerCase().split(/\s+/).filter(Boolean)
+  const all = data.value?.projects || []
+  if (!words.length) return all
+  return all.filter((p) => p.project === selectedId.value
+    || words.every((w) => `${p.project_name} ${p.project} ${p.customer || ''}`.toLowerCase().includes(w)))
+})
 const focus = computed(() => (session.value ? data.value.projects.find((p) => p.project === session.value.project) : selected.value) || null)
 const activeTask = computed(() => tasks.value.find((t) => t.name === session.value?.task)?.subject || '')
 const onSite = (p) => p.team.filter((m) => m.on_site).length

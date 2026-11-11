@@ -11,7 +11,7 @@ from projectit import attendance, ops
 
 def _projects(employee):
     rows = frappe.db.sql("""
-        SELECT p.name AS project, p.project_name, pai.name AS allocation, pai.work_instruction,
+        SELECT p.name AS project, p.project_name, p.customer, pai.name AS allocation, pai.work_instruction,
             eai.instructions AS my_instructions
         FROM `tabEmployee Allocation Instruction` eai
         INNER JOIN `tabProject Allocation and Instrucions` pai ON pai.name = eai.parent
