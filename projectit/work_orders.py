@@ -9,8 +9,8 @@ import frappe
 from frappe import _
 from frappe.utils import cint, get_datetime, getdate, now_datetime, nowdate
 
-from projectit import (billing, equipment as installed, failures, meters, ops, parts, permissions, procedures, ratings,
-    service_report, sla, timer)
+from projectit import (billing, contractors, equipment as installed, failures, meters, ops, parts, permissions,
+    procedures, ratings, service_report, sla, timer)
 
 FIELDS = ["name", "subject", "status", "priority", "exp_end_date", "custom_work_category", "custom_asset",
     "custom_location", "custom_equipment", "custom_customer", "project", "is_group", "progress", "owner", "creation",
@@ -51,6 +51,8 @@ def _work_order(name, write=False):
             and (write or not permissions.is_available(doc)):
         frappe.throw(_("This work order is not assigned to you."), frappe.PermissionError)
     doc.check_permission("write" if write else "read")
+    if write:
+        contractors.check_can_work(doc)
     return doc
 
 
@@ -122,7 +124,9 @@ def detail(doc):
     if doc.custom_work_request:
         request = frappe.db.get_value("Issue", doc.custom_work_request, ["name", "subject", "raised_by"], as_dict=True)
     can_write = bool(frappe.has_permission("Task", "write", doc=doc))
-    return {"work_order": {field: doc.get(field) for field in FIELDS}, "description": ops.plain(doc.description),
+    if contractors.is_contractor():
+        can_write = can_write and doc.get("custom_contractor_state") == "Accepted"
+    data = {"work_order": {field: doc.get(field) for field in FIELDS}, "description": ops.plain(doc.description),
         "assignees": ops.people(_assignees([doc.name])[doc.name]), "steps": steps, "comments": comments,
         "files": [f for f in ops.files("Task", doc.name) if not f.file_name.startswith("signature-")],
         "asset": asset, "request": request, "procedure": procedures.run_data(doc.name),
@@ -136,6 +140,25 @@ def detail(doc):
         "pm_log": doc.custom_asset_maintenance_log, "workflow": _workflow(), "can_write": can_write,
         "manager": ops.manager(), "mine": permissions.is_mine(doc),
         "can_take": not ops.manager() and permissions.is_available(doc), "on_way": on_way(doc)}
+    return _for_contractor(data, doc) if contractors.is_contractor() else _with_contractor(data, doc)
+
+
+def _with_contractor(data, doc):
+    data["contractor"] = contractors.job_contractor(doc.name) if doc.get("custom_contractor") else None
+    return data
+
+
+def _for_contractor(data, doc):
+    """What a contractor's people see of a job: the work, never our prices, invoices or internal reports."""
+    data.update(billing=None, report=None, rating=None, can_take=False, manager=False)
+    parts_data = data.get("parts")
+    if parts_data:
+        parts_data["rows"] = [{k: v for k, v in r.items() if k not in ("rate", "amount", "valuation_rate", "billing",
+            "billing_set_by_manager")} for r in parts_data["rows"]]
+        parts_data.update(chargeable_total=None, cost_total=None, can_approve=False, manager=False)
+    data["contractor"] = contractors.job_contractor(doc.name)
+    data["contractor_view"] = True
+    return data
 
 
 def on_way(doc):
@@ -315,6 +338,8 @@ def update_work_order(name, modified, status=None, priority=None, due_date=None,
     if due_date:
         doc.exp_end_date = getdate(due_date)
     wanted = current = None
+    if assignees is not None and contractors.is_contractor():
+        frappe.throw(_("Choose your crew in the job's Crew section."), frappe.PermissionError)
     if assignees is not None:
         wanted = set(ops.active_users(assignees))
         current = set(_assignees([doc.name])[doc.name])

@@ -395,12 +395,17 @@ def machine_costs(jobs, start, end, logged=None, cost_rate=0):
     period_start, period_end, period_hours = _window(start, end)
     done = [j for j in jobs if j.status == "Completed" and _in(completed_at(j), start, end) and machine_of(j)]
     parts = parts_cost(j.name for j in done)
+    from projectit import contractor_pay
+    contracted = contractor_pay.job_costs(j.name for j in done)
     down = _down_by_machine(jobs, start, end)
-    rows = defaultdict(lambda: {"jobs": 0, "repairs": 0, "parts": 0.0, "hours": 0.0})
+    rows = defaultdict(lambda: {"jobs": 0, "repairs": 0, "parts": 0.0, "hours": 0.0, "contractors": 0.0})
     for job in done:
         row = rows[machine_of(job)]
         row["jobs"] += 1
         row["parts"] += parts.get(job.name, 0)
+        if job.name in contracted:
+            row["contractors"] += contracted[job.name]  # what we pay the contractor, not our labour cost rate
+            continue
         row["hours"] += sum(logged[job.name].values()) if logged.get(job.name) else flt(job.custom_labour_hours)
     for job in jobs:
         key = machine_of(job)
@@ -415,7 +420,7 @@ def machine_costs(jobs, start, end, logged=None, cost_rate=0):
         # Running time: the period, from when the machine went into service, less the hours it was down.
         since = max(period_start, get_datetime(getdate(meta["since"]))) if meta.get("since") else period_start
         running = max(0.0, (period_end - since).total_seconds() / 3600 - down.get(key, {}).get("hours", 0))
-        labour = row["hours"] * flt(cost_rate)
+        labour = row["hours"] * flt(cost_rate) + row["contractors"]
         machines.append({"kind": key[0], "name": key[1], "label": meta["label"], "customer": meta["customer"],
             "customer_name": meta["customer_name"], "where": meta["where"], "jobs": row["jobs"], "breakdowns": row["repairs"],
             "parts_cost": round(row["parts"], 2), "labour_hours": round(row["hours"], 1), "labour_cost": round(labour, 2),
@@ -544,11 +549,15 @@ def contract_profit(start, end, jobs, logged=None):
                 extra += labour["amount"] + part_total
         parts_cost = flt(frappe.db.sql("""SELECT SUM(qty * valuation_rate) FROM `tabTechy Part Usage`
             WHERE status = 'Issued' AND work_order IN %s""", (tuple(j.name for j in own) or ("",),))[0][0])
-        hours = sum(sum(logged[j.name].values()) if logged.get(j.name) else flt(j.custom_labour_hours) for j in own)
-        income, cost = subscription + extra, parts_cost + hours * cost_rate
+        from projectit import contractor_pay
+        contracted = contractor_pay.job_costs(j.name for j in own)
+        hours = sum(sum(logged[j.name].values()) if logged.get(j.name) else flt(j.custom_labour_hours) for j in own
+            if j.name not in contracted)
+        labour_cost = hours * cost_rate + sum(contracted.values())
+        income, cost = subscription + extra, parts_cost + labour_cost
         result.append({"name": doc.name, "title": doc.title, "customer_name": doc.customer_name,
             "state": contracts.state(doc), "jobs": len(own), "subscription": subscription, "extra": extra,
-            "income": income, "parts_cost": parts_cost, "labour_hours": round(hours, 1), "labour_cost": hours * cost_rate,
+            "income": income, "parts_cost": parts_cost, "labour_hours": round(hours, 1), "labour_cost": labour_cost,
             "cost": cost, "profit": income - cost, "margin": round(100 * (income - cost) / income) if income else None})
     return {"rows": sorted(result, key=lambda r: r["profit"]), "labour_cost_rate": cost_rate}
 

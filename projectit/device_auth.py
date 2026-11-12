@@ -34,6 +34,7 @@ SIGNED_METHODS = {
     "projectit.customer_reports.export",
     "projectit.plant.report",
     "projectit.plant.monthly_report",
+    "projectit.contractor_pay.download_statement",
 }
 
 

@@ -177,3 +177,68 @@ def remove_member(project, employee):
 
 
 project_detail = project
+
+
+# Contractors on a project ----------------------------------------------------------------------------------------
+
+def _contractor_rows(doc):
+    rows = []
+    for r in doc.get("contractors") or []:
+        rows.append({"contractor": r.contractor, "contractor_name": r.contractor_name or frappe.db.get_value(
+            "Techy Contractor", r.contractor, "contractor_name"), "instructions": strip_html(r.instructions or "")})
+    return rows
+
+
+@frappe.whitelist()
+def project_contractors(project):
+    """The contractors given this project, and the active ones that can be added."""
+    _require_manager()
+    project = _resolve(project)
+    doc = _allocation(project)
+    given = _contractor_rows(doc) if doc.name else []
+    taken = {r["contractor"] for r in given}
+    available = frappe.get_all("Techy Contractor", filters={"enabled": 1, "name": ["not in", list(taken) or [""]]},
+        fields=["name", "contractor_name", "contractor_type", "trades"], order_by="contractor_name asc", limit_page_length=0)
+    from projectit import ops
+    return {"contractors": given, "available": available, "can_edit": bool(frappe.has_permission(ALLOCATION, "write")),
+        "milestones": ops.manager()}
+
+
+@frappe.whitelist(methods=["POST"])
+def add_contractor(project, contractor, instructions=None):
+    _require_manager()
+    doc = _allocation(project, write=True)
+    if not frappe.db.exists("Techy Contractor", {"name": contractor, "enabled": 1}):
+        frappe.throw(_("Choose an active contractor."))
+    if any(r.contractor == contractor for r in doc.get("contractors") or []):
+        frappe.throw(_("This contractor is already on the project."))
+    doc.append("contractors", {"contractor": contractor, "instructions": _text(instructions)})
+    doc.save()
+    from projectit import contractors, ops
+    ops.notify(contractors.job_runners(contractor), _("New project: {0}").format(
+        frappe.db.get_value("Project", project, "project_name") or project), "Project", project)
+    return project_contractors(project)
+
+
+@frappe.whitelist(methods=["POST"])
+def update_contractor(project, contractor, instructions):
+    _require_manager()
+    doc = _allocation(project, write=True)
+    row = next((r for r in doc.get("contractors") or [] if r.contractor == contractor), None)
+    if not row:
+        frappe.throw(_("This contractor is not on the project."))
+    row.instructions = _text(instructions)
+    doc.save()
+    return project_contractors(project)
+
+
+@frappe.whitelist(methods=["POST"])
+def remove_contractor(project, contractor):
+    _require_manager()
+    doc = _allocation(project, write=True)
+    before = len(doc.get("contractors") or [])
+    doc.contractors = [r for r in doc.contractors if r.contractor != contractor]
+    if len(doc.contractors) == before:
+        frappe.throw(_("This contractor is not on the project."))
+    doc.save()
+    return project_contractors(project)

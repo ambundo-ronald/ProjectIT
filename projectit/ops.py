@@ -19,9 +19,13 @@ def login():
 
 
 def system_user():
-    """Chat and work orders are for staff (System Users), not website/portal users."""
+    """Chat and work orders are for staff (System Users), not website/portal users. Contractors' accounts also pass:
+    they reach only their own jobs' endpoints (projectit.contractors.guard) and only their own jobs (permissions)."""
     login()
     if frappe.get_cached_value("User", frappe.session.user, "user_type") != "System User":
+        from projectit import contractors
+        if contractors.membership():
+            return
         frappe.throw(_("Techy Ops is available to staff accounts only."), frappe.PermissionError)
 
 

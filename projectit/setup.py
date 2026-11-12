@@ -60,9 +60,11 @@ def ensure_ops_defaults():
 
 # Task rights the Techy apps need, narrowed to each person's own work by projectit.permissions. Never delete.
 TASK_RIGHTS = {"Maintenance User": ("read", "write", "create", "report", "print"),
-    "Employee": ("read", "write", "report", "print")}
+    "Employee": ("read", "write", "report", "print"),
+    # Contractors: their own jobs only (projectit.permissions and projectit.contractors.guard).
+    "Techy Contractor": ("read", "write")}
 # Read the projects they are allocated to (narrowed by projectit.permissions.project_query).
-PROJECT_RIGHTS = {"Maintenance User": ("read",), "Employee": ("read",)}
+PROJECT_RIGHTS = {"Maintenance User": ("read",), "Employee": ("read",), "Techy Contractor": ("read",)}
 
 
 def ensure_task_permissions():
@@ -89,3 +91,13 @@ def ensure_customer_roles():
         else:
             frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": 0, "home_page": HOME}).insert(
                 ignore_permissions=True)
+
+
+def ensure_contractor_role():
+    """The role for contractors' accounts (see projectit.contractors): no Desk, and signing in opens their app."""
+    from projectit.contractors import HOME, ROLE
+    if frappe.db.exists("Role", ROLE):
+        frappe.db.set_value("Role", ROLE, {"desk_access": 0, "home_page": HOME})
+    else:
+        frappe.get_doc({"doctype": "Role", "role_name": ROLE, "desk_access": 0, "home_page": HOME}).insert(
+            ignore_permissions=True)

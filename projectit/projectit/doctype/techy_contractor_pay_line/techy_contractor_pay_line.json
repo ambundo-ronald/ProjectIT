@@ -1,0 +1,283 @@
+{
+ "actions": [],
+ "creation": "2026-11-13 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "contractor",
+  "contractor_name",
+  "pay_type",
+  "description",
+  "status",
+  "column_break_1",
+  "work_order",
+  "project",
+  "purchase_invoice",
+  "amount_section",
+  "unit",
+  "rate",
+  "hours_from",
+  "reported_qty",
+  "qty",
+  "column_break_2",
+  "percent",
+  "contract_sum",
+  "proof_work_order",
+  "amount",
+  "approval_section",
+  "approved_by",
+  "approved_on",
+  "purchase",
+  "part_usage",
+  "column_break_3",
+  "queried",
+  "query_note",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "contractor",
+   "fieldtype": "Link",
+   "label": "Contractor",
+   "options": "Techy Contractor",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "contractor_name",
+   "fieldtype": "Data",
+   "label": "Contractor Name",
+   "fetch_from": "contractor.contractor_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pay_type",
+   "fieldtype": "Select",
+   "label": "Pay Type",
+   "options": "Fixed\nHourly\nPer unit\nMilestone\nReimbursement\nDeduction",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Data",
+   "label": "Description",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nApproved\nOn hold\nBilled\nCancelled",
+   "default": "Draft",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1,
+   "description": "Draft: agreed, work not yet approved. Approved: to be paid in the next payout run. Billed: on a Purchase Invoice."
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "work_order",
+   "fieldtype": "Link",
+   "label": "Work Order",
+   "options": "Task",
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "options": "Project",
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "purchase_invoice",
+   "fieldtype": "Link",
+   "label": "Purchase Invoice",
+   "options": "Purchase Invoice",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "amount_section",
+   "fieldtype": "Section Break",
+   "label": "Amount"
+  },
+  {
+   "fieldname": "unit",
+   "fieldtype": "Data",
+   "label": "Unit"
+  },
+  {
+   "fieldname": "rate",
+   "fieldtype": "Currency",
+   "label": "Rate"
+  },
+  {
+   "fieldname": "hours_from",
+   "fieldtype": "Select",
+   "label": "Hours From",
+   "options": "\nCheck-in\nTimer",
+   "depends_on": "eval:doc.pay_type=='Hourly'"
+  },
+  {
+   "fieldname": "reported_qty",
+   "fieldtype": "Float",
+   "label": "Quantity Reported",
+   "depends_on": "eval:doc.pay_type=='Per unit'",
+   "description": "What the contractor's crew reported."
+  },
+  {
+   "fieldname": "qty",
+   "fieldtype": "Float",
+   "label": "Quantity",
+   "default": "1"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "percent",
+   "fieldtype": "Percent",
+   "label": "Share of Contract Sum",
+   "depends_on": "eval:doc.pay_type=='Milestone'"
+  },
+  {
+   "fieldname": "contract_sum",
+   "fieldtype": "Currency",
+   "label": "Contract Sum",
+   "depends_on": "eval:doc.pay_type=='Milestone'"
+  },
+  {
+   "fieldname": "proof_work_order",
+   "fieldtype": "Link",
+   "label": "Done When This Job Is Completed",
+   "options": "Task",
+   "depends_on": "eval:doc.pay_type=='Milestone'"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "label": "Amount",
+   "in_list_view": 1,
+   "read_only": 1,
+   "description": "Deductions are stored as a positive amount and taken off the bill."
+  },
+  {
+   "fieldname": "approval_section",
+   "fieldtype": "Section Break",
+   "label": "Approval"
+  },
+  {
+   "fieldname": "approved_by",
+   "fieldtype": "Link",
+   "label": "Approved By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "approved_on",
+   "fieldtype": "Datetime",
+   "label": "Approved On",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "purchase",
+   "fieldtype": "Link",
+   "label": "Bought On Site",
+   "options": "Techy Contractor Purchase",
+   "read_only": 1
+  },
+  {
+   "fieldname": "part_usage",
+   "fieldtype": "Link",
+   "label": "Part Not Returned",
+   "options": "Techy Part Usage",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "queried",
+   "fieldtype": "Check",
+   "label": "Queried",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "query_note",
+   "fieldtype": "Small Text",
+   "label": "Query"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-11-13 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Projectit",
+ "name": "Techy Contractor Pay Line",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1,
+   "role": "System Manager"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1,
+   "role": "Maintenance Manager"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1,
+   "role": "Projects Manager"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "PAY-.#####",
+ "naming_rule": "Expression (old style)",
+ "title_field": "description",
+ "track_changes": 1
+}
