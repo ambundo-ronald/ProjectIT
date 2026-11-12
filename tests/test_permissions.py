@@ -139,7 +139,19 @@ class OtherRolesKeepTheirRightsTests(OpsTestCase):
         self.readers = {"Project": ["Projects User", "Sales User", "Employee", "Maintenance User"]}
         self.frappe.db.exists = MagicMock(return_value=None)  # no Custom DocPerm: the standard rows apply
         self.frappe.get_all = MagicMock(side_effect=lambda doctype, filters=None, pluck=None: self.readers.get(filters["parent"], []))
-        self.frappe.local.__dict__.pop("techy_doctype_readers", None)
+        # Like Frappe's own frappe.local (a werkzeug Local): attributes only, no __dict__.
+        class Local:
+            __slots__ = ("site", "form_dict", "session", "techy_doctype_readers", "flags")
+        local = Local()
+        local.site, local.form_dict, local.session = self.frappe.local.site, self.frappe.local.form_dict, self.frappe.local.session
+        self.frappe.local = local
+
+    def test_works_on_frappes_local_and_reads_permissions_once_per_request(self):
+        # Regression: frappe.local has no __dict__ (the Projects workspace failed with "AttributeError: __dict__").
+        self.frappe.get_roles.return_value = ["Sales User", "Employee"]
+        self.assertFalse(self.perm.limited("sales@example.com", "Project"))
+        self.assertFalse(self.perm.limited("sales@example.com", "Project"))
+        self.assertEqual(self.frappe.get_all.call_count, 1)
 
     def test_a_salesperson_with_project_rights_creates_and_sees_projects(self):
         self.frappe.get_roles.return_value = ["Sales User", "Employee"]
