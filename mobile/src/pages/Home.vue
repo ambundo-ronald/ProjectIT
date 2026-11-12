@@ -38,6 +38,7 @@ import { useRoute, useRouter } from 'vue-router'
 import EmptyState from '../components/ops/EmptyState.vue'
 import UserMenu from '../components/ops/UserMenu.vue'
 import { api, me, loadMe } from '../data/ops'
+import { whoAmI } from '../data/session'
 
 const router = useRouter()
 const route = useRoute()
@@ -74,8 +75,7 @@ Promise.all([api('projectit.api.my_apps'), loadMe().catch(() => null)])
   })
   .catch(() => (apps.value = []))
 
-const cookies = new URLSearchParams(document.cookie.split('; ').join('&'))
-const firstName = (cookies.get('full_name') || '').split(' ')[0]
+const firstName = whoAmI().fullName.split(' ')[0]
 const hour = new Date().getHours()
 const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
 

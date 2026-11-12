@@ -29,7 +29,10 @@ GENERIC = {"All", "Guest", "Desk User"}
 
 def _other_roles_with_rights(doctype, roles):
     """The user's roles, other than the ones this app granted, that the site lets read the DocType."""
-    cache = frappe.local.__dict__.setdefault("techy_doctype_readers", {})
+    # Cached for the request. frappe.local is a werkzeug Local: attributes work, its __dict__ does not.
+    cache = getattr(frappe.local, "techy_doctype_readers", None)
+    if cache is None:
+        cache = frappe.local.techy_doctype_readers = {}
     if doctype not in cache:
         # Frappe uses a DocType's Custom DocPerm rows instead of its standard ones whenever it has any.
         source = "Custom DocPerm" if frappe.db.exists("Custom DocPerm", {"parent": doctype}) else "DocPerm"

@@ -61,7 +61,7 @@
 import { FeatherIcon } from 'frappe-ui'
 import Dropdown from './Dropdown.vue'
 import UserAvatar from './UserAvatar.vue'
-import { session } from '@/data/session'
+import { session, whoAmI } from '@/data/session'
 import { computed, ref } from 'vue'
 import { me } from '@/data/ops'
 import PresenceDot from './PresenceDot.vue'
@@ -77,9 +77,7 @@ const THEMES = [
 ]
 
 defineProps({ align: { type: String, default: 'right' }, placement: { type: String, default: 'bottom' } })
-const cookies = new URLSearchParams(document.cookie.split('; ').join('&'))
-const fullName = cookies.get('full_name') || ''
-const userId = cookies.get('user_id') || ''
+const { fullName, userId } = whoAmI()
 const toggleNotifications = () => setNotifications(!notify.enabled)
 const testing = ref(false)
 const tested = ref(false)
