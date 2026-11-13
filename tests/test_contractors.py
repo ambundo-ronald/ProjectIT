@@ -307,3 +307,13 @@ class JobScreenTests(ContractorCase):
         with patch.object(self.wo, "_work_order", return_value=doc), self.as_member(LEAD):
             with self.assertRaises(PermissionError):
                 self.wo.update_work_order("TASK-1", "m", assignees='["x@k.test"]')
+
+    def test_owner_opens_a_job_their_crew_is_on(self):
+        # The job screen's own check used to know only assignees, so an owner got "not assigned to you".
+        doc = MagicMock(name="TASK-1", custom_work_order=1, owner="boss@x.test")
+        doc.get = lambda k, d=None: {"custom_contractor": "CTR-1", "custom_contractor_state": "Accepted"}.get(k, d)
+        self.frappe.get_doc.return_value = doc
+        with self.as_member(OWNER), patch.object(self.c, "sees_job", return_value=True):
+            self.assertIs(self.wo._work_order("TASK-1"), doc)
+        with self.as_member(OWNER), patch.object(self.c, "sees_job", return_value=False), self.assertRaises(PermissionError):
+            self.wo._work_order("TASK-1")

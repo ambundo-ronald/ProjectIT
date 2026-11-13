@@ -360,7 +360,8 @@ def list_contractors(search=None, include_disabled=0):
         r.people = people.get(r.name, [])
         r.open_jobs = open_jobs.get(r.name, 0)
         r.owed = owed.get(r.name, {"approved": 0, "billed": 0})
-    return {"contractors": rows, "units": RATE_UNITS, "pay_cycles": PAY_CYCLES, "purchases": PURCHASES}
+    return {"contractors": rows, "units": RATE_UNITS, "pay_cycles": PAY_CYCLES, "purchases": PURCHASES,
+        "currency": frappe.db.get_default("currency")}
 
 
 @frappe.whitelist()
@@ -382,7 +383,7 @@ def get_contractor(name):
         "rates": [{"name": r.name, "activity": r.activity, "unit": r.unit, "rate": r.rate, "item_code": r.item_code,
             "valid_from": r.valid_from} for r in doc.rates],
         "jobs": jobs, "projects": projects, "owed": contractor_pay.owed_by_contractor([name]).get(name),
-        "units": RATE_UNITS, "pay_cycles": PAY_CYCLES, "purchases": PURCHASES}
+        "units": RATE_UNITS, "pay_cycles": PAY_CYCLES, "purchases": PURCHASES, "currency": frappe.db.get_default("currency")}
 
 
 def _supplier_for(name, kind, supplier=None):

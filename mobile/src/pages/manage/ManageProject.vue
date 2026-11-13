@@ -86,6 +86,8 @@
             </EmptyState>
           </div>
         </section>
+
+        <ProjectContractors :project="project" />
       </div>
     </template>
 
@@ -133,6 +135,7 @@ import { FeatherIcon, toast } from 'frappe-ui'
 import Modal from '@/components/ops/Modal.vue'
 import EmptyState from '@/components/ops/EmptyState.vue'
 import UserAvatar from '@/components/ops/UserAvatar.vue'
+import ProjectContractors from '@/components/ops/ProjectContractors.vue'
 import { api, formatDate, formatTime } from '@/data/ops'
 
 const route = useRoute()

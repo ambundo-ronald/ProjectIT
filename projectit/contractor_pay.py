@@ -572,7 +572,8 @@ def query_line(line, note):
 
 @frappe.whitelist(methods=["POST"])
 def answer_query(line, note):
-    ops.require_manager()
+    from projectit import payouts
+    payouts._require()
     row = frappe.get_doc(LINE, line, for_update=True)
     note = ops.text(note, "your answer", 1000)
     row.queried = 0
@@ -584,8 +585,9 @@ def answer_query(line, note):
 
 @frappe.whitelist()
 def queries():
-    """Open pay queries, for managers."""
-    ops.require_manager()
+    """Open pay queries, for managers and Accounts."""
+    from projectit import payouts
+    payouts._require()
     return frappe.get_all(LINE, filters={"queried": 1, "status": ["!=", "Cancelled"]}, fields=LINE_FIELDS,
         order_by="modified desc", limit_page_length=100)
 

@@ -47,7 +47,11 @@ def _work_order(name, write=False):
     if not doc.custom_work_order:
         frappe.throw(_("{0} is not a work order.").format(name))
     # The app's own rule first, so people get a clear message rather than ERPNext's generic one.
-    if not ops.manager() and doc.owner != frappe.session.user and frappe.session.user not in _assignees([name])[name] \
+    if contractors.is_contractor():
+        # A contractor's owner and leads see all their contractor's jobs; crew the ones they are on.
+        if not contractors.sees_job(doc):
+            frappe.throw(_("This job is not yours."), frappe.PermissionError)
+    elif not ops.manager() and doc.owner != frappe.session.user and frappe.session.user not in _assignees([name])[name] \
             and (write or not permissions.is_available(doc)):
         frappe.throw(_("This work order is not assigned to you."), frappe.PermissionError)
     doc.check_permission("write" if write else "read")

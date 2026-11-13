@@ -203,7 +203,7 @@ def owed():
 @frappe.whitelist()
 def report(days=90):
     """Per contractor in the period: jobs done, on time, sent back for rework, average job cost, paid."""
-    ops.require_manager()
+    _require()
     days = frappe.utils.cint(days) if frappe.utils.cint(days) in (30, 90, 180, 365) else 90
     end = getdate(nowdate())
     start = getdate(add_days(end, 1 - days))
