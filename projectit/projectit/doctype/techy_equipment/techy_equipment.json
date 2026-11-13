@@ -16,6 +16,8 @@
   "customer_name",
   "site_address",
   "site",
+  "latitude",
+  "longitude",
   "project",
   "dates_section",
   "delivery_note",
@@ -241,11 +243,24 @@
    "fieldtype": "Table",
    "label": "Supplies",
    "options": "Techy Equipment Supply"
+  },
+  {
+   "fieldname": "latitude",
+   "fieldtype": "Float",
+   "label": "Site Latitude",
+   "precision": "7",
+   "description": "Where the machine is: check-ins far from it are flagged."
+  },
+  {
+   "fieldname": "longitude",
+   "fieldtype": "Float",
+   "label": "Site Longitude",
+   "precision": "7"
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-21 17:00:00.000000",
+ "modified": "2026-11-13 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Techy Equipment",

@@ -140,7 +140,7 @@ const scroller = ref(null)
 const pulse = ref(false)
 const isPhone = ref(window.innerWidth < 768)
 
-const hidden = computed(() => ['Login', 'PublicRequest'].includes(route.name) || route.path.startsWith('/ops/chat') || route.path.startsWith('/plant'))
+const hidden = computed(() => ['Login', 'PublicRequest'].includes(route.name) || route.path.startsWith('/ops/chat') || route.path.startsWith('/plant') || route.path.startsWith('/contractor'))
 const visible = computed(() => ready.value && session.isLoggedIn && !hidden.value)
 // On the chat pages the bubble is hidden, but reminders still pop up there.
 const shownPopups = computed(() => (visible.value ? popups.value : popups.value.filter((p) => p.sticky)))
@@ -155,6 +155,8 @@ const sameAuthor = (i) => i > 0 && !messages.value[i - 1].system && messages.val
 
 async function start() {
   if (ready.value || !session.isLoggedIn || hidden.value) return
+  // Customers and contractors have no team chat; their app's address is known before the router settles.
+  if (/\/(plant|contractor)(\/|$)/.test(window.location.pathname)) return
   try {
     await loadMe()
     await loadChannels()

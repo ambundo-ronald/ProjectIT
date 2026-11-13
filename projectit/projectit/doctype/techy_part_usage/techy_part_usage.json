@@ -26,7 +26,11 @@
   "rejection_reason",
   "column_break_mr",
   "material_request",
-  "material_request_item"
+  "material_request_item",
+  "returns_section",
+  "qty_used",
+  "qty_returned",
+  "materials_reported"
  ],
  "fields": [
   {
@@ -176,11 +180,34 @@
    "label": "Material Request Item",
    "hidden": 1,
    "read_only": 1
+  },
+  {
+   "fieldname": "returns_section",
+   "fieldtype": "Section Break",
+   "label": "Used and returned",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "qty_used",
+   "fieldtype": "Float",
+   "label": "Quantity Used",
+   "description": "Reported at the end of the job (contractors)."
+  },
+  {
+   "fieldname": "qty_returned",
+   "fieldtype": "Float",
+   "label": "Quantity Returned"
+  },
+  {
+   "fieldname": "materials_reported",
+   "fieldtype": "Check",
+   "label": "Use Reported",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-14 09:00:00.000000",
+ "modified": "2026-11-13 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Techy Part Usage",

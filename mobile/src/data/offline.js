@@ -34,6 +34,13 @@ const READS = new Set([
   'projectit.procedures.list_procedures',
   'projectit.equipment.get_equipment',
   'projectit.meters.get_meter',
+  // The contractor app (/contractor).
+  'projectit.contractors.me',
+  'projectit.contractors.jobs',
+  'projectit.contractors.my_projects',
+  'projectit.contractors.job_people',
+  'projectit.site_visits.status',
+  'projectit.contractor_pay.job_pay',
 ])
 // Lists whose screen filters what it gets, so any saved copy is better than none.
 const ANY_ARGS = new Set(['projectit.work_orders.list_work_orders', 'projectit.work_orders.summary', 'projectit.ops.search_users'])
@@ -41,6 +48,8 @@ const ANY_ARGS = new Set(['projectit.work_orders.list_work_orders', 'projectit.w
 const DETAIL = 'projectit.work_orders.get_work_order'
 const BOOT = 'projectit.ops.bootstrap'
 const TODAY = 'projectit.work.today'
+const VISITS = 'projectit.site_visits.status'
+const JOB_PAY = 'projectit.contractor_pay.job_pay'
 
 export const offline = reactive({ online: typeof navigator === 'undefined' || navigator.onLine, pending: 0, failed: [], syncing: false })
 
@@ -253,6 +262,51 @@ const WRITES = {
     stamp: true,
     label: () => 'Site photo',
   },
+  // Contractors: check in and out at a site, and what they bought or used, with no signal there.
+  'projectit.site_visits.check_in': {
+    target: () => [VISITS, {}],
+    apply(t, a, ctx) {
+      const job = (t.places?.jobs || []).find((j) => j.name === a.work_order)
+      const project = (t.places?.projects || []).find((p) => p.name === a.project)
+      t.visit = { name: `pending-${ctx.id}`, status: 'On site', check_in_at: a.at, work_order: a.work_order || null, project: a.project || job?.project || null, subject: job?.subject || null, project_name: project?.project_name || null, pending: true }
+    },
+    stamp: true,
+    label: () => 'Check-in',
+  },
+  'projectit.site_visits.check_out': {
+    target: () => [VISITS, {}],
+    apply(t) {
+      t.visit = null
+    },
+    stamp: true,
+    label: () => 'Check-out',
+  },
+  'projectit.contractor_pay.log_purchase': {
+    target: (a) => [JOB_PAY, { work_order: a.work_order }],
+    apply(d, a, ctx) {
+      d.purchases = [{ name: `pending-${ctx.id}`, description: a.description, qty: a.qty, amount: a.amount, bought_on: a.at?.slice(0, 10), status: 'Submitted', full_name: ctx.me.full_name, receipts: [] }, ...(d.purchases || [])]
+    },
+    stamp: true,
+    label: (a) => `Bought on site: ${a.description}`,
+  },
+  'projectit.contractor_pay.report_quantity': {
+    target: (a) => [JOB_PAY, { work_order: a.work_order }],
+    apply(d, a) {
+      const line = (d.lines || []).find((l) => l.name === a.line)
+      if (line) line.reported_qty = a.qty
+    },
+    label: () => 'Quantity done',
+  },
+  'projectit.contractor_pay.report_materials': {
+    target: (a) => [JOB_PAY, { work_order: a.work_order }],
+    apply(d, a) {
+      for (const r of a.rows || []) {
+        const m = (d.materials || []).find((x) => x.name === r.name)
+        if (m) Object.assign(m, { qty_used: r.used, qty_returned: r.returned, materials_reported: 1 })
+      }
+    },
+    label: () => 'Materials used and returned',
+  },
 }
 
 /** Where a queued change shows on screen: the saved copy it updates. */
@@ -311,14 +365,17 @@ export async function sync() {
     for (const item of rows) {
       const spec = WRITES[item.method] || {}
       let args = spec.send ? spec.send({ ...item.args }) : { ...item.args }
-      // A check-out or photo for a check-in made offline: use the timesheet that check-in created.
-      if (typeof args.timesheet === 'string' && args.timesheet.startsWith('pending-')) {
-        const real = created[args.timesheet]
-        if (!real) {
-          await put('outbox', { ...item, failed: true, error: 'Its check-in was not sent. Retry or discard the check-in first.' })
-          continue
+      // A check-out or photo for a check-in made offline: use the timesheet (or site visit) that check-in created.
+      let missing = false
+      for (const field of ['timesheet', 'visit']) {
+        if (typeof args[field] === 'string' && args[field].startsWith('pending-')) {
+          if (!created[args[field]]) missing = true
+          else args[field] = created[args[field]]
         }
-        args.timesheet = real
+      }
+      if (missing) {
+        await put('outbox', { ...item, failed: true, error: 'Its check-in was not sent. Retry or discard the check-in first.' })
+        continue
       }
       try {
         if (item.method === 'projectit.procedures.answer' && !args.confirm) args.confirm = 2 // nobody to ask any more
@@ -327,7 +384,7 @@ export async function sync() {
           args.modified = (await request(DETAIL, { name: args.name })).work_order.modified
         }
         const result = await request(item.method, args)
-        if (item.method === 'projectit.attendance.check_in' && result?.name) {
+        if (['projectit.attendance.check_in', 'projectit.site_visits.check_in'].includes(item.method) && result?.name) {
           created[`pending-${item.id}`] = result.name
           await put('cache', { key: 'techy-offline-timesheets', value: created, at: Date.now() })
         }
@@ -432,6 +489,7 @@ export async function api(method, args = {}) {
 export async function prefetch() {
   // Staff work orders only; the customer app (/plant) keeps its own logs (data/plant.js).
   if (!navigator.onLine || location.pathname.includes('/plant')) return
+  if (/\/contractor(\/|$)/.test(location.pathname)) return prefetchContractor()
   try {
     const list = await api('projectit.work_orders.list_work_orders', { scope: 'mine', status: 'Active', page_length: 100 })
     for (const row of list.work_orders.slice(0, 40)) await api(DETAIL, { name: row.name })
@@ -446,6 +504,23 @@ export async function prefetch() {
     for (const p of (today.projects || []).slice(0, 10)) await api('projectit.tasks.work_tasks', { project: p.project }).catch(() => {})
   } catch (e) {
     /* not a Techy Work user */
+  }
+}
+
+/** Contractors: my jobs, their pay and materials, and where I can check in. */
+async function prefetchContractor() {
+  try {
+    await api('projectit.contractors.me')
+    await api(VISITS)
+    const { jobs } = await api('projectit.contractors.jobs', { view: 'active' })
+    for (const j of jobs.slice(0, 30)) {
+      await api(DETAIL, { name: j.name }).catch(() => {})
+      await api(JOB_PAY, { work_order: j.name }).catch(() => {})
+    }
+    await api('projectit.contractors.jobs', { view: 'offered' }).catch(() => {})
+    await api('projectit.failures.options').catch(() => {})
+  } catch (e) {
+    /* best effort */
   }
 }
 

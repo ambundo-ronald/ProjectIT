@@ -45,7 +45,13 @@
   "whatsapp_template_invite",
   "whatsapp_language",
   "whatsapp_country_code",
-  "whatsapp_api_base"
+  "whatsapp_api_base",
+  "contractor_section",
+  "contractor_item",
+  "contractor_reimbursement_item",
+  "contractor_column",
+  "site_distance_m",
+  "site_purchase_item"
  ],
  "fields": [
   {
@@ -305,12 +311,50 @@
    "fieldtype": "Data",
    "label": "API Address",
    "default": "https://graph.facebook.com/v21.0"
+  },
+  {
+   "fieldname": "contractor_section",
+   "fieldtype": "Section Break",
+   "label": "Contractors",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "contractor_item",
+   "fieldtype": "Link",
+   "label": "Contractor Work Item",
+   "options": "Item",
+   "description": "A non-stock service item for contractors' bills (Purchase Invoices). Its expense account is where their pay is booked."
+  },
+  {
+   "fieldname": "contractor_reimbursement_item",
+   "fieldtype": "Link",
+   "label": "Contractor Reimbursement Item",
+   "options": "Item",
+   "description": "For materials they bought on site and we pay back. Leave empty to use the work item."
+  },
+  {
+   "fieldname": "contractor_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "site_distance_m",
+   "fieldtype": "Int",
+   "label": "Flag Check-ins Further Than (m)",
+   "default": "500",
+   "description": "From the site's location (on the machine or the project)."
+  },
+  {
+   "fieldname": "site_purchase_item",
+   "fieldtype": "Link",
+   "label": "Bought On Site Item",
+   "options": "Item",
+   "description": "For customer invoices: what contractors bought on site that the customer pays for."
   }
  ],
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-12 10:00:00.000000",
+ "modified": "2026-11-13 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Techy Ops Settings",

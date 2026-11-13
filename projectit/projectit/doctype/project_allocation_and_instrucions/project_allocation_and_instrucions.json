@@ -10,7 +10,9 @@
   "project_name",
   "section_break_gtfj",
   "work_instruction",
-  "allocation"
+  "allocation",
+  "contractors_section",
+  "contractors"
  ],
  "fields": [
   {
@@ -47,12 +49,23 @@
    "fieldtype": "Table",
    "label": "Allocation",
    "options": "Employee Allocation Instruction"
+  },
+  {
+   "fieldname": "contractors_section",
+   "fieldtype": "Section Break",
+   "label": "Contractors"
+  },
+  {
+   "fieldname": "contractors",
+   "fieldtype": "Table",
+   "label": "Contractors",
+   "options": "Techy Contractor Allocation"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-15 09:00:00.000000",
+ "modified": "2026-11-13 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Project Allocation and Instrucions",

@@ -7,7 +7,7 @@ pages, its routes and the server's Work and Manage endpoints all ask it.
 """
 import frappe
 
-APPS = ("Ops", "WorkIT", "ManageIT", "Plant")
+APPS = ("Ops", "WorkIT", "ManageIT", "Plant", "Contractor")
 OPS_ROLES = {"Maintenance User", "Maintenance Manager", "Projects Manager", "System Manager"}
 
 
@@ -40,6 +40,10 @@ def apps_for(user=None):
     if customer_accounts.is_customer(user):
         # Customers have the plant app only (and nothing once their account is switched off).
         return ["Plant"] if customer_accounts.account(user) else []
+    from projectit import contractors
+    if contractors.is_contractor(user):
+        # Contractors have their own app only (and nothing once their account is switched off).
+        return ["Contractor"] if contractors.membership(user) else []
     employee = frappe.db.get_value("Employee", {"user_id": user, "status": "Active"}, "name")
     apps = set(frappe.get_all("Mobile Module", filters={"parent": employee, "parenttype": "Employee",
         "parentfield": "custom_mobile_module"}, pluck="module_name")) if employee else set()
@@ -64,17 +68,17 @@ def get_modules_for_router(user_id=None):
     Home is always open. Some Ops pages need more than the Ops app; the app marks those routes and they open only
     when listed here, so approvers and accounts staff reach their queues even without Ops (e.g. stock keepers).
     """
-    from projectit import billing, customer_accounts, ops, parts
-    if customer_accounts.is_customer():
-        return [app.lower() for app in apps_for()]  # no Home: the plant app is all they have
+    from projectit import billing, contractors, customer_accounts, ops, parts
+    if customer_accounts.is_customer() or contractors.is_contractor():
+        return [app.lower() for app in apps_for()]  # no Home: their own app is all they have
     modules = ["home"] + [app.lower() for app in apps_for()]
     if parts.can_approve():
         modules.append("ops/parts-requests")
     if billing.can_invoice():
-        modules.append("ops/billing")
+        modules += ["ops/billing", "ops/payouts"]
     if ops.manager():
         # Managers may also preview the customer plant app (read-only, see customer_accounts.preview).
-        modules += ["ops/reports", "ops/dispatch", "ops/customer-app", "plant"]
+        modules += ["ops/reports", "ops/dispatch", "ops/customer-app", "plant", "ops/contractors", "ops/on-site"]
     return modules
 
 
