@@ -94,9 +94,10 @@ doctype_js = {"Project": "public/js/project.js", "Task": "public/js/task.js",
 
 # before_install = "projectit.install.before_install"
 after_install = ["projectit.setup.ensure_access_fields", "projectit.setup.ensure_ops_defaults",
-    "projectit.setup.ensure_task_permissions", "projectit.setup.ensure_customer_roles"]
+    "projectit.setup.ensure_contractor_role", "projectit.setup.ensure_task_permissions", "projectit.setup.ensure_customer_roles"]
 after_migrate = ["projectit.setup.ensure_access_fields", "projectit.setup.ensure_ops_defaults",
-    "projectit.setup.ensure_task_permissions", "projectit.setup.ensure_customer_roles", "projectit.whatsapp.ensure_verify_token"]
+    "projectit.setup.ensure_contractor_role", "projectit.setup.ensure_task_permissions", "projectit.setup.ensure_customer_roles",
+    "projectit.whatsapp.ensure_verify_token"]
 
 # Uninstallation
 # ------------
@@ -139,7 +140,7 @@ permission_query_conditions = {
 
 # Customer accounts reach only the customer app's endpoints (projectit.customer_accounts.guard).
 # The phone app signs requests in by device token first (projectit.device_auth), then the guard applies.
-auth_hooks = ["projectit.device_auth.authenticate", "projectit.customer_accounts.guard"]
+auth_hooks = ["projectit.device_auth.authenticate", "projectit.customer_accounts.guard", "projectit.contractors.guard"]
 
 has_permission = {
     "Techy Channel": "projectit.chat.has_permission",
@@ -174,7 +175,8 @@ doc_events = {
     },
     "Task": {
         "validate": "projectit.work_orders.validate_task",
-        "on_update": ["projectit.work_orders.on_task_update", "projectit.customer_notify.on_task_update"],
+        "on_update": ["projectit.work_orders.on_task_update", "projectit.customer_notify.on_task_update",
+            "projectit.contractor_pay.on_task_update"],
     },
     "Delivery Note": {
         "on_submit": "projectit.equipment.on_delivery_note_submit",
@@ -186,6 +188,10 @@ doc_events = {
     },
     "Material Request": {
         "on_cancel": "projectit.parts.on_material_request_cancel",
+    },
+    "Purchase Invoice": {
+        "on_cancel": "projectit.payouts.release_lines",
+        "on_trash": "projectit.payouts.release_lines",
     },
     "Sales Invoice": {
         "on_cancel": "projectit.billing.release_jobs",
@@ -204,7 +210,7 @@ doc_events = {
 scheduler_events = {
     "monthly": ["projectit.monthly_report.send_all"],
     "daily": ["projectit.maintenance.generate_pm_work_orders", "projectit.contracts.generate_visits",
-        "projectit.customer_notify.missing_logs", "projectit.plant.refresh_all"],
+        "projectit.customer_notify.missing_logs", "projectit.plant.refresh_all", "projectit.site_visits.auto_close"],
     "cron": {"* * * * *": ["projectit.reminders.send_due"], "*/10 * * * *": ["projectit.sla.check_due"],
         "*/15 * * * *": ["projectit.customer_notify.remind_logs"]},
 }

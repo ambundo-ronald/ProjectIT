@@ -333,10 +333,13 @@ def _job_costs(jobs):
     parts = reports.parts_cost(j.name for j in done)
     logged = timer.hours_by_person([j.name for j in done])
     rate = flt(frappe.get_cached_doc("Techy Ops Settings").get("labour_cost_rate"))
+    from projectit import contractor_pay
+    contracted = contractor_pay.job_costs(j.name for j in done)
     out = []
     for j in done:
         hours = sum(logged[j.name].values()) if logged.get(j.name) else flt(j.custom_labour_hours)
-        out.append((j.custom_completed_at or j.modified, parts.get(j.name, 0) + hours * rate, j))
+        labour = contracted[j.name] if j.name in contracted else hours * rate
+        out.append((j.custom_completed_at or j.modified, parts.get(j.name, 0) + labour, j))
     return out, rate
 
 

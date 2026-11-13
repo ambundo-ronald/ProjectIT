@@ -153,6 +153,8 @@ const nav = [
   { name: 'OpsProcedures', label: 'Procedures', short: 'Procedures', icon: 'clipboard', prefix: '/ops/procedures', desktop: true },
   { name: 'OpsPartsRequests', label: 'Parts requests', short: 'Parts', icon: 'package', prefix: '/ops/parts-requests', desktop: true, show: () => me.can_approve_parts },
   { name: 'OpsBilling', label: 'Billing', short: 'Billing', icon: 'file-text', prefix: '/ops/billing', desktop: true, show: () => me.can_invoice },
+  { name: 'OpsContractors', label: 'Contractors', short: 'Contractors', icon: 'briefcase', prefix: ['/ops/contractors', '/ops/on-site'], desktop: true, show: () => me.manager },
+  { name: 'OpsPayouts', label: 'Payouts', short: 'Payouts', icon: 'credit-card', prefix: '/ops/payouts', desktop: true, show: () => me.can_invoice },
   { name: 'OpsCustomerApp', label: 'Customer plants', short: 'Plants', icon: 'smartphone', prefix: '/ops/customer-app', desktop: true, show: () => me.manager },
   { name: 'OpsReports', label: 'Reports', short: 'Reports', icon: 'bar-chart-2', prefix: '/ops/reports', desktop: true, show: () => me.manager },
   { name: 'OpsChat', label: 'Chat', short: 'Chat', icon: 'message-circle', prefix: '/ops/chat', tab: true },

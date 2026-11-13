@@ -1,7 +1,7 @@
 <template>
   <section class="mx-auto max-w-6xl p-4 md:p-8" :class="actionBar ? 'pb-40 md:pb-8' : ''">
     <nav class="mb-4 hidden items-center gap-1.5 text-sm text-gray-500 md:flex" aria-label="Breadcrumb">
-      <router-link :to="{ name: 'OpsWorkOrders' }" class="hover:text-gray-800">Work orders</router-link>
+      <router-link :to="{ name: cv ? 'ContractorJobs' : 'OpsWorkOrders' }" class="hover:text-gray-800">{{ cv ? 'Your jobs' : 'Work orders' }}</router-link>
       <FeatherIcon name="chevron-right" class="h-4 w-4" />
       <span class="text-gray-800">#{{ route.params.name }}</span>
     </nav>
@@ -27,8 +27,14 @@
             <PriorityFlag :priority="wo.priority" />
             <PromiseBadge v-if="data.promise" :wo="wo" :contract="data.promise.contract_title" detail />
             <span v-if="wo.exp_end_date" class="inline-flex items-center gap-1 text-[13px]" :class="overdue ? 'font-semibold text-red-600' : 'text-gray-600'"><FeatherIcon name="calendar" class="h-3.5 w-3.5" />Due {{ formatDate(wo.exp_end_date) }}</span>
-            <router-link v-if="data.asset" :to="{ name: 'OpsAsset', params: { name: data.asset.name } }" class="inline-flex items-center gap-1 text-[13px] text-gray-600 hover:text-brand-700"><FeatherIcon name="box" class="h-3.5 w-3.5" />{{ data.asset.asset_name }}</router-link>
-            <router-link v-if="data.equipment" :to="{ name: 'OpsEquipmentDetail', params: { name: data.equipment.name } }" class="inline-flex items-center gap-1 text-[13px] text-gray-600 hover:text-brand-700"><FeatherIcon name="droplet" class="h-3.5 w-3.5" />{{ data.equipment.equipment_name }}</router-link>
+            <template v-if="cv">
+              <span v-if="data.asset" class="inline-flex items-center gap-1 text-[13px] text-gray-600"><FeatherIcon name="box" class="h-3.5 w-3.5" />{{ data.asset.asset_name }}</span>
+              <span v-if="data.equipment" class="inline-flex items-center gap-1 text-[13px] text-gray-600"><FeatherIcon name="droplet" class="h-3.5 w-3.5" />{{ data.equipment.equipment_name }}</span>
+            </template>
+            <template v-else>
+              <router-link v-if="data.asset" :to="{ name: 'OpsAsset', params: { name: data.asset.name } }" class="inline-flex items-center gap-1 text-[13px] text-gray-600 hover:text-brand-700"><FeatherIcon name="box" class="h-3.5 w-3.5" />{{ data.asset.asset_name }}</router-link>
+              <router-link v-if="data.equipment" :to="{ name: 'OpsEquipmentDetail', params: { name: data.equipment.name } }" class="inline-flex items-center gap-1 text-[13px] text-gray-600 hover:text-brand-700"><FeatherIcon name="droplet" class="h-3.5 w-3.5" />{{ data.equipment.equipment_name }}</router-link>
+            </template>
             <CoverageBadge v-if="data.equipment" :kind="data.equipment.coverage.kind" :until="data.equipment.coverage.until" />
           </div>
 
@@ -90,6 +96,8 @@
           </div>
         </div>
 
+        <ContractorCard v-if="(data.manager && !closed) || data.contractor?.contractor" :key="`c-${wo.name}`" :work-order="wo.name" :initial="data.contractor" :manager="!!data.manager" :status="wo.status" @changed="load" />
+        <ContractorPayCard v-if="data.contractor?.contractor" :work-order="wo.name" :reload-key="wo.modified" />
         <TimerCard v-if="data.timer && (data.timer.entries.length || data.timer.can_start)" :timer="data.timer" :work-order="wo.name" :status="wo.status" :assignees="data.assignees" @updated="timed" @error="warn" />
         <CustomerSiteCard v-if="data.equipment" :equipment="data.equipment" class="lg:hidden" />
 
@@ -110,7 +118,7 @@
           </div>
           <ProcedureRun :steps="data.procedure.steps" :locked="!data.can_write || closed" :saving="saving" :highlight="highlight" @answer="answer" @error="warn" />
         </div>
-        <div v-else-if="data.can_write && !closed" class="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center">
+        <div v-else-if="data.can_write && !closed && !cv" class="card flex flex-col gap-3 p-5 sm:flex-row sm:items-center">
           <div class="min-w-0 flex-1">
             <h2 class="card-title">Add a procedure</h2>
             <p class="mt-0.5 text-sm text-gray-500">Readings, pass/fail checks, photos and sign-off from the procedure library.</p>
@@ -126,7 +134,7 @@
         <LabourCard v-if="data.billing?.customer" :billing="data.billing" :logged="data.timer?.total || 0" :work-order="wo.name" @updated="set" @error="warn" />
         <ServiceReportCard v-if="data.report" :report="data.report" :work-order="wo.name" @updated="set" @error="warn" />
         <RatingCard v-if="data.rating" :rating="data.rating" :work-order="wo.name" />
-        <InvestigationsCard v-if="['Corrective', 'Inspection', 'Safety'].includes(wo.custom_work_category)" :key="wo.name" :work-order="wo.name" />
+        <InvestigationsCard v-if="!cv && ['Corrective', 'Inspection', 'Safety'].includes(wo.custom_work_category)" :key="wo.name" :work-order="wo.name" />
         <MetersCard v-if="data.meters?.length" :meters="data.meters" :work-order="wo.name" :can-record="data.can_write && !closed" @reload="load" />
 
         <!-- Quick checklist (child Tasks) -->
@@ -188,7 +196,7 @@
             <div class="flex items-center justify-between">
               <h3 class="section-label">Assigned to</h3>
               <button v-if="data.manager && !closed" class="text-xs font-medium text-brand-600 hover:underline" @click="editing = !editing">{{ editing ? 'Done' : 'Edit' }}</button>
-              <button v-else-if="data.mine && data.can_write && !closed" class="text-xs font-medium text-brand-600 hover:underline" @click="adding = !adding">{{ adding ? 'Cancel' : 'Add helper' }}</button>
+              <button v-else-if="data.mine && data.can_write && !closed && !cv" class="text-xs font-medium text-brand-600 hover:underline" @click="adding = !adding">{{ adding ? 'Cancel' : 'Add helper' }}</button>
             </div>
             <ul class="mt-2 space-y-2">
               <li v-for="p in data.assignees" :key="p.user" class="flex items-center gap-2"><UserAvatar :name="p.full_name" :image="p.image" size="sm" />{{ p.full_name }}</li>
@@ -207,7 +215,7 @@
           <dl class="space-y-3 p-4">
             <div class="flex items-center justify-between gap-3">
               <dt class="text-gray-500">Due date</dt>
-              <dd v-if="(data.manager || (data.mine && data.can_write)) && !closed"><input type="date" :value="wo.exp_end_date || ''" class="input h-8 w-36 px-2 text-[13px]" aria-label="Due date" @change="update({ due_date: $event.target.value })" /></dd>
+              <dd v-if="(data.manager || (data.mine && data.can_write && !cv)) && !closed"><input type="date" :value="wo.exp_end_date || ''" class="input h-8 w-36 px-2 text-[13px]" aria-label="Due date" @change="update({ due_date: $event.target.value })" /></dd>
               <dd v-else :class="overdue ? 'font-semibold text-red-600' : ''">{{ wo.exp_end_date ? formatDate(wo.exp_end_date) : '—' }}</dd>
             </div>
             <div class="flex items-center justify-between gap-3">
@@ -221,7 +229,7 @@
             </div>
             <div v-if="data.asset" class="flex justify-between gap-3">
               <dt class="text-gray-500">Asset</dt>
-              <dd class="min-w-0 truncate text-right"><router-link :to="{ name: 'OpsAsset', params: { name: data.asset.name } }" class="link">{{ data.asset.asset_name }}</router-link></dd>
+              <dd class="min-w-0 truncate text-right"><span v-if="cv">{{ data.asset.asset_name }}</span><router-link v-else :to="{ name: 'OpsAsset', params: { name: data.asset.name } }" class="link">{{ data.asset.asset_name }}</router-link></dd>
             </div>
             <div v-if="wo.custom_location" class="flex justify-between gap-3">
               <dt class="text-gray-500">Location</dt>
@@ -231,7 +239,7 @@
               <dt class="text-gray-500">Project</dt>
               <dd class="truncate text-right">{{ wo.project }}</dd>
             </div>
-            <div v-if="data.request" class="flex justify-between gap-3">
+            <div v-if="data.request && !cv" class="flex justify-between gap-3">
               <dt class="text-gray-500">Request</dt>
               <dd class="min-w-0 truncate text-right"><router-link :to="{ name: 'OpsRequests', query: { open: data.request.name } }" class="link">{{ data.request.subject }}</router-link></dd>
             </div>
@@ -240,7 +248,7 @@
               <dd class="text-right">{{ formatDate(wo.creation) }}</dd>
             </div>
           </dl>
-          <div class="p-4">
+          <div v-if="!cv" class="p-4">
             <a :href="deskLink" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-brand-700"><FeatherIcon name="external-link" class="h-3.5 w-3.5" />Open in ERPNext</a>
           </div>
         </div>
@@ -277,6 +285,8 @@ import TimerCard from '@/components/ops/TimerCard.vue'
 import FailureCard from '@/components/ops/FailureCard.vue'
 import PhotoButtons from '@/components/ops/PhotoButtons.vue'
 import ProcedureSelect from '@/components/ops/ProcedureSelect.vue'
+import ContractorCard from '@/components/ops/ContractorCard.vue'
+import ContractorPayCard from '@/components/ops/ContractorPayCard.vue'
 import { ui } from '@/data/apps'
 import { api, loadMe, onRealtime, formatDate, fromNow, isOverdue, safeFile, displayStatus } from '@/data/ops'
 
@@ -415,8 +425,10 @@ const detachProcedure = () => window.confirm('Remove this procedure from the wor
 // Starting or stopping the timer also changes the running-timer banner in the app shell.
 function timed(result) {
   set(result)
-  loadMe(true).catch(() => {})
+  if (!cv.value) loadMe(true).catch(() => {})
 }
+// A contractor's person: the job without our staff-only links and tools (projectit.work_orders._for_contractor).
+const cv = computed(() => !!data.value?.contractor_view || route.path.startsWith('/contractor'))
 const warn = (title) => toast({ title, icon: 'alert-circle', iconClasses: 'text-red-600', position: 'top-center' })
 
 // Answers save one at a time, in order, and show instantly while saving.
@@ -462,6 +474,7 @@ const stop = onRealtime('techy_work_order', (msg) => {
 })
 onMounted(async () => {
   await load()
+  if (cv.value) return
   try {
     mentionable.value = await api('projectit.ops.search_users', { txt: '' })
   } catch (e) {

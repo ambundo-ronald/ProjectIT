@@ -23,7 +23,7 @@ OPEN = ("Open", "Overdue")
 
 # The roles this app gives Task and Project rights to (setup.ensure_task_permissions): access through these is
 # narrowed. Rights from any other role are left to ERPNext.
-GRANTED = {"Employee", "Maintenance User"}
+GRANTED = {"Employee", "Maintenance User", "Techy Contractor"}
 GENERIC = {"All", "Guest", "Desk User"}
 
 
@@ -79,6 +79,12 @@ def task_permission(doc, ptype=None, user=None, debug=False):
         return True
     if ptype == "delete":
         return False
+    from projectit import contractors
+    if contractors.is_contractor(user):
+        # Contractors never create tasks, and see only their own jobs (never the pool of unassigned ones).
+        if ptype == "create" or doc.is_new():
+            return False
+        return contractors.sees_job(doc, user)
     if ptype == "create" or doc.is_new():
         return True
     if is_mine(doc, user):
@@ -91,6 +97,9 @@ def task_query(user=None):
     user = user or frappe.session.user
     if not limited(user):
         return ""
+    from projectit import contractors
+    if contractors.is_contractor(user):
+        return contractors.job_query(user)
     me = frappe.db.escape(user)
     todo = lambda field: (f"exists (select 1 from `tabToDo` td where td.reference_type = 'Task' "
         f"and td.reference_name = {field} and td.allocated_to = {me} and td.status != 'Cancelled')")
@@ -122,6 +131,9 @@ def project_permission(doc, ptype=None, user=None, debug=False):
     user = user or frappe.session.user
     if not limited(user, "Project"):
         return True
+    from projectit import contractors
+    if contractors.is_contractor(user):
+        return ptype in ("read", "print") and doc.name in contractors.projects_for(user)
     return ptype in ("read", "print") and doc.name in allocated_projects(user)
 
 
@@ -129,4 +141,8 @@ def project_query(user=None):
     user = user or frappe.session.user
     if not limited(user, "Project"):
         return ""
+    from projectit import contractors
+    if contractors.is_contractor(user):
+        names = sorted(contractors.projects_for(user))
+        return f"`tabProject`.name in ({', '.join(frappe.db.escape(n) for n in names)})" if names else "1 = 0"
     return f"`tabProject`.name in ({ALLOCATED.format(user=frappe.db.escape(user))})"

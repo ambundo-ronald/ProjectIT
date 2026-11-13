@@ -58,6 +58,10 @@ const routes = [
       { path: 'chat', name: 'OpsChat', component: () => import('@/pages/ops/Chat.vue') },
       { path: 'procedures', name: 'OpsProcedures', component: () => import('@/pages/ops/Procedures.vue') },
       { path: 'procedures/:name', name: 'OpsProcedure', component: () => import('@/pages/ops/ProcedureEditor.vue'), meta: { back: true, title: 'Procedure' } },
+      { path: 'contractors', name: 'OpsContractors', component: () => import('@/pages/ops/Contractors.vue'), meta: { title: 'Contractors', only: 'ops/contractors' } },
+      { path: 'contractors/:name', name: 'OpsContractor', component: () => import('@/pages/ops/ContractorDetail.vue'), meta: { back: true, title: 'Contractor', only: 'ops/contractors' } },
+      { path: 'on-site', name: 'OpsOnSite', component: () => import('@/pages/ops/OnSite.vue'), meta: { title: 'On site', only: 'ops/on-site' } },
+      { path: 'payouts', name: 'OpsPayouts', component: () => import('@/pages/ops/Payouts.vue'), meta: { title: 'Payouts', only: 'ops/payouts' } },
       { path: 'chat/:channel', name: 'OpsChannel', component: () => import('@/pages/ops/Channel.vue'), meta: { back: true, title: 'Chat' } },
     ],
   },
@@ -70,6 +74,18 @@ const routes = [
       { path: 'log', name: 'PlantLog', component: () => import('@/pages/plant/PlantLog.vue') },
       { path: 'service', name: 'PlantService', component: () => import('@/pages/plant/PlantService.vue') },
       { path: 'account', name: 'PlantAccount', component: () => import('@/pages/plant/PlantAccount.vue') },
+    ],
+  },
+  {
+    // The contractor app: external technicians and their crews (see projectit/contractors.py).
+    path: '/contractor',
+    component: () => import('@/pages/contractor/ContractorLayout.vue'),
+    children: [
+      { path: '', name: 'ContractorJobs', component: () => import('@/pages/contractor/ContractorJobs.vue') },
+      { path: 'jobs/:name', name: 'ContractorJob', component: () => import('@/pages/ops/WorkOrderDetail.vue'), meta: { back: true, title: 'Job' } },
+      { path: 'site', name: 'ContractorSite', component: () => import('@/pages/contractor/ContractorSite.vue') },
+      { path: 'pay', name: 'ContractorPay', component: () => import('@/pages/contractor/ContractorPay.vue') },
+      { path: 'account', name: 'ContractorAccount', component: () => import('@/pages/contractor/ContractorAccount.vue') },
     ],
   },
   {
@@ -126,7 +142,7 @@ router.beforeEach(async (to, from, next) => {
   }
   // An app opens everything under its address (/ops, /workit, /manageit); pages marked `only` must be listed.
   const allowed = to.meta.only ? modules.includes(to.meta.only) : modules.some((m) => to.path === `/${m}` || to.path.startsWith(`/${m}/`))
-  // Customers have no Home (their plant app is all they have): send them to the first app they may open.
+  // Customers and contractors have no Home (their own app is all they have): send them to the first app they may open.
   const fallback = modules.includes('home') || !modules.length ? { name: 'Home' } : `/${modules[0]}`
   next(allowed ? undefined : fallback)
 })

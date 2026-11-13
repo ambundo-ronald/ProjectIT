@@ -1,0 +1,185 @@
+{
+ "actions": [],
+ "creation": "2026-11-13 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "contractor_name",
+  "contractor_type",
+  "supplier",
+  "enabled",
+  "column_break_1",
+  "phone",
+  "email",
+  "pay_cycle",
+  "purchases",
+  "about_section",
+  "trades",
+  "notes",
+  "members_section",
+  "members",
+  "rates_section",
+  "rates"
+ ],
+ "fields": [
+  {
+   "fieldname": "contractor_name",
+   "fieldtype": "Data",
+   "label": "Contractor Name",
+   "reqd": 1,
+   "in_list_view": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "contractor_type",
+   "fieldtype": "Select",
+   "label": "Type",
+   "options": "Individual\nCompany",
+   "default": "Individual",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "supplier",
+   "fieldtype": "Link",
+   "label": "Supplier",
+   "options": "Supplier",
+   "reqd": 1,
+   "in_standard_filter": 1,
+   "description": "Their bills (Purchase Invoices) go to this supplier. Withholding tax is set on the supplier."
+  },
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Active",
+   "default": "1",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "phone",
+   "fieldtype": "Data",
+   "label": "Phone",
+   "options": "Phone"
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email",
+   "options": "Email"
+  },
+  {
+   "fieldname": "pay_cycle",
+   "fieldtype": "Select",
+   "label": "Usual Pay Cycle",
+   "options": "Per job\nWeekly\nMonthly",
+   "default": "Monthly",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "purchases",
+   "fieldtype": "Select",
+   "label": "Materials Bought On Site",
+   "options": "Reimbursed\nIncluded in price",
+   "default": "Reimbursed",
+   "description": "The default for their jobs: things they buy on site are added to their bill, or are already in the price. Change it per job."
+  },
+  {
+   "fieldname": "about_section",
+   "fieldtype": "Section Break",
+   "label": "About"
+  },
+  {
+   "fieldname": "trades",
+   "fieldtype": "Small Text",
+   "label": "Skills or Trades",
+   "description": "For picking the right contractor, e.g. RO installation, plumbing, electrical"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "members_section",
+   "fieldtype": "Section Break",
+   "label": "People"
+  },
+  {
+   "fieldname": "members",
+   "fieldtype": "Table",
+   "label": "People",
+   "options": "Techy Contractor Member"
+  },
+  {
+   "fieldname": "rates_section",
+   "fieldtype": "Section Break",
+   "label": "Rate Card"
+  },
+  {
+   "fieldname": "rates",
+   "fieldtype": "Table",
+   "label": "Rates",
+   "options": "Techy Contractor Rate"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-11-13 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Projectit",
+ "name": "Techy Contractor",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1,
+   "role": "System Manager"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1,
+   "role": "Maintenance Manager"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1,
+   "role": "Projects Manager"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "CTR-.#####",
+ "naming_rule": "Expression (old style)",
+ "title_field": "contractor_name",
+ "show_title_field_in_link": 1,
+ "search_fields": "contractor_name,contractor_type",
+ "track_changes": 1
+}

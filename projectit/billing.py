@@ -65,10 +65,15 @@ def labour(task):
         "flat_fee": fee, "amount": amount, "hourly_item": hourly_item, "flat_item": flat_item}
 
 
+def _site_purchases(task_name):
+    from projectit import contractor_pay
+    return contractor_pay.chargeable_purchases(task_name)
+
+
 def summary(task, can_write):
     closed = task.status in ("Completed", "Cancelled")
     data = labour(task)
-    part_total = sum(flt(r.amount) for r in parts.billable(task.name))
+    part_total = sum(flt(r.amount) for r in parts.billable(task.name)) + sum(flt(p.amount) for p in _site_purchases(task.name))
     invoice = None
     if task.get("custom_sales_invoice"):
         invoice = frappe.db.get_value("Sales Invoice", task.custom_sales_invoice, ["name", "docstatus", "status",
@@ -128,7 +133,7 @@ def _require_invoicer():
 
 def _job_total(task):
     data = labour(task)
-    part_total = sum(flt(r.amount) for r in parts.billable(task.name))
+    part_total = sum(flt(r.amount) for r in parts.billable(task.name)) + sum(flt(p.amount) for p in _site_purchases(task.name))
     return data, part_total
 
 
@@ -205,6 +210,14 @@ def create_invoice(jobs):
             if row.billing == "Chargeable" and flt(row.amount) > 0:
                 items.append({"item_code": row.item_code, "qty": row.qty, "rate": row.rate,
                     "description": f"{row.item_name} – {label}"})
+        bought = _site_purchases(task.name)
+        if bought:
+            item = _setting("site_purchase_item")
+            if not item:
+                frappe.throw(_("Set the Bought On Site Item in Techy Ops Settings to invoice what contractors bought."))
+            for row in bought:
+                items.append({"item_code": item, "qty": 1, "rate": flt(row.amount),
+                    "description": _("{0} (bought on site) – {1}").format(row.description, label)})
         if task.project:
             projects.add(task.project)
     customer = customers.pop()
