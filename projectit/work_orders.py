@@ -48,15 +48,19 @@ def _work_order(name, write=False):
         frappe.throw(_("{0} is not a work order.").format(name))
     # The app's own rule first, so people get a clear message rather than ERPNext's generic one.
     if contractors.is_contractor():
-        # A contractor's owner and leads see all their contractor's jobs; crew the ones they are on.
+        # A contractor's owner and leads see all their contractor's jobs; crew the ones they are on. This is the rule
+        # for reading (Task permissions from other apps, such as Taskist's owner-or-assignee rule, would hide a job
+        # offered to a contractor); changes still go through Task permissions.
         if not contractors.sees_job(doc):
             frappe.throw(_("This job is not yours."), frappe.PermissionError)
-    elif not ops.manager() and doc.owner != frappe.session.user and frappe.session.user not in _assignees([name])[name] \
+        if write:
+            contractors.check_can_work(doc)
+            doc.check_permission("write")
+        return doc
+    if not ops.manager() and doc.owner != frappe.session.user and frappe.session.user not in _assignees([name])[name] \
             and (write or not permissions.is_available(doc)):
         frappe.throw(_("This work order is not assigned to you."), frappe.PermissionError)
     doc.check_permission("write" if write else "read")
-    if write:
-        contractors.check_can_work(doc)
     return doc
 
 
@@ -129,7 +133,9 @@ def detail(doc):
         request = frappe.db.get_value("Issue", doc.custom_work_request, ["name", "subject", "raised_by"], as_dict=True)
     can_write = bool(frappe.has_permission("Task", "write", doc=doc))
     if contractors.is_contractor():
-        can_write = can_write and doc.get("custom_contractor_state") == "Accepted"
+        # Their crew work on the job; an owner or lead not on it reads it (accepting and choosing crew).
+        can_write = can_write and doc.get("custom_contractor_state") == "Accepted" \
+            and frappe.session.user in _assignees([doc.name])[doc.name]
     data = {"work_order": {field: doc.get(field) for field in FIELDS}, "description": ops.plain(doc.description),
         "assignees": ops.people(_assignees([doc.name])[doc.name]), "steps": steps, "comments": comments,
         "files": [f for f in ops.files("Task", doc.name) if not f.file_name.startswith("signature-")],

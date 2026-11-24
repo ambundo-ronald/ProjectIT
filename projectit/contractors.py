@@ -306,13 +306,12 @@ def update_member(user, contractor=None, member_role=None, enabled=None):
 
 def _drop_jobs(user, contractor):
     """Someone switched off is taken off their contractor's open jobs (the owner reassigns them)."""
-    from frappe.desk.form.assign_to import remove
     jobs = frappe.get_all("Task", filters={"custom_contractor": contractor, "status": ["not in", ["Completed", "Cancelled"]]},
         pluck="name")
     for name in jobs:
         if frappe.db.exists("ToDo", {"reference_type": "Task", "reference_name": name, "allocated_to": user,
                 "status": "Open"}):
-            remove("Task", name, user, ignore_permissions=True)
+            unassign(name, user)
 
 
 @frappe.whitelist(methods=["POST"])
@@ -483,9 +482,16 @@ def _assignees(name):
     return assignees([name])[name]
 
 
+def unassign(task, user):
+    """Take someone off a job the caller was already authorised to change. Frappe's public remove() checks the
+    caller's rights on the Task (and takes no ignore_permissions), which a contractor's owner or lead may lack."""
+    from frappe.desk.form import assign_to
+    remover = getattr(assign_to, "_remove", None)
+    return remover("Task", task, user, ignore_permissions=True) if remover else assign_to.remove("Task", task, user)
+
+
 def _set_crew(doc, contractor, users):
     """Make the job's crew exactly `users` (people of this contractor); staff assignees are left alone."""
-    from frappe.desk.form.assign_to import remove
     from projectit.work_orders import _assign
     people = {m.user for m in members(contractor)}
     users = frappe.parse_json(users) if isinstance(users, str) else (users or [])
@@ -501,7 +507,7 @@ def _set_crew(doc, contractor, users):
         _assign(doc, added)
         ops.notify(added, _("New job: {0}").format(doc.subject), "Task", doc.name, "Assignment")
     for user in crew_now - users:
-        remove("Task", doc.name, user, ignore_permissions=True)
+        unassign(doc.name, user)
     return added
 
 
@@ -577,15 +583,32 @@ def me():
         "visit": site_visits.open_visit(), "support_phone": frappe.db.get_single_value("Techy Ops Settings", "support_phone")}
 
 
+def assigned_jobs(user=None):
+    """Tasks the person is on (open or done assignments)."""
+    return frappe.get_all("ToDo", filters={"reference_type": "Task", "allocated_to": user or frappe.session.user,
+        "status": ["!=", "Cancelled"]}, pluck="reference_name", distinct=True)
+
+
+def job_filters(member, **extra):
+    """Filters for the jobs a contractor's person may see, applied here rather than through Task permissions: other
+    apps (Taskist) narrow Task to its owner and assignees, which would hide a job offered to a contractor until
+    someone is on it. Owners and leads see all their contractor's jobs; crew the ones they are on."""
+    filters = {"custom_work_order": 1, "is_template": 0, "parent_task": ["is", "not set"],
+        "custom_contractor": member.contractor, **extra}
+    if not runs_jobs(member):
+        filters["name"] = ["in", assigned_jobs() or [""]]
+    return filters
+
+
 def _my_jobs(member, limit=0):
-    return frappe.get_list("Task", filters={"custom_work_order": 1, "is_template": 0, "parent_task": ["is", "not set"],
-        "custom_contractor": member.contractor}, fields=JOB_FIELDS, order_by="modified desc", limit_page_length=limit)
+    return frappe.get_all("Task", filters=job_filters(member), fields=JOB_FIELDS, order_by="modified desc",
+        limit_page_length=limit)
 
 
 @frappe.whitelist()
 def jobs(view="active"):
-    """My jobs: offered (waiting for an answer), active, or done. The list is narrowed by permissions: crew see the
-    jobs they are on, the owner and leads see all their contractor's jobs."""
+    """My jobs: offered (waiting for an answer), active, or done. Crew see the jobs they are on, the owner and leads
+    see all their contractor's jobs (job_filters)."""
     member = require_member()
     rows = _my_jobs(member)
     if view == "offered":
