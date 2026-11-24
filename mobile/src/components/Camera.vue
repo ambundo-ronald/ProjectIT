@@ -43,6 +43,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { FeatherIcon } from 'frappe-ui'
+import { askOnce, DISCLOSURES } from '@/data/disclosure'
 
 const props = defineProps({ mode: String })
 const emit = defineEmits(['close-event', 'capture-event'])
@@ -66,6 +67,11 @@ async function start() {
   failed.value = ''
   if (!navigator.mediaDevices?.getUserMedia) {
     failed.value = 'This browser cannot open the camera. Choose a photo from your device instead.'
+    return
+  }
+  // Phone app: say what the camera is for before Android asks (data/disclosure.js).
+  if (!(await askOnce('camera'))) {
+    failed.value = DISCLOSURES.camera.refused
     return
   }
   try {

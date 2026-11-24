@@ -81,6 +81,8 @@
       </div>
     </div>
 
+    <AccountPrivacy />
+
     <button class="btn btn-secondary w-full text-red-600" :disabled="session.logout.loading" @click="session.logout.submit()"><FeatherIcon name="log-out" class="h-4 w-4" />Sign out</button>
   </div>
 </template>
@@ -89,6 +91,7 @@ import { ref, computed, onMounted, h } from 'vue'
 import { FeatherIcon, toast } from 'frappe-ui'
 import UserAvatar from '@/components/ops/UserAvatar.vue'
 import CustomerAccessCard from '@/components/ops/CustomerAccessCard.vue'
+import AccountPrivacy from '@/components/ops/AccountPrivacy.vue'
 import { plant } from '@/data/plant'
 import { session } from '@/data/session'
 import { theme, setTheme } from '@/data/theme'

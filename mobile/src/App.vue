@@ -4,6 +4,7 @@
   <ChatDock />
   <StatusModal v-model="statusDialog.open" />
   <Camera v-if="showCamera" :mode="cameraMode" @close-event="showCamera = false" @capture-event="imageFile = $event" />
+  <AppNotices />
 </template>
 <script setup>
 import { watch, inject } from 'vue'
@@ -11,6 +12,7 @@ import { Toasts } from 'frappe-ui'
 import Camera from './components/Camera.vue'
 import ChatDock from './components/ChatDock.vue'
 import StatusModal from './components/ops/StatusModal.vue'
+import AppNotices from './components/AppNotices.vue'
 import { statusDialog } from './data/presence'
 import { startOffline } from './data/offline'
 

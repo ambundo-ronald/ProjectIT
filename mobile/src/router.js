@@ -3,6 +3,7 @@ import { isNative } from '@/data/native'
 import { session } from './data/session'
 import { userResource } from '@/data/user'
 import { api } from '@/data/offline'
+import { rememberTarget } from '@/data/applinks'
 
 const routes = [
   { path: '/', redirect: '/home' },
@@ -131,7 +132,11 @@ router.beforeEach(async (to, from, next) => {
   }
   if (to.name === 'Login' && isLoggedIn) return next({ name: 'Home' })
   if (to.name === 'Login') return next()
-  if (!isLoggedIn) return next({ name: 'Login' })
+  if (!isLoggedIn) {
+    // Come back here after signing in (a link from an email or WhatsApp, say).
+    if (to.fullPath !== '/' && to.name !== 'Home') rememberTarget(to.fullPath)
+    return next({ name: 'Login' })
+  }
   let modules
   try {
     // Saved on the phone by api(), so the apps this person may open are known offline too.

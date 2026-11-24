@@ -4,6 +4,7 @@ import { createResource } from 'frappe-ui'
 
 import { userResource } from './user'
 import { isNative, server } from './native'
+import { takeTarget } from './applinks'
 
 export function sessionUser() {
   // The phone app has no session cookie: it is signed in while it holds a token (data/native.js).
@@ -43,7 +44,7 @@ export const session = reactive({
       userResource.reload()
       session.user = sessionUser()
       session.login.reset()
-      router.replace(data.default_route || '/home')
+      router.replace(takeTarget() || data.default_route || '/home')
     },
     onError(error){
       if(error.exc_type  == "AuthenticationError"){

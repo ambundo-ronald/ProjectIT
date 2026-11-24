@@ -24,6 +24,23 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Links to the company's Techy App open here (Android App Links; the site's /.well-known/assetlinks.json
+                 lists this app, see projectit/app_links.py). The host is set in app/build.gradle (appLinkHost). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="${appLinkHost}" android:pathPrefix="/techy-app" />
+            </intent-filter>
+
+            <!-- "Open in the app" from any company's Techy website: techyapp://open?site=…&path=… (data/applinks.js) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="techyapp" android:host="open" />
+            </intent-filter>
+
         </activity>
 
         <provider

@@ -158,6 +158,8 @@ async function start() {
   // Customers and contractors have no team chat; their app's address is known before the router settles.
   if (/\/(plant|contractor)(\/|$)/.test(window.location.pathname)) return
   try {
+    // Team chat is for staff: customers and contractors have no Home, only their own app.
+    if (!(await api('projectit.api.get_modules_for_router')).includes('home')) return
     await loadMe()
     await loadChannels()
     listenForChat()

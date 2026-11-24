@@ -164,6 +164,7 @@ import SearchSelect from '@/components/ops/SearchSelect.vue'
 import { taskOptions } from '@/data/pickers'
 import { api, formatDate, formatTime, readFile } from '@/data/ops'
 import { showCamera, cameraMode, imageFile } from '@/data/camera_context'
+import { askOnce, DISCLOSURES } from '@/data/disclosure'
 
 const data = ref(null)
 const error = ref('')
@@ -247,7 +248,9 @@ function startCamera(mode) {
   showCamera.value = true
 }
 
-function getLocation() {
+async function getLocation() {
+  // Phone app: say what the location is for before Android asks (data/disclosure.js).
+  if (!(await askOnce('location'))) throw new Error(DISCLOSURES.location.refused)
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) return reject(new Error('This device cannot share its location, which is required to check in and out.'))
     navigator.geolocation.getCurrentPosition(

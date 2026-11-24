@@ -843,6 +843,11 @@
   dependencies:
     tslib "^2.1.0"
 
+"@capawesome/capacitor-app-update@8.1.1":
+  version "8.1.1"
+  resolved "https://registry.yarnpkg.com/@capawesome/capacitor-app-update/-/capacitor-app-update-8.1.1.tgz#311de5a414eae7d729837e4d1589b7593b725da2"
+  integrity sha512-1TzM4hMN4wgCDu3O0UhaIIoVspUFNfNJ+q+K/EKSQRKkfCbG79S1Fn/sXwMdtMO1Me55LQxdjw1I9rctFtKBOQ==
+
 "@esbuild/aix-ppc64@0.21.5":
   version "0.21.5"
   resolved "https://registry.yarnpkg.com/@esbuild/aix-ppc64/-/aix-ppc64-0.21.5.tgz#c7184a326533fcdf1b8ee0733e21c713b975575f"

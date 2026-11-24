@@ -29,7 +29,9 @@ ALLOWED = {"login", "logout", "frappe.handler.logout", "frappe.auth.get_logged_u
     "projectit.push.public_key", "projectit.push.subscribe", "projectit.push.unsubscribe", "projectit.push.pending",
     "projectit.push.test",
     # The Android app: their own phones (see projectit.device_auth).
-    "projectit.device_auth.my_devices", "projectit.device_auth.sign_out_device"}
+    "projectit.device_auth.my_devices", "projectit.device_auth.sign_out_device",
+    # Asking for their account to be deleted (Play Store rule; see projectit.app_links).
+    "projectit.app_links.request_deletion"}
 ALLOWED_PREFIXES = ("projectit.plant.", "projectit.customer_accounts.")
 
 

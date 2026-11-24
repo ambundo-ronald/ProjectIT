@@ -26,6 +26,7 @@ import { ref, computed } from 'vue'
 import { FeatherIcon } from 'frappe-ui'
 import Camera from '@/components/Camera.vue'
 import { shrink, touchDevice } from '@/data/photos'
+import { askOnce, DISCLOSURES } from '@/data/disclosure'
 
 const props = defineProps({
   variant: { type: String, default: 'buttons' },
@@ -45,7 +46,9 @@ const spinning = computed(() => working.value || props.busy)
 const iconClass = 'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-800 disabled:opacity-40'
 const tileClass = 'flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-gray-300 text-gray-500 transition hover:border-brand-400 hover:bg-brand-50 hover:text-brand-700 disabled:opacity-50'
 
-function openCamera() {
+async function openCamera() {
+  // Phone app: say what the camera is for before Android asks (data/disclosure.js).
+  if (!(await askOnce('camera'))) return emit('error', DISCLOSURES.camera.refused)
   if (touchDevice()) camera.value.click()
   else webcam.value = true
 }

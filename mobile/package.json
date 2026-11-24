@@ -13,6 +13,7 @@
     "@capacitor/app": "^8.1.2",
     "@capacitor/browser": "^8.0.5",
     "@capacitor/core": "^8.6.0",
+    "@capawesome/capacitor-app-update": "8.1.1",
     "@internationalized/date": "^3.7.0",
     "dayjs": "^1.11.13",
     "feather-icons": "^4.29.2",
@@ -39,5 +40,5 @@
     "node": ">=24",
     "yarn": ">=1.22"
   },
-  "nativeVersion": "1.0.0"
+  "nativeVersion": "1.1.0"
 }

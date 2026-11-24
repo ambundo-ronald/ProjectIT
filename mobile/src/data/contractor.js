@@ -55,7 +55,9 @@ export function money(value, currency) {
 }
 
 /** The phone's location, with messages a person can act on. */
-export function getLocation() {
+export async function getLocation() {
+  const { askOnce, DISCLOSURES } = await import('./disclosure')
+  if (!(await askOnce('location'))) throw new Error(DISCLOSURES.location.refused)
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) return reject(new Error('This device cannot share its location, which is required to check in and out.'))
     navigator.geolocation.getCurrentPosition(

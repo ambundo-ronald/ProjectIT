@@ -34,6 +34,7 @@
   "log_reminder_time",
   "log_missing_days",
   "android_app_url",
+  "android_app_fingerprints",
   "whatsapp_section",
   "whatsapp_enabled",
   "whatsapp_phone_number_id",
@@ -349,12 +350,18 @@
    "label": "Bought On Site Item",
    "options": "Item",
    "description": "For customer invoices: what contractors bought on site that the customer pays for."
+  },
+  {
+   "fieldname": "android_app_fingerprints",
+   "fieldtype": "Small Text",
+   "label": "Android App Fingerprints",
+   "description": "SHA-256 fingerprints of the Android app's signing keys, one per line (Play Console → Setup → App signing). With them, links to this site's Techy App open in the installed app (/.well-known/assetlinks.json)."
   }
  ],
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-13 00:00:00.000000",
+ "modified": "2026-11-24 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Projectit",
  "name": "Techy Ops Settings",

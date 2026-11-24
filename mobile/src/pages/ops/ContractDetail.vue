@@ -249,7 +249,11 @@ function apply(r) {
   items.value = r.items
   visits.value = r.visits
   state.value = r.state
-  return loadCustomer(r.machines)
+  return loadCustomer(r.machines).catch((e) => {
+    // Technicians read the contract; the customer's other machines and subscriptions are for managers editing it.
+    if (!/manager/i.test(e.message)) throw e
+    machines.value = r.machines.map((m) => ({ ...m, included: true }))
+  })
 }
 
 async function save(extra = {}) {
