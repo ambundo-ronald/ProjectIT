@@ -3,7 +3,7 @@
     <InstallationPrompt v-if="!isNative" />
     <div class="w-full max-w-sm">
       <div class="mb-6 flex flex-col items-center text-center">
-        <img :src="isNative && server.logo ? server.logo : '/techy-app.svg'" alt="" class="h-14 w-14 rounded-2xl bg-panel object-contain shadow-card" @error="(e) => (e.target.src = '/techy-app.svg')" />
+        <img :src="isNative && server.logo ? server.logo : APP_ICON" alt="" class="h-14 w-14 rounded-2xl bg-panel object-contain shadow-card" @error="(e) => (e.target.src = APP_ICON)" />
         <h1 class="mt-4 text-[24px] font-semibold tracking-tight">{{ isNative && server.url ? `Sign in to ${server.company}` : 'Sign in to Techy App' }}</h1>
         <p class="mt-1 text-sm text-gray-500">{{ isNative ? 'For our team and our customers.' : 'Work orders, field work and your team, in one place.' }}</p>
       </div>
@@ -35,6 +35,7 @@
           <button type="button" class="font-medium text-brand-600 hover:underline" @click="changeServer">Change company</button>
         </p>
       </form>
+      <p class="mt-4 text-center text-xs text-gray-500"><a :href="privacyUrl" target="_blank" rel="noopener" class="hover:text-brand-700 hover:underline">Privacy policy</a></p>
     </div>
   </div>
 </template>
@@ -42,8 +43,13 @@
 import { computed, ref } from 'vue'
 import { FeatherIcon } from 'frappe-ui'
 import { session, showAuthenticationError } from '../data/session'
-import { isNative, server, chooseServer, forgetServer } from '../data/native'
+import { isNative, server, chooseServer, forgetServer, PRIVACY_URL } from '../data/native'
 import InstallationPrompt from './InstallationPrompt.vue'
+
+// The app icon from public/, at the address the build serves it from (the web app lives under /assets/…).
+const APP_ICON = `${import.meta.env.BASE_URL}techy-app.svg`
+// The company's own policy page once the phone knows its site; before that, the app publisher's.
+const privacyUrl = computed(() => (!isNative ? '/techy-privacy' : server.url ? `${server.url}/techy-privacy` : PRIVACY_URL))
 
 const address = ref('')
 const error = ref('')

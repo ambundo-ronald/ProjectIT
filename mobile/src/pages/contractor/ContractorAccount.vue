@@ -63,6 +63,8 @@
       <a :href="`tel:${contractor.me.support_phone}`" class="btn btn-secondary btn-sm mt-3"><FeatherIcon name="phone" class="h-4 w-4" />{{ contractor.me.support_phone }}</a>
     </div>
 
+    <AccountPrivacy />
+
     <button class="btn btn-secondary w-full text-red-600" :disabled="session.logout.loading" @click="session.logout.submit()"><FeatherIcon name="log-out" class="h-4 w-4" />Sign out</button>
 
     <Modal v-model="inviting" title="Add someone" subtitle="They get an email with a link to set their password, then sign in to this app.">
@@ -95,6 +97,7 @@ import { FeatherIcon, toast } from 'frappe-ui'
 import UserAvatar from '@/components/ops/UserAvatar.vue'
 import Modal from '@/components/ops/Modal.vue'
 import Dropdown from '@/components/ops/Dropdown.vue'
+import AccountPrivacy from '@/components/ops/AccountPrivacy.vue'
 import { contractor } from '@/data/contractor'
 import { session } from '@/data/session'
 import { theme, setTheme } from '@/data/theme'

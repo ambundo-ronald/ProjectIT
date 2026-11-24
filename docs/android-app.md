@@ -15,6 +15,32 @@ One app on the Play Store serves every company that runs Techy. It is also the c
   - notifications on the phone (they need Firebase, which is the next step);
   - two-factor sign-in (people who use it get a clear message).
 
+## Updates
+
+- **Play updates the app by itself.** Phones with *auto-update apps* on (the default) get new versions within a day or two, usually on Wi-Fi.
+- **The app also asks.** Each time it opens, it asks Play whether a newer version exists, and shows a bar: **Update** downloads in the background, then **Restart** installs it.
+- **Too old for the site.** The site states the oldest app it works with (`MIN_APP_VERSION` in `projectit/app_links.py`). An app older than that opens Play's full-screen update straight away. An APK installed by hand, which Play can't update, is sent to the Play Store instead.
+- **Server changes need no new app.** Changes to the Python side reach everyone as soon as the site is updated. Only screen changes need a new app version.
+
+## Links open the app
+
+- **Android App Links.** Links to `https://erp.norwawater.com/techy-app/…`, in WhatsApp, email or SMS, open straight in the app on the right screen.
+  - Android trusts the site once `/.well-known/assetlinks.json` lists the app's signing keys. Paste them in **Techy Ops Settings → Android App Fingerprints**.
+  - The host is set in `android/app/build.gradle` (`appLinkHost`).
+- **Open in the app.** Every company's website shows a small **Open in the app** bar on Android phones, once **Techy Ops Settings → Android App Link** is set.
+  - It opens the installed app on the same screen, or the Play Store if the app isn't installed.
+  - It uses `techyapp://open?site=…&path=…`, so it works for any company's site without setup.
+- **Sign-in first.** If the phone is signed out, or signed in to another company, the app switches to the link's site, asks the person to sign in, then opens the screen.
+
+## Privacy and account deletion
+
+- **Privacy policy:** `/techy-privacy` on each site. It's also linked from the sign-in screen and the account menus.
+- **Deleting an account:**
+  - In the app: **Account → Delete my account** (for staff, it's in the menu under their name).
+  - On the web: `/techy-delete-account`.
+  - Either way, the company's System Managers are told by notification and email.
+- **Location and camera:** the first time the app needs either, it says what it is for, before Android asks for the permission.
+
 ## What a company needs
 
 - Techy (this app) on its ERPNext site, reachable over **https** from the internet.
@@ -72,31 +98,10 @@ Changes to the server side (the Python app) reach everyone as soon as the site i
 
 ## Publishing on the Play Store
 
-1. **Developer account.** Create a [Play Console](https://play.google.com/console) account in the company's name: a one-off US$25, plus identity checks.
-   - A new *personal* account must run a closed test with at least 12 testers for 14 days before it can publish.
-   - An *organisation* account skips this, but needs a D-U-N-S number.
-2. **The app's ID**, `com.techyapp.field`, is permanent once uploaded. To change it, edit `appId` in `mobile/capacitor.config.json` and `applicationId`/`namespace` in `android/app/build.gradle` *before* the first upload, then run `npx cap sync android`.
-3. **Store listing:**
-   - name: Techy App;
-   - short description;
-   - the 512×512 icon (`mobile/public/icons/icon-512.png`);
-   - a 1024×500 feature graphic;
-   - at least two phone screenshots.
-4. **Privacy policy URL.** It is required because the app uses the camera and location.
-5. **Data safety form.** What the app collects, all of it sent only to the company's own Techy site:
-
-   | Data | Why | Optional? |
-   |---|---|---|
-   | Name, email | Sign-in, showing who did what | No |
-   | Precise location | Recorded with each check-in and check-out | Required for check-in |
-   | Photos | Job, check-in and site photos the person takes | Yes |
-   | App activity (jobs, readings, messages) | The work itself | No |
-
-   - It is encrypted in transit (https).
-   - Users can ask their company to delete their account.
-   - Nothing is shared with third parties or used for ads.
-6. **App access.** Reviewers can't sign in without an account, so give them a demo site address and a demo login, for example a technician account on a demo site.
-7. **Release.** Start with *Internal testing*, which reaches up to 100 testers by email within minutes. Then *Closed testing*, then *Production*.
+Everything Play Console asks for is in [mobile/store/README.md](../mobile/store/README.md):
+- listing texts and images;
+- the data safety, content rating and app access answers;
+- the release and App Links steps.
 
 ## Where things are
 

@@ -37,6 +37,10 @@ import { FeatherIcon, toast } from 'frappe-ui'
 import Modal from '@/components/ops/Modal.vue'
 import ContractorStatement from '@/components/ops/ContractorStatement.vue'
 import { api } from '@/data/ops'
+import { loadContractor } from '@/data/contractor'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const data = ref(null)
 const error = ref('')
@@ -82,5 +86,10 @@ const pdfPath = computed(() => {
   const { start, end } = range()
   return `/api/method/projectit.contractor_pay.download_statement?start=${start}&end=${end}`
 })
-onMounted(load)
+onMounted(async () => {
+  // Only owners see pay; anyone else typing the address goes back to their jobs.
+  const me = await loadContractor().catch(() => null)
+  if (me && !me.sees_pay) return router.replace({ name: 'ContractorJobs' })
+  load()
+})
 </script>

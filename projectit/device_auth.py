@@ -113,12 +113,15 @@ def _check_signed(request):
 def hello():
     """What the app shows after someone types the company's address: proof it is a Techy site, and whose."""
     from projectit import __version__
+    from projectit.app_links import app_info
     logo = frappe.db.get_single_value("Navbar Settings", "app_logo") or ""
     return {
         "app": "techy",
         "version": __version__,
         "company": frappe.db.get_single_value("Global Defaults", "default_company") or frappe.local.site,
         "logo": frappe.utils.get_url(logo) if logo else "",
+        # The Android app: the oldest version this server works with, and where to get it (see app_links).
+        **app_info(),
     }
 
 

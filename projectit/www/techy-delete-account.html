@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Delete your account – Techy App</title>
+  <link rel="icon" href="/assets/projectit/projectit/techy-app.svg" type="image/svg+xml" />
+  <style>
+    :root { color-scheme: light dark; --ink: #1f2937; --muted: #6b7280; --line: #e5e7eb; --bg: #f7f7f8; --card: #fff; --brand: #0f2a4a; --btn: #0f2a4a; --btn-ink: #fff; }
+    @media (prefers-color-scheme: dark) { :root { --ink: #e5e7eb; --muted: #9ca3af; --line: #26324a; --bg: #0b1424; --card: #111c31; --brand: #9cc3f5; --btn: #9cc3f5; --btn-ink: #0b1424; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    main { max-width: 640px; margin: 0 auto; padding: 32px 16px 64px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
+    h1 { font-size: 26px; line-height: 1.2; margin: 0 0 8px; color: var(--brand); }
+    h2 { font-size: 17px; margin: 24px 0 6px; color: var(--brand); }
+    p, li { margin: 0 0 10px; }
+    label { display: block; font-weight: 600; font-size: 14px; margin: 14px 0 6px; }
+    input, textarea { width: 100%; font: inherit; color: inherit; background: transparent; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+    button { margin-top: 16px; width: 100%; font: inherit; font-weight: 600; border: 0; border-radius: 10px; padding: 12px; background: var(--btn); color: var(--btn-ink); cursor: pointer; }
+    button[disabled] { opacity: .6; }
+    .note { margin-top: 14px; padding: 12px; border-radius: 10px; border: 1px solid var(--line); }
+    .muted { color: var(--muted); font-size: 14px; }
+    a { color: var(--brand); }
+    header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    header img { width: 44px; height: 44px; border-radius: 12px; }
+  </style>
+</head>
+<body>
+<main>
+  <header><img src="/assets/projectit/projectit/techy-app.svg" alt="" /><strong>Techy App</strong></header>
+  <div class="card">
+    <h1>Delete your Techy account</h1>
+    <p>Your Techy account belongs to the company that gave it to you ({{ company }} for this site). You can ask for it
+      and your personal data to be deleted here, or in the app (Account, then <strong>Delete my account</strong>).</p>
+
+    <h2>What happens</h2>
+    <ul>
+      <li>The company checks the request is yours, switches your account off, and deletes your personal details
+        (name, email, phone, photos of you, your locations) within 30 days.</li>
+      <li>Records the company must keep by law or for its business (for example invoices, attendance and the work done
+        on a customer's machine) are kept, without your contact details where possible.</li>
+      <li>Uninstalling the app removes everything it saved on your phone.</li>
+    </ul>
+
+    <form id="f">
+      <label for="email">The email you sign in with</label>
+      <input id="email" type="email" required autocomplete="email" />
+      <label for="reason">Anything you want us to know <span class="muted">(optional)</span></label>
+      <textarea id="reason" rows="3" maxlength="1000"></textarea>
+      <button id="go" type="submit">Ask for my account to be deleted</button>
+    </form>
+    <p id="done" class="note" role="status" hidden></p>
+    <p class="muted" style="margin-top:16px">See also the <a href="/techy-privacy">privacy policy</a>.</p>
+  </div>
+</main>
+<script>
+  document.getElementById('f').addEventListener('submit', async (e) => {
+    e.preventDefault()
+    const go = document.getElementById('go')
+    const done = document.getElementById('done')
+    go.disabled = true
+    try {
+      const r = await fetch('/api/method/projectit.app_links.request_deletion_by_email', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Frappe-CSRF-Token': '{{ csrf }}' },
+        body: JSON.stringify({ email: document.getElementById('email').value, reason: document.getElementById('reason').value }),
+      })
+      if (r.status === 429) throw new Error('Too many requests. Try again in an hour.')
+      if (!r.ok) throw new Error('Check the email address and try again.')
+      done.textContent = 'Thank you. Your request was sent. The company will confirm it is you and delete your account within 30 days.'
+      document.getElementById('f').hidden = true
+    } catch (err) {
+      done.textContent = err.message
+    }
+    done.hidden = false
+    go.disabled = false
+  })
+</script>
+</body>
+</html>

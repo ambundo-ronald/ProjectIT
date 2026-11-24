@@ -36,6 +36,7 @@ ALLOWED = {"login", "logout", "frappe.handler.logout", "frappe.auth.get_logged_u
     "projectit.api.my_apps", "projectit.api.get_header_info", "projectit.api.get_employee_id",
     "projectit.push.public_key", "projectit.push.subscribe", "projectit.push.unsubscribe", "projectit.push.pending",
     "projectit.push.test", "projectit.device_auth.my_devices", "projectit.device_auth.sign_out_device",
+    "projectit.app_links.request_deletion",
     # Their jobs: the same screen as our technicians (narrowed by projectit.permissions, redacted in work_orders.detail).
     "projectit.work_orders.get_work_order", "projectit.work_orders.update_work_order",
     "projectit.work_orders.toggle_step", "projectit.work_orders.add_comment", "projectit.work_orders.attach_photo",

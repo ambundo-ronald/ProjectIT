@@ -50,6 +50,8 @@ startNative()
 
 app.use(router)
 app.use(resourcesPlugin)
+// Phone app: open links to the company's site (and the website's "Open in the app") on the right screen.
+import('./data/applinks').then(({ startAppLinks }) => startAppLinks(router))
 
 app.component('Button', Button)
 app.component('Card', Card)

@@ -34,6 +34,8 @@ function save() {
 }
 
 export const APP_VERSION = import.meta.env.VITE_APP_VERSION || ''
+/** The publisher's privacy policy (the Play Store listing links to the same page). */
+export const PRIVACY_URL = import.meta.env.VITE_PRIVACY_URL || 'https://erp.norwawater.com/techy-privacy'
 
 /** "ops.example.com", "https://ops.example.com/", "ops.example.com/app" → "https://ops.example.com". */
 export function normalizeUrl(text) {
@@ -232,6 +234,16 @@ export function startNative() {
     apply()
     new MutationObserver(apply).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
   }).catch(() => {})
+  // A newer version of the app (data/updates.js), checked against the company's site each time the app opens.
+  if (server.url) {
+    call('projectit.device_auth.hello', {}, false)
+      .then((hello) => {
+        Object.assign(server, { company: hello.company || server.company, logo: hello.logo || server.logo })
+        save()
+        return import('./updates').then(({ checkForUpdate }) => checkForUpdate(hello))
+      })
+      .catch(() => {})
+  }
   // The phone's Back button goes back in the app, and closes it from the first screen.
   import('@capacitor/app').then(({ App }) => {
     App.addListener('backButton', ({ canGoBack }) => (canGoBack ? window.history.back() : App.exitApp()))

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Privacy policy – Techy App</title>
+  <link rel="icon" href="/assets/projectit/projectit/techy-app.svg" type="image/svg+xml" />
+  <style>
+    :root { color-scheme: light dark; --ink: #1f2937; --muted: #6b7280; --line: #e5e7eb; --bg: #f7f7f8; --card: #fff; --brand: #0f2a4a; }
+    @media (prefers-color-scheme: dark) { :root { --ink: #e5e7eb; --muted: #9ca3af; --line: #26324a; --bg: #0b1424; --card: #111c31; --brand: #9cc3f5; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
+    h1 { font-size: 28px; line-height: 1.2; margin: 0 0 4px; color: var(--brand); }
+    h2 { font-size: 18px; margin: 28px 0 8px; color: var(--brand); }
+    p, li { margin: 0 0 10px; }
+    .muted { color: var(--muted); font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: 15px; margin: 8px 0 12px; }
+    th, td { text-align: left; vertical-align: top; padding: 8px; border-bottom: 1px solid var(--line); }
+    th { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+    a { color: var(--brand); }
+    header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    header img { width: 44px; height: 44px; border-radius: 12px; }
+  </style>
+</head>
+<body>
+<main>
+  <header><img src="/assets/projectit/projectit/techy-app.svg" alt="" /><strong>Techy App</strong></header>
+  <div class="card">
+    <h1>Privacy policy</h1>
+    <p class="muted">Techy App for Android and the web · Last updated {{ updated }}</p>
+
+    <p>Techy App is the field-service app companies use for their technicians, managers, contractors and customers.
+      You sign in to <strong>your company's own Techy site</strong> (for example {{ company }}), with an account your company
+      gives you. This policy explains what the app collects, why, and your choices.</p>
+
+    <h2>Who is responsible for your data</h2>
+    <p>The company whose site you sign in to decides what is recorded and keeps the data on its own site. It is the
+      controller of your data. The app sends what you enter only to that site and to nowhere else.</p>
+
+    <h2>What the app collects and why</h2>
+    <table>
+      <tr><th>Data</th><th>Why</th><th>When</th></tr>
+      <tr><td>Name, email, phone</td><td>Signing in, and showing who did what</td><td>From your account</td></tr>
+      <tr><td>Precise location (GPS)</td><td>Recorded with a check-in or check-out at a site, so the company knows you were there</td><td>Only at the moment you check in or out, with your permission. Never in the background.</td></tr>
+      <tr><td>Photos</td><td>Check-in photos, photos of the work, receipts and readings</td><td>Only photos you take or choose in the app</td></tr>
+      <tr><td>Work records</td><td>Jobs, checklists, readings, times, messages, materials and pay (contractors)</td><td>What you enter while working</td></tr>
+      <tr><td>Device name and app version</td><td>Listing your signed-in phones so you or your manager can sign one out</td><td>When you sign in</td></tr>
+    </table>
+    <p>The app has no advertising and no analytics or tracking tools. It does not sell or share data with third
+      parties, and it does not use your data for anything except the work above.</p>
+
+    <h2>Permissions on your phone</h2>
+    <ul>
+      <li><strong>Location</strong>: asked the first time you check in. If you refuse, you cannot check in from the app, but everything else works.</li>
+      <li><strong>Camera</strong>: asked the first time you take a photo.</li>
+    </ul>
+
+    <h2>Security</h2>
+    <p>Everything is sent over an encrypted connection (https). Your password is not stored on the phone. The phone
+      keeps a sign-in key, which you or your company can cancel at any time. Work saved for use without signal stays in
+      the app's own storage and is sent when you are back online.</p>
+
+    <h2>How long data is kept</h2>
+    <p>Your company keeps work records as long as it needs them for its business and the law (for example invoices and
+      attendance). Signing out removes your sign-in key from the phone. Uninstalling the app removes everything it
+      stored on the phone.</p>
+
+    <h2>Your choices and deleting your account</h2>
+    <p>You can see and correct your details through your company. To have your account and personal data deleted, use
+      <strong>Delete my account</strong> in the app, or the <a href="/techy-delete-account">account deletion page</a>. Your
+      company then deletes your account and personal data within 30 days, except records it must keep by law.</p>
+
+    <h2>Children</h2>
+    <p>Techy App is a work app for adults and is not meant for children.</p>
+
+    <h2>Changes and contact</h2>
+    <p>If this policy changes, the new version is posted here with a new date.
+      {% if contact %}Questions: <a href="mailto:{{ contact }}">{{ contact }}</a>.{% else %}Questions: contact the company that gave you your account.{% endif %}</p>
+  </div>
+</main>
+</body>
+</html>

@@ -50,6 +50,7 @@
         <router-link v-if="me.can_invoice" :to="{ name: 'OpsBilling' }" class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm hover:bg-gray-50" role="menuitem" @click="close"><FeatherIcon name="file-text" class="h-4 w-4 text-gray-500" />Billing</router-link>
         <router-link :to="{ name: 'Home' }" class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm hover:bg-gray-50" role="menuitem" @click="close"><FeatherIcon name="grid" class="h-4 w-4 text-gray-500" />All apps</router-link>
         <a href="/desk" class="flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm hover:bg-gray-50" role="menuitem"><FeatherIcon name="external-link" class="h-4 w-4 text-gray-500" />Open ERPNext</a>
+        <AccountPrivacy compact />
       </div>
       <div class="border-t border-gray-100 pt-1">
         <button class="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm text-red-600 hover:bg-red-50" role="menuitem" :disabled="session.logout.loading" @click="session.logout.submit()"><FeatherIcon name="log-out" class="h-4 w-4" />Sign out</button>
@@ -61,6 +62,7 @@
 import { FeatherIcon } from 'frappe-ui'
 import Dropdown from './Dropdown.vue'
 import UserAvatar from './UserAvatar.vue'
+import AccountPrivacy from './AccountPrivacy.vue'
 import { session, whoAmI } from '@/data/session'
 import { computed, ref } from 'vue'
 import { me } from '@/data/ops'
