@@ -69,9 +69,9 @@ def open_visit(user=None):
 
 def _places(member):
     """Where I can check in: my accepted open jobs, and my contractor's projects."""
-    filters = {"custom_work_order": 1, "parent_task": ["is", "not set"], "custom_contractor": member.contractor,
-        "custom_contractor_state": "Accepted", "status": ["not in", ["Completed", "Cancelled"]]}
-    jobs = frappe.get_list("Task", filters=filters, fields=["name", "subject", "project", "custom_equipment"],
+    filters = contractors.job_filters(member, custom_contractor_state="Accepted",
+        status=["not in", ["Completed", "Cancelled"]])
+    jobs = frappe.get_all("Task", filters=filters, fields=["name", "subject", "project", "custom_equipment"],
         order_by="exp_end_date asc", limit_page_length=200)
     names = sorted(contractors.allocated_projects(member.contractor) | {j.project for j in jobs if j.project})
     projects = frappe.get_all("Project", filters={"name": ["in", names or [""]], "status": "Open"},

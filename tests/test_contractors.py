@@ -317,3 +317,35 @@ class JobScreenTests(ContractorCase):
             self.assertIs(self.wo._work_order("TASK-1"), doc)
         with self.as_member(OWNER), patch.object(self.c, "sees_job", return_value=False), self.assertRaises(PermissionError):
             self.wo._work_order("TASK-1")
+
+
+class OtherAppsTaskRuleTests(ContractorCase):
+    """Taskist (on live) lets only a task's owner and assignees read it. A job offered to a contractor has nobody on it
+    yet, so the contractor screens must not depend on Task permissions to show it."""
+
+    def test_offered_jobs_are_listed_without_task_permissions(self):
+        self.frappe.get_list = MagicMock(side_effect=AssertionError("must not go through Task permissions"))
+        self.frappe.get_all = MagicMock(return_value=[])
+        with self.as_member(OWNER):
+            self.c._my_jobs(OWNER)
+        filters = self.frappe.get_all.call_args.kwargs["filters"]
+        self.assertEqual(filters["custom_contractor"], "CTR-1")
+        self.assertNotIn("name", filters)  # owners and leads: every job of their contractor
+
+    def test_crew_list_is_limited_to_their_jobs(self):
+        def get_all(doctype, **kw):
+            return ["TASK-7"] if doctype == "ToDo" else []
+        self.frappe.get_all = MagicMock(side_effect=get_all)
+        with self.as_member(CREW):
+            filters = self.c.job_filters(CREW)
+        self.assertEqual(filters["name"], ["in", ["TASK-7"]])
+
+    def test_owner_reads_an_offered_job_another_app_would_hide(self):
+        doc = MagicMock(name="TASK-1", custom_work_order=1, owner="boss@x.test")
+        doc.get = lambda k, d=None: {"custom_contractor": "CTR-1", "custom_contractor_state": "Offered"}.get(k, d)
+        doc.check_permission.side_effect = PermissionError("Taskist: not assigned")
+        self.frappe.get_doc.return_value = doc
+        with self.as_member(OWNER), patch.object(self.c, "sees_job", return_value=True):
+            self.assertIs(self.wo._work_order("TASK-1"), doc)  # reading: the contractor rule decides
+            with self.assertRaises(PermissionError):
+                self.wo._work_order("TASK-1", write=True)  # working on it waits for acceptance
